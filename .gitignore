@@ -1,0 +1,28 @@
+# Virtual environment
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Database
+*.db
+*.db-journal
+
+# Config (user-specific)
+config/blacklist.txt
+
+# Python
+*.py[cod]
+*$py.class
+*.so
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Test/temporary files
+test_*.py
+copy-pages/
+
