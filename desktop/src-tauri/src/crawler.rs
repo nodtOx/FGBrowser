@@ -89,7 +89,7 @@ impl FitGirlCrawler {
             format!("{}/page/{}/", self.base_url, page_num)
         };
 
-        println!("Crawling page {}: {}", page_num, url);
+        // println!("Crawling page {}: {}", page_num, url);
 
         let html = self.fetch_page(&url).await?;
         let document = Html::parse_document(&html);
@@ -97,7 +97,7 @@ impl FitGirlCrawler {
         // Extract total pages from pagination (only on first page)
         if page_num == 1 {
             if let Some(total) = self.extract_total_pages(&document) {
-                println!("  [INFO] Total pages available: {}", total);
+                // println!("  [INFO] Total pages available: {}", total);
             }
         }
 
@@ -107,10 +107,10 @@ impl FitGirlCrawler {
         for article in document.select(&article_selector) {
             if let Some(repack) = self.extract_repack_from_article(&article) {
                 if self.is_blacklisted(&repack.url, &repack.title) {
-                    println!("  [SKIP] {}", repack.title);
+                    // println!("  [SKIP] {}", repack.title);
                     continue;
                 }
-                println!("  [+] {}", repack.title);
+                // println!("  [+] {}", repack.title);
                 repacks.push(repack);
             }
         }
@@ -215,7 +215,7 @@ impl FitGirlCrawler {
             // Join and parse the combined text (like Python: " ".join(text_parts))
             let full_text = text_parts.join(" ");
             
-            println!("[DEBUG] Combined text from siblings: {}", &full_text[..full_text.len().min(500)]);
+            // println!("[DEBUG] Combined text from siblings: {}", &full_text[..full_text.len().min(500)]);
             
             // Extract using simple string operations (like Python approach)
             // Genres/Tags
@@ -223,7 +223,7 @@ impl FitGirlCrawler {
                 let after = &full_text[genres_start + 12..];
                 let end = after.find("Companies:").or_else(|| after.find("Company:")).unwrap_or(after.len());
                 details.genres_tags = Some(after[..end].trim().to_string());
-                println!("[DEBUG] Extracted Genres: {:?}", details.genres_tags);
+                // println!("[DEBUG] Extracted Genres: {:?}", details.genres_tags);
             }
             
             // Company/Companies
@@ -231,12 +231,12 @@ impl FitGirlCrawler {
                 let after = &full_text[start + 10..];
                 let end = after.find("Languages:").or_else(|| after.find("Language:")).unwrap_or(after.len());
                 details.company = Some(after[..end].trim().to_string());
-                println!("[DEBUG] Extracted Company: {:?}", details.company);
+                // println!("[DEBUG] Extracted Company: {:?}", details.company);
             } else if let Some(start) = full_text.find("Company:") {
                 let after = &full_text[start + 8..];
                 let end = after.find("Languages:").or_else(|| after.find("Language:")).unwrap_or(after.len());
                 details.company = Some(after[..end].trim().to_string());
-                println!("[DEBUG] Extracted Company: {:?}", details.company);
+                // println!("[DEBUG] Extracted Company: {:?}", details.company);
             }
             
             // Languages
@@ -244,12 +244,12 @@ impl FitGirlCrawler {
                 let after = &full_text[start + 10..];
                 let end = after.find("Original Size:").or_else(|| after.find("This game")).unwrap_or(after.len());
                 details.languages = Some(after[..end].trim().to_string());
-                println!("[DEBUG] Extracted Languages: {:?}", details.languages);
+                // println!("[DEBUG] Extracted Languages: {:?}", details.languages);
             } else if let Some(start) = full_text.find("Language:") {
                 let after = &full_text[start + 9..];
                 let end = after.find("Original Size:").or_else(|| after.find("This game")).unwrap_or(after.len());
                 details.languages = Some(after[..end].trim().to_string());
-                println!("[DEBUG] Extracted Languages: {:?}", details.languages);
+                // println!("[DEBUG] Extracted Languages: {:?}", details.languages);
             }
             
             // Original Size
@@ -257,7 +257,7 @@ impl FitGirlCrawler {
                 let after = &full_text[start + 14..];
                 let end = after.find("Repack Size:").unwrap_or(after.len().min(100));
                 details.original_size = Some(after[..end].trim().to_string());
-                println!("[DEBUG] Extracted Original Size: {:?}", details.original_size);
+                // println!("[DEBUG] Extracted Original Size: {:?}", details.original_size);
             }
             
             // Repack Size
@@ -265,7 +265,7 @@ impl FitGirlCrawler {
                 let after = &full_text[start + 12..];
                 let end = after.find("Download").unwrap_or(after.len().min(100));
                 details.repack_size = Some(after[..end].trim().to_string());
-                println!("[DEBUG] Extracted Repack Size: {:?}", details.repack_size);
+                // println!("[DEBUG] Extracted Repack Size: {:?}", details.repack_size);
             }
         }
 

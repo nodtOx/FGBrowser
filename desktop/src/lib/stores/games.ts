@@ -1,5 +1,5 @@
-import { writable, derived } from 'svelte/store';
 import { invoke } from '@tauri-apps/api/core';
+import { writable } from 'svelte/store';
 
 export interface Game {
   id: number;
@@ -8,7 +8,8 @@ export interface Game {
   company: string | null;
   languages: string | null;
   original_size: string | null;
-  repack_size: string | null;
+  repack_size: string | null; // Keep for backwards compatibility
+  size: number | null; // Size in MB (parsed from repack_size)
   url: string;
   date: string | null;
 }
@@ -115,5 +116,20 @@ export async function copyMagnetLink(magnet: string) {
     await invoke('copy_to_clipboard', { text: magnet });
   } catch (error) {
     console.error('Failed to copy to clipboard:', error);
+  }
+}
+
+// Format size from MB to human-readable string
+export function formatSize(sizeInMB: number | null): string {
+  if (!sizeInMB || sizeInMB <= 0) return 'N/A';
+
+  if (sizeInMB < 1024) {
+    return `${sizeInMB} MB`;
+  } else if (sizeInMB < 1024 * 1024) {
+    const sizeInGB = sizeInMB / 1024;
+    return `${sizeInGB.toFixed(1)} GB`;
+  } else {
+    const sizeInTB = sizeInMB / (1024 * 1024);
+    return `${sizeInTB.toFixed(1)} TB`;
   }
 }

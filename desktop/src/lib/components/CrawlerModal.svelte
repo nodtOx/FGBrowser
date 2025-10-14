@@ -7,6 +7,9 @@
     export let onComplete: () => void = () => {};
     export let onStart: () => void = () => {};
     
+    // Track new games found during updates
+    let newGamesFound = 0;
+    
     // Configuration
     const MAX_PAGES = 10;
     const GAMES_PER_PAGE = 10;
@@ -21,10 +24,15 @@
         status: string;
     }
     
-    // Watch for changes in isOpen - only trigger once
-    $: if (isOpen && !crawlerRunning && !isUpdating) {
-        console.log('Starting crawler from reactive statement');
-        startCrawl();
+    // Watch for changes in isOpen - trigger appropriate action
+    $: if (isOpen && !crawlerRunning) {
+        if (isUpdating) {
+            console.log('Starting database update from reactive statement');
+            startUpdate();
+        } else {
+            console.log('Starting crawler from reactive statement');
+            startCrawl();
+        }
     }
     
     async function startCrawl() {
@@ -56,6 +64,46 @@
             }, 3000);
         }
     }
+    
+    async function startUpdate() {
+        if (crawlerRunning) return;
+        
+        crawlerRunning = true;
+        newGamesFound = 0; // Reset counter
+        status = 'Checking for new games...';
+        onStart(); // Start polling
+        
+        try {
+            console.log('🎯 CrawlerModal calling update_database');
+            const result = await invoke<CrawlResult>('update_database');
+            
+            newGamesFound = result.total_games;
+            
+            if (result.total_games > 0) {
+                status = `Found ${result.total_games} new games!`;
+            } else {
+                status = 'Database is up to date';
+            }
+            
+            // Wait before closing
+            setTimeout(() => {
+                isOpen = false;
+                crawlerRunning = false;
+                newGamesFound = 0; // Reset when closing
+                onComplete();
+            }, MODAL_CLOSE_DELAY_MS);
+        } catch (error) {
+            console.error('Update error:', error);
+            status = `Error: ${error}`;
+            crawlerRunning = false;
+            newGamesFound = 0;
+            
+            // Close on error
+            setTimeout(() => {
+                isOpen = false;
+            }, 3000);
+        }
+    }
 </script>
 
 {#if isOpen}
@@ -74,21 +122,33 @@
                         </div>
                         
                         <div class="stats">
-                            <div class="stat-item">
-                                <div class="stat-value">{totalGames}</div>
-                                <div class="stat-label">Games Found</div>
-                            </div>
-                            
-                            {#if estimatedTotal > 0 && totalGames > 0}
-                                <div class="stat-divider">/</div>
+                            {#if isUpdating}
                                 <div class="stat-item">
-                                    <div class="stat-value secondary">~{estimatedTotal}</div>
-                                    <div class="stat-label">Estimated Total</div>
+                                    <div class="stat-value">{newGamesFound}</div>
+                                    <div class="stat-label">New Games Found</div>
                                 </div>
+                                <div class="stat-divider">|</div>
+                                <div class="stat-item">
+                                    <div class="stat-value secondary">{totalGames}</div>
+                                    <div class="stat-label">Total Games</div>
+                                </div>
+                            {:else}
+                                <div class="stat-item">
+                                    <div class="stat-value">{totalGames}</div>
+                                    <div class="stat-label">Games Found</div>
+                                </div>
+                                
+                                {#if estimatedTotal > 0 && totalGames > 0}
+                                    <div class="stat-divider">/</div>
+                                    <div class="stat-item">
+                                        <div class="stat-value secondary">~{estimatedTotal}</div>
+                                        <div class="stat-label">Estimated Total</div>
+                                    </div>
+                                {/if}
                             {/if}
                         </div>
                         
-                        {#if estimatedTotal > 0 && totalGames > 0}
+                        {#if !isUpdating && estimatedTotal > 0 && totalGames > 0}
                             <div class="progress-bar">
                                 <div class="progress-fill" style="width: {Math.min((totalGames / estimatedTotal) * 100, 100)}%"></div>
                             </div>
