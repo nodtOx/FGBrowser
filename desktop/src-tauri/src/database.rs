@@ -450,6 +450,112 @@ impl Database {
         Ok(categories)
     }
     
+    // Get categories that appear in games filtered by time
+    pub fn get_categories_for_time_filtered_games(&self, days_ago: i32) -> Result<Vec<CategoryWithCount>> {
+        let query = 
+            "SELECT c.id, c.name, COUNT(DISTINCT r.id) as game_count
+             FROM categories c
+             JOIN game_categories gc ON c.id = gc.category_id
+             JOIN repacks r ON gc.repack_id = r.id
+             WHERE r.date >= date('now', '-' || ? || ' days')
+             GROUP BY c.id, c.name
+             HAVING game_count > 0
+             ORDER BY game_count DESC, c.name ASC";
+
+        let mut stmt = self.conn.prepare(query)?;
+        
+        let categories = stmt
+            .query_map([days_ago], |row| {
+                Ok(CategoryWithCount {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    game_count: row.get(2)?,
+                })
+            })?
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(categories)
+    }
+    
+    // Get categories that appear in games filtered by size
+    pub fn get_categories_for_size_filtered_games(&self, min_size: Option<i64>, max_size: Option<i64>) -> Result<Vec<CategoryWithCount>> {
+        let mut query = 
+            "SELECT c.id, c.name, COUNT(DISTINCT r.id) as game_count
+             FROM categories c
+             JOIN game_categories gc ON c.id = gc.category_id
+             JOIN repacks r ON gc.repack_id = r.id
+             WHERE 1=1".to_string();
+        
+        let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
+        
+        if let Some(min) = min_size {
+            query.push_str(" AND r.size >= ?");
+            params.push(Box::new(min));
+        }
+        
+        if let Some(max) = max_size {
+            query.push_str(" AND r.size <= ?");
+            params.push(Box::new(max));
+        }
+        
+        query.push_str(" GROUP BY c.id, c.name HAVING game_count > 0 ORDER BY game_count DESC, c.name ASC");
+
+        let mut stmt = self.conn.prepare(&query)?;
+        let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
+        
+        let categories = stmt
+            .query_map(&param_refs[..], |row| {
+                Ok(CategoryWithCount {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    game_count: row.get(2)?,
+                })
+            })?
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(categories)
+    }
+    
+    // Get categories that appear in games filtered by size AND time
+    pub fn get_categories_for_size_and_time_filtered_games(&self, min_size: Option<i64>, max_size: Option<i64>, days_ago: i32) -> Result<Vec<CategoryWithCount>> {
+        let mut query = 
+            "SELECT c.id, c.name, COUNT(DISTINCT r.id) as game_count
+             FROM categories c
+             JOIN game_categories gc ON c.id = gc.category_id
+             JOIN repacks r ON gc.repack_id = r.id
+             WHERE r.date >= date('now', '-' || ? || ' days')".to_string();
+        
+        let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
+        params.push(Box::new(days_ago));
+        
+        if let Some(min) = min_size {
+            query.push_str(" AND r.size >= ?");
+            params.push(Box::new(min));
+        }
+        
+        if let Some(max) = max_size {
+            query.push_str(" AND r.size <= ?");
+            params.push(Box::new(max));
+        }
+        
+        query.push_str(" GROUP BY c.id, c.name HAVING game_count > 0 ORDER BY game_count DESC, c.name ASC");
+
+        let mut stmt = self.conn.prepare(&query)?;
+        let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
+        
+        let categories = stmt
+            .query_map(&param_refs[..], |row| {
+                Ok(CategoryWithCount {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    game_count: row.get(2)?,
+                })
+            })?
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(categories)
+    }
+    
     // Get games filtered by date range
     pub fn get_games_by_date_range(&self, days_ago: i32, limit: i32, offset: i32) -> Result<Vec<Game>> {
         let mut stmt = self.conn.prepare(
@@ -567,6 +673,178 @@ impl Database {
         params.push(Box::new(offset));
         
         let mut stmt = self.conn.prepare(&query)?;
+        let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
+        
+        let games = stmt
+            .query_map(&param_refs[..], |row| {
+                Ok(Game {
+                    id: row.get(0)?,
+                    title: row.get(1)?,
+                    genres_tags: row.get(2)?,
+                    company: row.get(3)?,
+                    languages: row.get(4)?,
+                    original_size: row.get(5)?,
+                    repack_size: row.get(6)?,
+                    size: row.get(7)?,
+                    url: row.get(8)?,
+                    date: row.get(9)?,
+                })
+            })?
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(games)
+    }
+    
+    // Get games by categories, size AND time (triple combination)
+    pub fn get_games_by_categories_size_and_time(&self, category_ids: &[i64], min_size: Option<i64>, max_size: Option<i64>, days_ago: i32, limit: i32, offset: i32) -> Result<Vec<Game>> {
+        if category_ids.is_empty() {
+            // No categories selected, filter by size and time only
+            return self.get_games_by_size_and_time(min_size, max_size, days_ago, limit, offset);
+        }
+        
+        let placeholders = category_ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
+        let mut query = format!(
+            "SELECT r.id, r.title, r.genres_tags, r.company, r.languages, r.original_size, r.repack_size, r.size, r.url, r.date 
+             FROM repacks r
+             WHERE r.id IN (
+                 SELECT gc.repack_id 
+                 FROM game_categories gc 
+                 WHERE gc.category_id IN ({})
+                 GROUP BY gc.repack_id 
+                 HAVING COUNT(DISTINCT gc.category_id) = ?
+             )",
+            placeholders
+        );
+        
+        let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
+        
+        // Add category parameters
+        for &id in category_ids {
+            params.push(Box::new(id));
+        }
+        params.push(Box::new(category_ids.len() as i64));
+        
+        // Add size constraints
+        if let Some(min) = min_size {
+            query.push_str(" AND r.size >= ?");
+            params.push(Box::new(min));
+        }
+        
+        if let Some(max) = max_size {
+            query.push_str(" AND r.size <= ?");
+            params.push(Box::new(max));
+        }
+        
+        // Add time constraint
+        query.push_str(" AND r.date >= date('now', '-' || ? || ' days')");
+        params.push(Box::new(days_ago));
+        
+        query.push_str(" ORDER BY r.date DESC LIMIT ? OFFSET ?");
+        params.push(Box::new(limit));
+        params.push(Box::new(offset));
+        
+        let mut stmt = self.conn.prepare(&query)?;
+        let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
+        
+        let games = stmt
+            .query_map(&param_refs[..], |row| {
+                Ok(Game {
+                    id: row.get(0)?,
+                    title: row.get(1)?,
+                    genres_tags: row.get(2)?,
+                    company: row.get(3)?,
+                    languages: row.get(4)?,
+                    original_size: row.get(5)?,
+                    repack_size: row.get(6)?,
+                    size: row.get(7)?,
+                    url: row.get(8)?,
+                    date: row.get(9)?,
+                })
+            })?
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(games)
+    }
+    
+    // Get games by size AND time (dual combination)
+    pub fn get_games_by_size_and_time(&self, min_size: Option<i64>, max_size: Option<i64>, days_ago: i32, limit: i32, offset: i32) -> Result<Vec<Game>> {
+        let mut query = "SELECT id, title, genres_tags, company, languages, original_size, repack_size, size, url, date FROM repacks WHERE 1=1".to_string();
+        let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
+        
+        if let Some(min) = min_size {
+            query.push_str(" AND size >= ?");
+            params.push(Box::new(min));
+        }
+        
+        if let Some(max) = max_size {
+            query.push_str(" AND size <= ?");
+            params.push(Box::new(max));
+        }
+        
+        query.push_str(" AND date >= date('now', '-' || ? || ' days')");
+        params.push(Box::new(days_ago));
+        
+        query.push_str(" ORDER BY date DESC LIMIT ? OFFSET ?");
+        params.push(Box::new(limit));
+        params.push(Box::new(offset));
+        
+        let mut stmt = self.conn.prepare(&query)?;
+        let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
+        
+        let games = stmt
+            .query_map(&param_refs[..], |row| {
+                Ok(Game {
+                    id: row.get(0)?,
+                    title: row.get(1)?,
+                    genres_tags: row.get(2)?,
+                    company: row.get(3)?,
+                    languages: row.get(4)?,
+                    original_size: row.get(5)?,
+                    repack_size: row.get(6)?,
+                    size: row.get(7)?,
+                    url: row.get(8)?,
+                    date: row.get(9)?,
+                })
+            })?
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(games)
+    }
+    
+    // Get games by categories AND time (dual combination)
+    pub fn get_games_by_categories_and_time(&self, category_ids: &[i64], days_ago: i32, limit: i32, offset: i32) -> Result<Vec<Game>> {
+        if category_ids.is_empty() {
+            return self.get_games_by_date_range(days_ago, limit, offset);
+        }
+        
+        let placeholders = category_ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
+        let query = format!(
+            "SELECT r.id, r.title, r.genres_tags, r.company, r.languages, r.original_size, r.repack_size, r.size, r.url, r.date 
+             FROM repacks r
+             WHERE r.id IN (
+                 SELECT gc.repack_id 
+                 FROM game_categories gc 
+                 WHERE gc.category_id IN ({})
+                 GROUP BY gc.repack_id 
+                 HAVING COUNT(DISTINCT gc.category_id) = ?
+             )
+             AND r.date >= date('now', '-' || ? || ' days')
+             ORDER BY r.date DESC
+             LIMIT ? OFFSET ?",
+            placeholders
+        );
+        
+        let mut stmt = self.conn.prepare(&query)?;
+        
+        let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
+        for &id in category_ids {
+            params.push(Box::new(id));
+        }
+        params.push(Box::new(category_ids.len() as i64));
+        params.push(Box::new(days_ago));
+        params.push(Box::new(limit));
+        params.push(Box::new(offset));
+        
         let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
         
         let games = stmt

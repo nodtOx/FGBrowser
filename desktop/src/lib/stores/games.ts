@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import { writable } from 'svelte/store';
+import { derived, writable } from 'svelte/store';
 
 export interface Game {
   id: number;
@@ -45,26 +45,60 @@ export const isLoading = writable<boolean>(false);
 export const categories = writable<CategoryWithCount[]>([]);
 export const selectedCategories = writable<CategoryWithCount[]>([]);
 
-// Track active filter type to prevent conflicts
-export const activeFilterType = writable<'none' | 'category' | 'time' | 'size' | 'status'>('none');
-
-// Active size filter state
+// All active filters (unified system)
+export const activeTimeFilter = writable<string>('');
 export const activeSizeFilter = writable<string>('');
+export const activeStatusFilter = writable<string>('');
+
+// Combined active filters for display
+export const activeFilters = derived(
+  [selectedCategories, activeTimeFilter, activeSizeFilter, activeStatusFilter],
+  ([$categories, $time, $size, $status]) => {
+    const filters: Array<{ type: string; value: string; label: string }> = [];
+
+    // Add category filters
+    $categories.forEach((cat) => {
+      filters.push({ type: 'category', value: cat.name, label: cat.name });
+    });
+
+    // Add time filter
+    if ($time) {
+      filters.push({ type: 'time', value: $time, label: $time });
+    }
+
+    // Add size filter
+    if ($size) {
+      filters.push({ type: 'size', value: $size, label: $size });
+    }
+
+    // Add status filter
+    if ($status) {
+      filters.push({ type: 'status', value: $status, label: $status });
+    }
+
+    return filters;
+  },
+);
 
 // Optimization: Debouncing for category filtering
 let filterDebounceTimer: number | null = null;
 const FILTER_DEBOUNCE_MS = 200;
 
-// Debounced category filtering
-export function debouncedApplyCategoryFilters() {
+// Debounced filter application (unified)
+export function debouncedApplyFilters() {
   if (filterDebounceTimer) {
     clearTimeout(filterDebounceTimer);
   }
 
   filterDebounceTimer = setTimeout(() => {
-    applyCategoryFilters();
+    applyAllFilters();
     filterDebounceTimer = null;
   }, FILTER_DEBOUNCE_MS) as unknown as number;
+}
+
+// Legacy function for backward compatibility
+export function debouncedApplyCategoryFilters() {
+  debouncedApplyFilters();
 }
 
 // Helper function to convert time filter names to days
@@ -81,15 +115,22 @@ function getTimeFilterDays(timeFilter: string): number {
   }
 }
 
-// Apply time filter
+// Apply time filter (works with other filters)
 export async function applyTimeFilter(timeFilter: string) {
-  const daysAgo = getTimeFilterDays(timeFilter);
-  if (daysAgo > 0) {
-    activeFilterType.set('time');
-    await loadGamesByDateRange(daysAgo);
-    // When filtering by time, restore all categories
-    await loadCategories();
-  }
+  activeTimeFilter.set(timeFilter);
+  await applyAllFilters();
+}
+
+// Apply size filter (works with other filters)
+export async function applySizeFilter(sizeFilter: string) {
+  activeSizeFilter.set(sizeFilter);
+  await applyAllFilters();
+}
+
+// Apply status filter (works with other filters)
+export async function applyStatusFilter(statusFilter: string) {
+  activeStatusFilter.set(statusFilter);
+  await applyAllFilters();
 }
 
 // Helper function to convert size filter names to MB ranges
@@ -112,31 +153,117 @@ function getSizeFilterRange(sizeFilter: string): { minSize?: number; maxSize?: n
   }
 }
 
-// Apply size filter (works with categories)
-export async function applySizeFilter(sizeFilter: string) {
-  activeSizeFilter.set(sizeFilter);
-  const { minSize, maxSize } = getSizeFilterRange(sizeFilter);
+// Unified filter application - combines all active filters
+export async function applyAllFilters() {
+  isLoading.set(true);
 
-  // Get current selected categories
-  let currentSelected: CategoryWithCount[] = [];
-  selectedCategories.subscribe((s) => (currentSelected = s))();
+  try {
+    // Get current filter states
+    let currentCategories: CategoryWithCount[] = [];
+    selectedCategories.subscribe((s) => (currentCategories = s))();
 
-  if (currentSelected.length > 0) {
-    // Combine category + size filters
-    activeFilterType.set('category'); // Keep category as primary filter type
-    const categoryIds = currentSelected.map((c) => c.id);
-    await loadGamesByCategoriesAndSize(categoryIds, minSize, maxSize);
-  } else {
-    // Size filter only
-    activeFilterType.set('size');
-    await loadGamesBySize(minSize, maxSize);
-    await loadCategories(); // Show all categories when no categories selected
+    let currentTimeFilter: string = '';
+    activeTimeFilter.subscribe((s) => (currentTimeFilter = s))();
+
+    let currentSizeFilter: string = '';
+    activeSizeFilter.subscribe((s) => (currentSizeFilter = s))();
+
+    let currentStatusFilter: string = '';
+    activeStatusFilter.subscribe((s) => (currentStatusFilter = s))();
+
+    // If no filters active, show all games
+    if (currentCategories.length === 0 && !currentTimeFilter && !currentSizeFilter && !currentStatusFilter) {
+      await Promise.all([loadGames(), loadCategories()]);
+      return;
+    }
+
+    // Apply combined filters
+    const categoryIds = currentCategories.map((c) => c.id);
+    const { minSize, maxSize } = currentSizeFilter ? getSizeFilterRange(currentSizeFilter) : {};
+    const daysAgo = currentTimeFilter ? getTimeFilterDays(currentTimeFilter) : undefined;
+
+    // Call the appropriate backend function based on active filters
+    if (categoryIds.length > 0 && currentSizeFilter && currentTimeFilter && daysAgo) {
+      // Categories + Size + Time (triple combination)
+      await loadGamesByCategoriesSizeAndTime(categoryIds, minSize, maxSize, daysAgo);
+    } else if (categoryIds.length > 0 && currentSizeFilter) {
+      // Categories + Size
+      await loadGamesByCategoriesAndSize(categoryIds, minSize, maxSize);
+    } else if (categoryIds.length > 0 && currentTimeFilter && daysAgo) {
+      // Categories + Time
+      await loadGamesByCategoriesAndTime(categoryIds, daysAgo);
+    } else if (currentSizeFilter && currentTimeFilter && daysAgo) {
+      // Size + Time
+      await loadGamesBySizeAndTime(minSize, maxSize, daysAgo);
+    } else if (categoryIds.length > 0) {
+      // Categories only
+      await loadGamesByMultipleCategories(categoryIds);
+    } else if (currentSizeFilter) {
+      // Size only
+      await loadGamesBySize(minSize, maxSize);
+    } else if (currentTimeFilter && daysAgo) {
+      // Time only
+      await loadGamesByDateRange(daysAgo);
+    }
+
+    // Always update categories for faceted filtering
+    if (categoryIds.length > 0) {
+      // Categories are selected - use category-based faceted filtering
+      await loadFilteredCategories(categoryIds);
+    } else if (currentTimeFilter && currentSizeFilter && daysAgo) {
+      // Only time + size filters are active
+      await loadCategoriesForSizeAndTimeFilter(minSize, maxSize, daysAgo);
+    } else if (currentTimeFilter && daysAgo) {
+      // Only time filter is active
+      await loadCategoriesForTimeFilter(daysAgo);
+    } else if (currentSizeFilter) {
+      // Only size filter is active
+      await loadCategoriesForSizeFilter(minSize, maxSize);
+    } else {
+      // No filters active - show all categories
+      await loadCategories();
+    }
+  } catch (error) {
+    console.error('Failed to apply combined filters:', error);
+  } finally {
+    isLoading.set(false);
   }
 }
 
-// Clear size filter
-export function clearSizeFilter() {
+// Clear specific filters
+export async function clearTimeFilter() {
+  activeTimeFilter.set('');
+  await applyAllFilters();
+}
+
+export async function clearSizeFilter() {
   activeSizeFilter.set('');
+  await applyAllFilters();
+}
+
+export async function clearStatusFilter() {
+  activeStatusFilter.set('');
+  await applyAllFilters();
+}
+
+// Remove specific filter by type and value
+export async function removeFilter(type: string, value: string) {
+  switch (type) {
+    case 'category':
+      // Find and remove the category
+      selectedCategories.update((selected) => selected.filter((cat) => cat.name !== value));
+      break;
+    case 'time':
+      activeTimeFilter.set('');
+      break;
+    case 'size':
+      activeSizeFilter.set('');
+      break;
+    case 'status':
+      activeStatusFilter.set('');
+      break;
+  }
+  await applyAllFilters();
 }
 
 // Load games from database
@@ -174,6 +301,47 @@ export async function loadFilteredCategories(selectedCategoryIds: number[]) {
     categories.set(result);
   } catch (error) {
     console.error('Failed to load filtered categories:', error);
+  }
+}
+
+// Load categories filtered by time
+export async function loadCategoriesForTimeFilter(daysAgo: number) {
+  try {
+    const result = await invoke<CategoryWithCount[]>('get_categories_for_time_filtered_games', {
+      daysAgo,
+    });
+    categories.set(result);
+  } catch (error) {
+    console.error('Failed to load categories for time filter:', error);
+  }
+}
+
+// Load categories filtered by size
+export async function loadCategoriesForSizeFilter(minSize?: number, maxSize?: number) {
+  try {
+    const result = await invoke<CategoryWithCount[]>('get_categories_for_size_filtered_games', {
+      minSize: minSize || null,
+      maxSize: maxSize || null,
+    });
+    categories.set(result);
+  } catch (error) {
+    console.error('Failed to load categories for size filter:', error);
+  }
+}
+
+// Load categories filtered by size AND time
+export async function loadCategoriesForSizeAndTimeFilter(minSize?: number, maxSize?: number, daysAgo?: number) {
+  if (daysAgo === undefined) return;
+
+  try {
+    const result = await invoke<CategoryWithCount[]>('get_categories_for_size_and_time_filtered_games', {
+      minSize: minSize || null,
+      maxSize: maxSize || null,
+      daysAgo,
+    });
+    categories.set(result);
+  } catch (error) {
+    console.error('Failed to load categories for size and time filter:', error);
   }
 }
 
@@ -286,6 +454,94 @@ export async function loadGamesByCategoriesAndSize(
   }
 }
 
+// Load games by categories AND time (combined filters)
+export async function loadGamesByCategoriesAndTime(
+  categoryIds: number[],
+  daysAgo: number,
+  limit: number = 1000,
+  offset: number = 0,
+) {
+  isLoading.set(true);
+  try {
+    const result = await invoke<Game[]>('get_games_by_categories_and_time', {
+      categoryIds,
+      daysAgo,
+      limit,
+      offset,
+    });
+    games.set(result);
+    if (result.length > 0) {
+      await selectGame(0);
+    }
+  } catch (error) {
+    console.error('Failed to load games by categories and time:', error);
+  } finally {
+    isLoading.set(false);
+  }
+}
+
+// Load games by size AND time (combined filters)
+export async function loadGamesBySizeAndTime(
+  minSize?: number,
+  maxSize?: number,
+  daysAgo?: number,
+  limit: number = 1000,
+  offset: number = 0,
+) {
+  if (daysAgo === undefined) return;
+
+  isLoading.set(true);
+  try {
+    const result = await invoke<Game[]>('get_games_by_size_and_time', {
+      minSize: minSize || null,
+      maxSize: maxSize || null,
+      daysAgo,
+      limit,
+      offset,
+    });
+    games.set(result);
+    if (result.length > 0) {
+      await selectGame(0);
+    }
+  } catch (error) {
+    console.error('Failed to load games by size and time:', error);
+  } finally {
+    isLoading.set(false);
+  }
+}
+
+// Load games by categories, size AND time (triple combination)
+export async function loadGamesByCategoriesSizeAndTime(
+  categoryIds: number[],
+  minSize?: number,
+  maxSize?: number,
+  daysAgo?: number,
+  limit: number = 1000,
+  offset: number = 0,
+) {
+  if (daysAgo === undefined) return;
+
+  isLoading.set(true);
+  try {
+    const result = await invoke<Game[]>('get_games_by_categories_size_and_time', {
+      categoryIds,
+      minSize: minSize || null,
+      maxSize: maxSize || null,
+      daysAgo,
+      limit,
+      offset,
+    });
+    games.set(result);
+    if (result.length > 0) {
+      await selectGame(0);
+    }
+  } catch (error) {
+    console.error('Failed to load games by categories, size and time:', error);
+  } finally {
+    isLoading.set(false);
+  }
+}
+
 // Toggle category selection
 export function toggleCategorySelection(category: CategoryWithCount) {
   selectedCategories.update((selected) => {
@@ -307,66 +563,33 @@ export function clearCategorySelection() {
 
 // Clear all filters and restore default state
 export async function clearAllFilters() {
-  activeFilterType.set('none');
-  clearCategorySelection();
-  clearSizeFilter();
+  selectedCategories.set([]);
+  activeTimeFilter.set('');
+  activeSizeFilter.set('');
+  activeStatusFilter.set('');
   await Promise.all([loadGames(), loadCategories()]);
 }
 
-// Apply category filters (with faceted filtering and size combination)
+// Apply category filters (now uses unified system)
 export async function applyCategoryFilters() {
-  let currentSelected: CategoryWithCount[] = [];
-  selectedCategories.subscribe((s) => (currentSelected = s))();
-
-  let currentSizeFilter: string = '';
-  activeSizeFilter.subscribe((s) => (currentSizeFilter = s))();
-
-  if (currentSelected.length === 0) {
-    // No categories selected
-    let currentActiveFilter: string = 'none';
-    activeFilterType.subscribe((f) => (currentActiveFilter = f))();
-
-    if (currentActiveFilter === 'category' || currentActiveFilter === 'none') {
-      // Check if there's a size filter to maintain
-      if (currentSizeFilter) {
-        await applySizeFilter(currentSizeFilter);
-      } else {
-        activeFilterType.set('none');
-        await Promise.all([loadGames(), loadCategories()]);
-      }
-    }
-  } else {
-    // Categories selected - check if we need to combine with size filter
-    activeFilterType.set('category');
-    const categoryIds = currentSelected.map((c) => c.id);
-
-    if (currentSizeFilter) {
-      // Combine categories + size filter
-      const { minSize, maxSize } = getSizeFilterRange(currentSizeFilter);
-      await Promise.all([
-        loadGamesByCategoriesAndSize(categoryIds, minSize, maxSize),
-        loadFilteredCategories(categoryIds),
-      ]);
-    } else {
-      // Categories only
-      await Promise.all([loadGamesByMultipleCategories(categoryIds), loadFilteredCategories(categoryIds)]);
-    }
-  }
+  await applyAllFilters();
 }
 
-// Search games
+// Search games (clears all filters)
 export async function searchGames(query: string, limit: number = 100) {
-  // Clear selected categories when searching
-  clearCategorySelection();
+  // Clear all filters when searching
+  selectedCategories.set([]);
+  activeTimeFilter.set('');
+  activeSizeFilter.set('');
+  activeStatusFilter.set('');
 
   if (!query.trim()) {
-    // If search is cleared, restore normal state (all games and categories)
-    activeFilterType.set('none');
+    // If search is cleared, restore normal state
     await Promise.all([loadGames(limit), loadCategories()]);
     return;
   }
 
-  activeFilterType.set('none'); // Search overrides all filters
+  // Search overrides all filters
   isLoading.set(true);
   try {
     const result = await invoke<Game[]>('search_games', { query, limit });
