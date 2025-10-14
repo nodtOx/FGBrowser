@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Console-style Theme - Default */
+  --color-background: #2e3440;
+  --color-backgroundSecondary: #3b4252;
+  --color-backgroundTertiary: #434c5e;
+  --color-primary: #88c0d0;
+  --color-secondary: #5e81ac;
+  --color-text: #eceff4;
+  --color-textSecondary: #d8dee9;
+  --color-textMuted: #4c566a;
+  --color-border: #434c5e;
+  --color-hover: #4c566a;
+  --color-selected: #88c0d0;
+  --color-selectedText: #2e3440;
+  --color-success: #a3be8c;
+  --color-warning: #ebcb8b;
+  --color-error: #bf616a;
+  --color-info: #81a1c1;
+  
+  /* Layout */
+  --sidebar-width: 240px;
+  --header-height: 32px;
+  --footer-height: 24px;
+  --border-radius: 0px;
+  --spacing: 4px;
+  
+  /* Typography */
+  --base-font-size: 16px;
+  
+  /* Effects */
+  --blur: 10px;
+  --shadow: none;
+  --shadow-hover: none;
+  --transition: all 0.15s ease;
+  
+  /* Game List */
+  --row-height: 20px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  background-color: var(--color-background);
+  color: var(--color-text);
+  overflow: hidden;
+  user-select: none;
+  font-size: var(--base-font-size);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-backgroundTertiary);
+  border: 2px solid var(--color-background);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-hover);
+}
+
+/* Focus styles for keyboard navigation */
+*:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Utility classes */
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.keyboard-focus:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+

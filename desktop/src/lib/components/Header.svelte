@@ -1,0 +1,218 @@
+<script lang="ts">
+    import { currentPage, navigateTo, type Page } from '$lib/stores/navigation';
+    import { currentTheme, availableThemes, applyTheme } from '$lib/stores/theme';
+    
+    function handleNavClick(page: Page) {
+        navigateTo(page);
+    }
+    
+    let showThemeSelector = false;
+    
+    function toggleThemeSelector() {
+        showThemeSelector = !showThemeSelector;
+    }
+    
+    function selectTheme(theme: any) {
+        applyTheme(theme);
+        showThemeSelector = false;
+    }
+</script>
+
+<header class="header">
+    <div class="header-content">
+        <div class="header-left">
+            <span class="app-title">FG Browser v1.0</span>
+        </div>
+        
+        <div class="header-center">
+            <nav class="nav-tabs">
+                <button 
+                    class="nav-tab"
+                    class:active={$currentPage === 'browse'}
+                    on:click={() => handleNavClick('browse')}
+                >
+                    Browse
+                </button>
+                <button 
+                    class="nav-tab"
+                    class:active={$currentPage === 'downloads'}
+                    on:click={() => handleNavClick('downloads')}
+                >
+                    Downloads
+                </button>
+                <button 
+                    class="nav-tab"
+                    class:active={$currentPage === 'settings'}
+                    on:click={() => handleNavClick('settings')}
+                >
+                    Settings
+                </button>
+                <button 
+                    class="nav-tab"
+                    class:active={$currentPage === 'stats'}
+                    on:click={() => handleNavClick('stats')}
+                >
+                    Stats
+                </button>
+            </nav>
+        </div>
+        
+        <div class="header-right">
+            <span class="theme-btn" on:click={toggleThemeSelector} title="Change Theme (T)">
+                T
+            </span>
+            {#if showThemeSelector}
+                <div class="theme-dropdown">
+                    {#each availableThemes as theme}
+                        <button 
+                            class="theme-option"
+                            class:active={$currentTheme.name === theme.name}
+                            on:click={() => selectTheme(theme)}
+                        >
+                            {theme.name}
+                        </button>
+                    {/each}
+                </div>
+            {/if}
+        </div>
+    </div>
+</header>
+
+<style>
+    .header {
+        height: 31px;
+        background-color: var(--color-backgroundTertiary);
+        border-bottom: 1px solid var(--color-border);
+        display: flex;
+        align-items: center;
+        padding: 0;
+        font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        font-size: calc(var(--base-font-size) * 1);
+    }
+    
+    .header-content {
+        display: grid;
+        grid-template-columns: var(--sidebar-width) 1fr var(--sidebar-width);
+        align-items: center;
+        width: 100%;
+        height: 100%;
+    }
+    
+    .header-left {
+        display: flex;
+        align-items: center;
+        padding: 0 12px;
+        border-right: 1px solid var(--color-border);
+        height: 100%;
+    }
+    
+    .app-title {
+        color: var(--color-text);
+        font-weight: 600;
+        margin: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .header-center {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 12px;
+        height: 100%;
+    }
+    
+    .nav-tabs {
+        display: flex;
+        gap: 0px;
+        align-items: center;
+        height: 100%;
+    }
+    
+    .nav-tab {
+        background: none;
+        border: none;
+        color: var(--color-textSecondary);
+        padding: 4px 16px;
+        cursor: pointer;
+        font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        font-size: calc(var(--base-font-size) * 0.9);
+        font-weight: 600;
+        transition: var(--transition);
+    }
+    
+    .nav-tab:hover {
+        color: var(--color-text);
+        background-color: var(--color-hover);
+    }
+    
+    .nav-tab.active {
+        color: var(--color-selectedText);
+        background-color: var(--color-primary);
+        
+        border-bottom: none;
+    }
+    
+    .header-right {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        padding: 0 12px;
+        gap: 8px;
+        position: relative;
+        height: 100%;
+    }
+    
+    .theme-btn {
+        color: var(--color-textSecondary);
+        cursor: pointer;
+        padding: 2px 6px;
+        border: 1px solid var(--color-border);
+        background: none;
+        font-size: 11px;
+        font-weight: 600;
+        transition: var(--transition);
+    }
+    
+    .theme-btn:hover {
+        background-color: var(--color-hover);
+        color: var(--color-text);
+    }
+    
+    .theme-dropdown {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        margin-top: 2px;
+        background-color: var(--color-backgroundSecondary);
+        border: 1px solid var(--color-border);
+        z-index: 100;
+        min-width: 120px;
+    }
+    
+    .theme-option {
+        display: block;
+        width: 100%;
+        padding: 6px 12px;
+        background: none;
+        border: none;
+        color: var(--color-text);
+        font-size: 11px;
+        text-align: left;
+        cursor: pointer;
+        transition: var(--transition);
+        font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    }
+    
+    .theme-option:hover {
+        background-color: var(--color-hover);
+    }
+    
+    .theme-option.active {
+        background-color: var(--color-primary);
+        color: var(--color-selectedText);
+        font-weight: 600;
+    }
+</style>
+
