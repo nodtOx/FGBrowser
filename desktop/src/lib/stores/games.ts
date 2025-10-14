@@ -48,6 +48,9 @@ export const selectedCategories = writable<CategoryWithCount[]>([]);
 // Track active filter type to prevent conflicts
 export const activeFilterType = writable<'none' | 'category' | 'time' | 'size' | 'status'>('none');
 
+// Active size filter state
+export const activeSizeFilter = writable<string>('');
+
 // Optimization: Debouncing for category filtering
 let filterDebounceTimer: number | null = null;
 const FILTER_DEBOUNCE_MS = 200;
@@ -87,6 +90,53 @@ export async function applyTimeFilter(timeFilter: string) {
     // When filtering by time, restore all categories
     await loadCategories();
   }
+}
+
+// Helper function to convert size filter names to MB ranges
+function getSizeFilterRange(sizeFilter: string): { minSize?: number; maxSize?: number } {
+  switch (sizeFilter) {
+    case '< 1 GB':
+      return { maxSize: 1024 }; // 1 GB in MB
+    case '1-10 GB':
+      return { minSize: 1024, maxSize: 10240 }; // 1-10 GB in MB
+    case '10-25 GB':
+      return { minSize: 10240, maxSize: 25600 }; // 10-25 GB in MB
+    case '25-40 GB':
+      return { minSize: 25600, maxSize: 40960 }; // 25-40 GB in MB
+    case '40-60 GB':
+      return { minSize: 40960, maxSize: 61440 }; // 40-60 GB in MB
+    case '> 60 GB':
+      return { minSize: 61440 }; // 60+ GB in MB
+    default:
+      return {};
+  }
+}
+
+// Apply size filter (works with categories)
+export async function applySizeFilter(sizeFilter: string) {
+  activeSizeFilter.set(sizeFilter);
+  const { minSize, maxSize } = getSizeFilterRange(sizeFilter);
+
+  // Get current selected categories
+  let currentSelected: CategoryWithCount[] = [];
+  selectedCategories.subscribe((s) => (currentSelected = s))();
+
+  if (currentSelected.length > 0) {
+    // Combine category + size filters
+    activeFilterType.set('category'); // Keep category as primary filter type
+    const categoryIds = currentSelected.map((c) => c.id);
+    await loadGamesByCategoriesAndSize(categoryIds, minSize, maxSize);
+  } else {
+    // Size filter only
+    activeFilterType.set('size');
+    await loadGamesBySize(minSize, maxSize);
+    await loadCategories(); // Show all categories when no categories selected
+  }
+}
+
+// Clear size filter
+export function clearSizeFilter() {
+  activeSizeFilter.set('');
 }
 
 // Load games from database
@@ -187,6 +237,55 @@ export async function loadGamesByDateRange(daysAgo: number, limit: number = 1000
   }
 }
 
+// Load games by size range
+export async function loadGamesBySize(minSize?: number, maxSize?: number, limit: number = 1000, offset: number = 0) {
+  isLoading.set(true);
+  try {
+    const result = await invoke<Game[]>('get_games_by_size_range', {
+      minSize: minSize || null,
+      maxSize: maxSize || null,
+      limit,
+      offset,
+    });
+    games.set(result);
+    if (result.length > 0) {
+      await selectGame(0);
+    }
+  } catch (error) {
+    console.error('Failed to load games by size range:', error);
+  } finally {
+    isLoading.set(false);
+  }
+}
+
+// Load games by categories AND size (combined filters)
+export async function loadGamesByCategoriesAndSize(
+  categoryIds: number[],
+  minSize?: number,
+  maxSize?: number,
+  limit: number = 1000,
+  offset: number = 0,
+) {
+  isLoading.set(true);
+  try {
+    const result = await invoke<Game[]>('get_games_by_categories_and_size', {
+      categoryIds,
+      minSize: minSize || null,
+      maxSize: maxSize || null,
+      limit,
+      offset,
+    });
+    games.set(result);
+    if (result.length > 0) {
+      await selectGame(0);
+    }
+  } catch (error) {
+    console.error('Failed to load games by categories and size:', error);
+  } finally {
+    isLoading.set(false);
+  }
+}
+
 // Toggle category selection
 export function toggleCategorySelection(category: CategoryWithCount) {
   selectedCategories.update((selected) => {
@@ -210,28 +309,48 @@ export function clearCategorySelection() {
 export async function clearAllFilters() {
   activeFilterType.set('none');
   clearCategorySelection();
+  clearSizeFilter();
   await Promise.all([loadGames(), loadCategories()]);
 }
 
-// Apply category filters (with faceted filtering)
+// Apply category filters (with faceted filtering and size combination)
 export async function applyCategoryFilters() {
   let currentSelected: CategoryWithCount[] = [];
   selectedCategories.subscribe((s) => (currentSelected = s))();
 
+  let currentSizeFilter: string = '';
+  activeSizeFilter.subscribe((s) => (currentSizeFilter = s))();
+
   if (currentSelected.length === 0) {
-    // No categories selected - only load all games if no other filter is active
+    // No categories selected
     let currentActiveFilter: string = 'none';
     activeFilterType.subscribe((f) => (currentActiveFilter = f))();
 
     if (currentActiveFilter === 'category' || currentActiveFilter === 'none') {
-      activeFilterType.set('none');
-      await Promise.all([loadGames(), loadCategories()]);
+      // Check if there's a size filter to maintain
+      if (currentSizeFilter) {
+        await applySizeFilter(currentSizeFilter);
+      } else {
+        activeFilterType.set('none');
+        await Promise.all([loadGames(), loadCategories()]);
+      }
     }
   } else {
-    // Categories selected - filter both games and categories
+    // Categories selected - check if we need to combine with size filter
     activeFilterType.set('category');
     const categoryIds = currentSelected.map((c) => c.id);
-    await Promise.all([loadGamesByMultipleCategories(categoryIds), loadFilteredCategories(categoryIds)]);
+
+    if (currentSizeFilter) {
+      // Combine categories + size filter
+      const { minSize, maxSize } = getSizeFilterRange(currentSizeFilter);
+      await Promise.all([
+        loadGamesByCategoriesAndSize(categoryIds, minSize, maxSize),
+        loadFilteredCategories(categoryIds),
+      ]);
+    } else {
+      // Categories only
+      await Promise.all([loadGamesByMultipleCategories(categoryIds), loadFilteredCategories(categoryIds)]);
+    }
   }
 }
 

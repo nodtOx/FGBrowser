@@ -187,6 +187,33 @@ pub async fn get_games_by_date_range(
 }
 
 #[tauri::command]
+pub async fn get_games_by_size_range(
+    min_size: Option<i64>,
+    max_size: Option<i64>,
+    limit: i32,
+    offset: i32,
+    state: State<'_, AppState>,
+) -> Result<Vec<Game>, String> {
+    let db_path = state.db_path.lock().unwrap().clone();
+    let db = Database::new(db_path).map_err(|e| e.to_string())?;
+    db.get_games_by_size_range(min_size, max_size, limit, offset).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_games_by_categories_and_size(
+    category_ids: Vec<i64>,
+    min_size: Option<i64>,
+    max_size: Option<i64>,
+    limit: i32,
+    offset: i32,
+    state: State<'_, AppState>,
+) -> Result<Vec<Game>, String> {
+    let db_path = state.db_path.lock().unwrap().clone();
+    let db = Database::new(db_path).map_err(|e| e.to_string())?;
+    db.get_games_by_categories_and_size(&category_ids, min_size, max_size, limit, offset).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub async fn get_games_by_category(
     category_id: i64,
     limit: i32,
