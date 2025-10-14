@@ -1,9 +1,10 @@
 mod commands;
+mod crawler;
 mod database;
 
 use commands::{
     copy_to_clipboard, get_all_games, get_database_stats, get_disk_info, get_game_details,
-    open_magnet_link, search_games, AppState,
+    get_settings, open_magnet_link, save_settings, search_games, start_crawler, AppState,
 };
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -45,7 +46,6 @@ pub fn run() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_fs::init())
         .manage(AppState {
             db_path: Mutex::new(db_path),
@@ -57,7 +57,10 @@ pub fn run() {
             get_database_stats,
             open_magnet_link,
             copy_to_clipboard,
-            get_disk_info
+            get_disk_info,
+            start_crawler,
+            get_settings,
+            save_settings
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
