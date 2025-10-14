@@ -19,8 +19,18 @@
         <div class="details-content">
             <div class="info-grid">
                 <div class="info-item">
-                    <span class="info-label">Genre:</span>
-                    <span class="info-value">{$selectedGame.genres_tags || 'N/A'}</span>
+                    <span class="info-label">Categories:</span>
+                    <div class="info-value">
+                        {#if $selectedGame.categories && $selectedGame.categories.length > 0}
+                            <div class="categories-list">
+                                {#each $selectedGame.categories as category}
+                                    <span class="category-tag">{category.name}</span>
+                                {/each}
+                            </div>
+                        {:else}
+                            N/A
+                        {/if}
+                    </div>
                 </div>
                 
                 <div class="info-item">
@@ -211,6 +221,23 @@
         justify-content: center;
         height: 100%;
         color: var(--color-textMuted);
+    }
+    
+    .categories-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    
+    .category-tag {
+        background-color: var(--color-backgroundTertiary);
+        color: var(--color-text);
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 500;
+        border: 1px solid var(--color-border);
+        white-space: nowrap;
     }
 </style>
 
