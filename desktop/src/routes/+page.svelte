@@ -15,6 +15,10 @@
 
   import '../app.css';
 
+  // Configuration
+  const GAMES_LOAD_LIMIT = 100; // Number of games to load at once
+  const POLLING_INTERVAL_MS = 2000; // How often to poll for new games during crawling
+
   let showCrawlerModal = false;
   let pollingInterval: any;
 
@@ -34,13 +38,13 @@
         showCrawlerModal = true;
       } else {
         // Database has data, check for updates
-        await loadGames(100);
+        await loadGames(GAMES_LOAD_LIMIT);
         checkForUpdates();
       }
     } catch (error) {
       console.error('Error checking database:', error);
       // Try to load games anyway
-      await loadGames(100);
+      await loadGames(GAMES_LOAD_LIMIT);
     }
   }
 
@@ -66,7 +70,7 @@
         showCrawlerModal = false;
         isUpdating = false;
         stopPollingGames();
-        loadGames(100);
+        loadGames(GAMES_LOAD_LIMIT);
       }, 1500);
     } catch (error) {
       console.error('Error updating database:', error);
@@ -79,8 +83,8 @@
   function startPollingGames() {
     // Poll every 2 seconds to update game list while crawler is running
     pollingInterval = setInterval(async () => {
-      await loadGames(100);
-    }, 2000);
+      await loadGames(GAMES_LOAD_LIMIT);
+    }, POLLING_INTERVAL_MS);
   }
 
   function stopPollingGames() {

@@ -190,19 +190,20 @@ pub struct CrawlProgress {
 
 #[tauri::command]
 pub async fn start_crawler(
-    max_pages: Option<u32>,
     state: State<'_, AppState>,
 ) -> Result<CrawlProgress, String> {
     use std::time::Instant;
     
+    // HARDCODED: Always crawl exactly 10 pages
+    const MAX_PAGES: u32 = 10;
+    
+    println!("\n🚀 START_CRAWLER FUNCTION CALLED!");
+    println!("🔧 HARDCODED: Will crawl exactly {} pages", MAX_PAGES);
+    
     let start_time = Instant::now();
     println!("\n{}", "=".repeat(80));
     println!("CRAWLER STARTED");
-    if let Some(max) = max_pages {
-        println!("Mode: Quick Start ({} pages)", max);
-    } else {
-        println!("Mode: Full Database (all pages)");
-    }
+    println!("Mode: Quick Start ({} pages) - HARDCODED", MAX_PAGES);
     println!("{}", "=".repeat(80));
     
     // Create crawler
@@ -214,11 +215,11 @@ pub async fn start_crawler(
     let mut current_page = 1u32;
     
     loop {
-        // Check if we've reached max_pages
-        if let Some(max) = max_pages {
-            if current_page > max {
-                break;
-            }
+        // Check if we've reached max_pages (HARDCODED)
+        println!("[DEBUG] Checking page limit: current_page={}, max={}", current_page, MAX_PAGES);
+        if current_page > MAX_PAGES {
+            println!("[DEBUG] Reached max pages ({}), breaking loop", MAX_PAGES);
+            break;
         }
         
         // Crawl single page (includes delay)
@@ -343,6 +344,7 @@ pub async fn get_settings(state: State<'_, AppState>) -> Result<AppSettings, Str
     db.get_settings().map_err(|e| e.to_string())
 }
 
+
 #[tauri::command]
 pub async fn save_settings(
     settings: AppSettings,
@@ -405,18 +407,21 @@ pub async fn update_database(
                     break;
                 }
                 
-                // Filter out games that are older than or equal to our latest date
+                // Filter out games that already exist in database by URL
+                // This is more reliable than date comparison
                 let new_repacks: Vec<_> = repacks
                     .into_iter()
                     .filter(|r| {
-                        if let Some(ref game_date) = r.date {
-                            if let Some(ref latest) = latest_date {
-                                game_date > latest
-                            } else {
-                                true
-                            }
-                        } else {
-                            true
+                        // Check if this URL already exists in database
+                        let exists: Result<i64, _> = db.conn.query_row(
+                            "SELECT COUNT(*) FROM repacks WHERE url = ?1",
+                            [&r.url],
+                            |row| row.get(0),
+                        );
+                        
+                        match exists {
+                            Ok(count) => count == 0, // Include if doesn't exist
+                            Err(_) => true, // Include on error
                         }
                     })
                     .collect();

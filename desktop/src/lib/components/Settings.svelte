@@ -156,9 +156,8 @@
     crawlerProgress = 'Starting crawler...';
 
     try {
-      const result: any = await invoke('start_crawler', {
-        maxPages: crawlerMaxPages > 0 ? crawlerMaxPages : null,
-      });
+      console.log('⚙️ Settings calling start_crawler (no parameters - hardcoded in Rust)');
+      const result: any = await invoke('start_crawler');
 
       crawlerProgress = `Completed! Found ${result.total_games} games`;
 

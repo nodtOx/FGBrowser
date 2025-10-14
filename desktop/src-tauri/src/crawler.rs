@@ -93,6 +93,13 @@ impl FitGirlCrawler {
 
         let html = self.fetch_page(&url).await?;
         let document = Html::parse_document(&html);
+        
+        // Extract total pages from pagination (only on first page)
+        if page_num == 1 {
+            if let Some(total) = self.extract_total_pages(&document) {
+                println!("  [INFO] Total pages available: {}", total);
+            }
+        }
 
         let article_selector = Selector::parse("article").unwrap();
         let mut repacks = Vec::new();
@@ -109,6 +116,30 @@ impl FitGirlCrawler {
         }
 
         Ok(repacks)
+    }
+    
+    fn extract_total_pages(&self, document: &Html) -> Option<u32> {
+        let pagination_selector = Selector::parse(".pagination a.page-numbers").unwrap();
+        let mut max_page = 1u32;
+        
+        for elem in document.select(&pagination_selector) {
+            if let Some(href) = elem.value().attr("href") {
+                // Extract page number from URL like "/page/673/"
+                if let Some(page_str) = href.split("/page/").nth(1) {
+                    if let Some(num_str) = page_str.split('/').next() {
+                        if let Ok(page_num) = num_str.parse::<u32>() {
+                            max_page = max_page.max(page_num);
+                        }
+                    }
+                }
+            }
+        }
+        
+        if max_page > 1 {
+            Some(max_page)
+        } else {
+            None
+        }
     }
 
     fn extract_repack_from_article(&self, article: &scraper::ElementRef) -> Option<GameRepack> {
@@ -160,66 +191,103 @@ impl FitGirlCrawler {
     fn extract_game_details(&self, content: &scraper::ElementRef) -> GameDetails {
         let mut details = GameDetails::default();
 
-        // Get all text from content
-        let full_text: String = content.text().collect();
-        
-        // Debug: Print first 500 chars to see what we're working with
-        if full_text.len() > 50 {
-            println!("  [DEBUG] Text preview: {}", &full_text[..std::cmp::min(500, full_text.len())]);
-        }
-
-        // Extract genres/tags
-        if let Ok(re) = Regex::new(r"(?i)Genres?[/\s]*Tags?:\s*(.+?)(?=Compan|Languages?|Original|$)") {
-            if let Some(caps) = re.captures(&full_text) {
-                details.genres_tags = Some(caps[1].trim().to_string());
+        // EXACTLY like Python: Look for the game info section (usually in <h3>)
+        let h3_selector = Selector::parse("h3").unwrap();
+        if let Some(info_section) = content.select(&h3_selector).next() {
+            // Get all text until next heading or download section (like Python)
+            let mut text_parts = Vec::new();
+            
+            // Collect text from all siblings until we hit another h3
+            for sibling in info_section.next_siblings() {
+                if let Some(element) = scraper::ElementRef::wrap(sibling) {
+                    // Stop if we hit another h3
+                    if element.value().name() == "h3" {
+                        break;
+                    }
+                    // Collect text from this element
+                    let text: String = element.text().collect();
+                    if !text.trim().is_empty() {
+                        text_parts.push(text.trim().to_string());
+                    }
+                }
             }
-        }
-
-        // Extract company
-        if let Ok(re) = Regex::new(r"(?i)Compan(?:y|ies):\s*(.+?)(?=Languages?|Original|Repack|$)") {
-            if let Some(caps) = re.captures(&full_text) {
-                details.company = Some(caps[1].trim().to_string());
+            
+            // Join and parse the combined text (like Python: " ".join(text_parts))
+            let full_text = text_parts.join(" ");
+            
+            println!("[DEBUG] Combined text from siblings: {}", &full_text[..full_text.len().min(500)]);
+            
+            // Extract using simple string operations (like Python approach)
+            // Genres/Tags
+            if let Some(genres_start) = full_text.find("Genres/Tags:") {
+                let after = &full_text[genres_start + 12..];
+                let end = after.find("Companies:").or_else(|| after.find("Company:")).unwrap_or(after.len());
+                details.genres_tags = Some(after[..end].trim().to_string());
+                println!("[DEBUG] Extracted Genres: {:?}", details.genres_tags);
             }
-        }
-
-        // Extract languages
-        if let Ok(re) = Regex::new(r"(?i)Languages?:\s*(.+?)(?=Original|Repack|This game|$)") {
-            if let Some(caps) = re.captures(&full_text) {
-                details.languages = Some(caps[1].trim().to_string());
+            
+            // Company/Companies
+            if let Some(start) = full_text.find("Companies:") {
+                let after = &full_text[start + 10..];
+                let end = after.find("Languages:").or_else(|| after.find("Language:")).unwrap_or(after.len());
+                details.company = Some(after[..end].trim().to_string());
+                println!("[DEBUG] Extracted Company: {:?}", details.company);
+            } else if let Some(start) = full_text.find("Company:") {
+                let after = &full_text[start + 8..];
+                let end = after.find("Languages:").or_else(|| after.find("Language:")).unwrap_or(after.len());
+                details.company = Some(after[..end].trim().to_string());
+                println!("[DEBUG] Extracted Company: {:?}", details.company);
             }
-        }
-
-        // Extract original size
-        if let Ok(re) = Regex::new(r"(?i)Original Size:\s*(.+?)(?=\[|Repack|$)") {
-            if let Some(caps) = re.captures(&full_text) {
-                let size = caps[1].trim();
-                // Clean up the size string
-                let cleaned_size = size
-                    .lines()
-                    .next()
-                    .unwrap_or(size)
-                    .trim()
-                    .to_string();
-                details.original_size = Some(cleaned_size);
+            
+            // Languages
+            if let Some(start) = full_text.find("Languages:") {
+                let after = &full_text[start + 10..];
+                let end = after.find("Original Size:").or_else(|| after.find("This game")).unwrap_or(after.len());
+                details.languages = Some(after[..end].trim().to_string());
+                println!("[DEBUG] Extracted Languages: {:?}", details.languages);
+            } else if let Some(start) = full_text.find("Language:") {
+                let after = &full_text[start + 9..];
+                let end = after.find("Original Size:").or_else(|| after.find("This game")).unwrap_or(after.len());
+                details.languages = Some(after[..end].trim().to_string());
+                println!("[DEBUG] Extracted Languages: {:?}", details.languages);
             }
-        }
-
-        // Extract repack size
-        if let Ok(re) = Regex::new(r"(?i)Repack Size:\s*(.+?)(?=\[|Download|$)") {
-            if let Some(caps) = re.captures(&full_text) {
-                let size = caps[1].trim();
-                // Clean up the size string
-                let cleaned_size = size
-                    .lines()
-                    .next()
-                    .unwrap_or(size)
-                    .trim()
-                    .to_string();
-                details.repack_size = Some(cleaned_size);
+            
+            // Original Size
+            if let Some(start) = full_text.find("Original Size:") {
+                let after = &full_text[start + 14..];
+                let end = after.find("Repack Size:").unwrap_or(after.len().min(100));
+                details.original_size = Some(after[..end].trim().to_string());
+                println!("[DEBUG] Extracted Original Size: {:?}", details.original_size);
+            }
+            
+            // Repack Size
+            if let Some(start) = full_text.find("Repack Size:") {
+                let after = &full_text[start + 12..];
+                let end = after.find("Download").unwrap_or(after.len().min(100));
+                details.repack_size = Some(after[..end].trim().to_string());
+                println!("[DEBUG] Extracted Repack Size: {:?}", details.repack_size);
             }
         }
 
         details
+    }
+    
+    fn strip_html_tags(&self, html: &str) -> String {
+        // Simple HTML tag stripper - replace tags with spaces to preserve word boundaries
+        let tag_re = Regex::new(r"<[^>]*>").unwrap();
+        let text = tag_re.replace_all(html, " ");
+        
+        // Decode HTML entities
+        let text = text.replace("&amp;", "&");
+        let text = text.replace("&lt;", "<");
+        let text = text.replace("&gt;", ">");
+        let text = text.replace("&quot;", "\"");
+        let text = text.replace("&#038;", "&");
+        let text = text.replace("&nbsp;", " ");
+        
+        // Normalize whitespace
+        let whitespace_re = Regex::new(r"\s+").unwrap();
+        whitespace_re.replace_all(&text, " ").trim().to_string()
     }
 
     fn extract_magnet_links(&self, content: &scraper::ElementRef) -> Vec<MagnetLink> {

@@ -65,7 +65,6 @@
         padding: 3px 12px;
         gap: 16px;
         cursor: pointer;
-        
         border-bottom: 1px solid transparent;
     }
     
