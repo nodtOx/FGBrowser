@@ -37,7 +37,61 @@ pub struct Database {
 impl Database {
     pub fn new(db_path: PathBuf) -> Result<Self> {
         let conn = Connection::open(db_path)?;
-        Ok(Self { conn })
+        let db = Self { conn };
+        db.init_tables()?;
+        Ok(db)
+    }
+    
+    pub fn init_tables(&self) -> Result<()> {
+        // Create repacks table
+        self.conn.execute(
+            "CREATE TABLE IF NOT EXISTS repacks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                genres_tags TEXT,
+                company TEXT,
+                languages TEXT,
+                original_size TEXT,
+                repack_size TEXT,
+                url TEXT UNIQUE,
+                date TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )",
+            [],
+        )?;
+        
+        // Create magnet_links table
+        self.conn.execute(
+            "CREATE TABLE IF NOT EXISTS magnet_links (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                repack_id INTEGER NOT NULL,
+                source TEXT NOT NULL,
+                magnet TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (repack_id) REFERENCES repacks (id) ON DELETE CASCADE,
+                UNIQUE(repack_id, source)
+            )",
+            [],
+        )?;
+        
+        // Create indexes
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_repacks_title ON repacks(title)",
+            [],
+        )?;
+        
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_repacks_date ON repacks(date)",
+            [],
+        )?;
+        
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_magnet_links_repack_id ON magnet_links(repack_id)",
+            [],
+        )?;
+        
+        Ok(())
     }
 
     pub fn search_games(&self, query: &str, limit: i32) -> Result<Vec<Game>> {
@@ -149,6 +203,18 @@ impl Database {
             total_games,
             total_magnets,
         })
+    }
+    
+    pub fn get_latest_game_date(&self) -> Result<Option<String>> {
+        match self.conn.query_row(
+            "SELECT date FROM repacks WHERE date IS NOT NULL ORDER BY date DESC LIMIT 1",
+            [],
+            |row| row.get(0),
+        ) {
+            Ok(date) => Ok(Some(date)),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+            Err(e) => Err(e),
+        }
     }
 }
 

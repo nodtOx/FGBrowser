@@ -42,42 +42,49 @@
         console.log('Status selected:', status);
         // TODO: Filter by download status
     }
+    
+    function handleKeydown(e: KeyboardEvent, action: () => void) {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            action();
+        }
+    }
 </script>
 
 <div class="sidebar">
     <div class="sidebar-section">
         <div class="section-title">Categories</div>
-        <div class="sidebar-item" class:active={activeCategory === 'All Games'} on:click={() => selectCategory('All Games')}>
+        <div class="sidebar-item" class:active={activeCategory === 'All Games'} on:click={() => selectCategory('All Games')} on:keydown={(e) => handleKeydown(e, () => selectCategory('All Games'))} role="button" tabindex="0">
             All ({totalGames})
         </div>
-        <div class="sidebar-item" class:active={activeCategory === 'Action'} on:click={() => selectCategory('Action')}>Action</div>
-        <div class="sidebar-item" class:active={activeCategory === 'Adventure'} on:click={() => selectCategory('Adventure')}>Adventure</div>
-        <div class="sidebar-item" class:active={activeCategory === 'Racing'} on:click={() => selectCategory('Racing')}>Racing</div>
-        <div class="sidebar-item" class:active={activeCategory === 'RPG'} on:click={() => selectCategory('RPG')}>RPG</div>
-        <div class="sidebar-item" class:active={activeCategory === 'Simulation'} on:click={() => selectCategory('Simulation')}>Simulation</div>
-        <div class="sidebar-item" class:active={activeCategory === 'Sports'} on:click={() => selectCategory('Sports')}>Sports</div>
-        <div class="sidebar-item" class:active={activeCategory === 'Strategy'} on:click={() => selectCategory('Strategy')}>Strategy</div>
+        <div class="sidebar-item" class:active={activeCategory === 'Action'} on:click={() => selectCategory('Action')} on:keydown={(e) => handleKeydown(e, () => selectCategory('Action'))} role="button" tabindex="0">Action</div>
+        <div class="sidebar-item" class:active={activeCategory === 'Adventure'} on:click={() => selectCategory('Adventure')} on:keydown={(e) => handleKeydown(e, () => selectCategory('Adventure'))} role="button" tabindex="0">Adventure</div>
+        <div class="sidebar-item" class:active={activeCategory === 'Racing'} on:click={() => selectCategory('Racing')} on:keydown={(e) => handleKeydown(e, () => selectCategory('Racing'))} role="button" tabindex="0">Racing</div>
+        <div class="sidebar-item" class:active={activeCategory === 'RPG'} on:click={() => selectCategory('RPG')} on:keydown={(e) => handleKeydown(e, () => selectCategory('RPG'))} role="button" tabindex="0">RPG</div>
+        <div class="sidebar-item" class:active={activeCategory === 'Simulation'} on:click={() => selectCategory('Simulation')} on:keydown={(e) => handleKeydown(e, () => selectCategory('Simulation'))} role="button" tabindex="0">Simulation</div>
+        <div class="sidebar-item" class:active={activeCategory === 'Sports'} on:click={() => selectCategory('Sports')} on:keydown={(e) => handleKeydown(e, () => selectCategory('Sports'))} role="button" tabindex="0">Sports</div>
+        <div class="sidebar-item" class:active={activeCategory === 'Strategy'} on:click={() => selectCategory('Strategy')} on:keydown={(e) => handleKeydown(e, () => selectCategory('Strategy'))} role="button" tabindex="0">Strategy</div>
     </div>
     
     <div class="sidebar-section">
         <div class="section-title">Recent</div>
-        <div class="sidebar-item" class:active={activeRecent === 'Today'} on:click={() => selectRecent('Today')}>Today</div>
-        <div class="sidebar-item" class:active={activeRecent === 'This Week'} on:click={() => selectRecent('This Week')}>This Week</div>
-        <div class="sidebar-item" class:active={activeRecent === 'This Month'} on:click={() => selectRecent('This Month')}>This Month</div>
+        <div class="sidebar-item" class:active={activeRecent === 'Today'} on:click={() => selectRecent('Today')} on:keydown={(e) => handleKeydown(e, () => selectRecent('Today'))} role="button" tabindex="0">Today</div>
+        <div class="sidebar-item" class:active={activeRecent === 'This Week'} on:click={() => selectRecent('This Week')} on:keydown={(e) => handleKeydown(e, () => selectRecent('This Week'))} role="button" tabindex="0">This Week</div>
+        <div class="sidebar-item" class:active={activeRecent === 'This Month'} on:click={() => selectRecent('This Month')} on:keydown={(e) => handleKeydown(e, () => selectRecent('This Month'))} role="button" tabindex="0">This Month</div>
     </div>
     
     <div class="sidebar-section">
         <div class="section-title">Size</div>
-        <div class="sidebar-item" class:active={activeSize === '< 10 GB'} on:click={() => selectSize('< 10 GB')}>{'<'} 10 GB</div>
-        <div class="sidebar-item" class:active={activeSize === '10-50 GB'} on:click={() => selectSize('10-50 GB')}>10-50 GB</div>
-        <div class="sidebar-item" class:active={activeSize === '> 50 GB'} on:click={() => selectSize('> 50 GB')}>{'>'} 50 GB</div>
+        <div class="sidebar-item" class:active={activeSize === '< 10 GB'} on:click={() => selectSize('< 10 GB')} on:keydown={(e) => handleKeydown(e, () => selectSize('< 10 GB'))} role="button" tabindex="0">{'<'} 10 GB</div>
+        <div class="sidebar-item" class:active={activeSize === '10-50 GB'} on:click={() => selectSize('10-50 GB')} on:keydown={(e) => handleKeydown(e, () => selectSize('10-50 GB'))} role="button" tabindex="0">10-50 GB</div>
+        <div class="sidebar-item" class:active={activeSize === '> 50 GB'} on:click={() => selectSize('> 50 GB')} on:keydown={(e) => handleKeydown(e, () => selectSize('> 50 GB'))} role="button" tabindex="0">{'>'} 50 GB</div>
     </div>
     
     <div class="sidebar-section">
         <div class="section-title">Status</div>
-        <div class="sidebar-item" class:active={activeStatus === 'Available'} on:click={() => selectStatus('Available')}>Available</div>
-        <div class="sidebar-item" class:active={activeStatus === 'Downloading'} on:click={() => selectStatus('Downloading')}>Downloading</div>
-        <div class="sidebar-item" class:active={activeStatus === 'Completed'} on:click={() => selectStatus('Completed')}>Completed</div>
+        <div class="sidebar-item" class:active={activeStatus === 'Available'} on:click={() => selectStatus('Available')} on:keydown={(e) => handleKeydown(e, () => selectStatus('Available'))} role="button" tabindex="0">Available</div>
+        <div class="sidebar-item" class:active={activeStatus === 'Downloading'} on:click={() => selectStatus('Downloading')} on:keydown={(e) => handleKeydown(e, () => selectStatus('Downloading'))} role="button" tabindex="0">Downloading</div>
+        <div class="sidebar-item" class:active={activeStatus === 'Completed'} on:click={() => selectStatus('Completed')} on:keydown={(e) => handleKeydown(e, () => selectStatus('Completed'))} role="button" tabindex="0">Completed</div>
     </div>
 </div>
 

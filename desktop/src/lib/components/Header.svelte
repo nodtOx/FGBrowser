@@ -1,6 +1,15 @@
 <script lang="ts">
     import { currentPage, navigateTo, type Page } from '$lib/stores/navigation';
-    import { currentTheme, availableThemes, applyTheme } from '$lib/stores/theme';
+    import { applyTheme, availableThemes, currentTheme } from '$lib/stores/theme';
+    import { invoke } from '@tauri-apps/api/core';
+    import { onMount } from 'svelte';
+    
+    let isDev = false;
+    
+    onMount(() => {
+        // Check if we're in development mode
+        isDev = window.location.hostname === 'localhost' || window.location.hostname === 'tauri.localhost';
+    });
     
     function handleNavClick(page: Page) {
         navigateTo(page);
@@ -15,6 +24,21 @@
     function selectTheme(theme: any) {
         applyTheme(theme);
         showThemeSelector = false;
+    }
+    
+    async function handleReset() {
+        if (!confirm('This will delete the database and restart the app. Continue?')) {
+            return;
+        }
+        
+        try {
+            await invoke('reset_database');
+            // Reload the window to restart the app
+            window.location.reload();
+        } catch (error) {
+            console.error('Failed to reset:', error);
+            alert('Failed to reset database: ' + error);
+        }
     }
 </script>
 
@@ -58,6 +82,11 @@
         </div>
         
         <div class="header-right">
+            {#if isDev}
+                <span class="reset-btn" on:click={handleReset} title="Reset Database & Restart (Dev Only)">
+                    R
+                </span>
+            {/if}
             <span class="theme-btn" on:click={toggleThemeSelector} title="Change Theme (T)">
                 T
             </span>
@@ -164,6 +193,22 @@
         height: 100%;
     }
     
+    .reset-btn {
+        color: var(--color-error);
+        cursor: pointer;
+        padding: 2px 6px;
+        border: 1px solid var(--color-border);
+        background: none;
+        font-size: 11px;
+        font-weight: 600;
+    }
+    
+    .reset-btn:hover {
+        background-color: var(--color-error);
+        color: var(--color-background);
+        border-color: var(--color-error);
+    }
+    
     .theme-btn {
         color: var(--color-textSecondary);
         cursor: pointer;
@@ -172,7 +217,6 @@
         background: none;
         font-size: 11px;
         font-weight: 600;
-        transition: var(--transition);
     }
     
     .theme-btn:hover {

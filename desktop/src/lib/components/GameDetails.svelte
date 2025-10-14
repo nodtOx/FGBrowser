@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { selectedGame, openMagnetLink, copyMagnetLink } from '$lib/stores/games';
+    import { copyMagnetLink, openMagnetLink, selectedGame } from '$lib/stores/games';
     
     async function handleOpenMagnet(magnet: string) {
         await openMagnetLink(magnet);
@@ -158,7 +158,6 @@
         gap: 12px;
         padding: 12px;
         background-color: var(--color-backgroundTertiary);
-        border-radius: var(--border-radius);
     }
     
     .magnet-index {
@@ -180,7 +179,6 @@
     .btn {
         padding: 6px 16px;
         border: none;
-        border-radius: var(--border-radius);
         cursor: pointer;
         font-size: 12px;
         font-weight: 500;

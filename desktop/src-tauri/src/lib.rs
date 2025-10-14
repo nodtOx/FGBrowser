@@ -4,7 +4,8 @@ mod database;
 
 use commands::{
     copy_to_clipboard, get_all_games, get_database_stats, get_disk_info, get_game_details,
-    get_settings, open_magnet_link, save_settings, search_games, start_crawler, AppState,
+    get_settings, is_database_empty, open_magnet_link, reset_database, save_settings, 
+    search_games, start_crawler, update_database, AppState,
 };
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -55,12 +56,15 @@ pub fn run() {
             get_all_games,
             get_game_details,
             get_database_stats,
+            is_database_empty,
             open_magnet_link,
             copy_to_clipboard,
             get_disk_info,
             start_crawler,
+            update_database,
             get_settings,
-            save_settings
+            save_settings,
+            reset_database
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

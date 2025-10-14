@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use regex::Regex;
 use reqwest::Client;
 use scraper::{Html, Selector};
@@ -127,8 +127,11 @@ impl FitGirlCrawler {
         let date = article.select(&date_selector).next().and_then(|elem| {
             elem.value()
                 .attr("datetime")
-                .or_else(|| Some(elem.text().collect::<String>().trim()))
                 .map(|s| s.to_string())
+                .or_else(|| {
+                    let text: String = elem.text().collect();
+                    Some(text.trim().to_string())
+                })
         });
 
         // Extract content
@@ -136,10 +139,10 @@ impl FitGirlCrawler {
         let content = article.select(&content_selector).next()?;
 
         // Extract game details
-        let details = self.extract_game_details(content);
+        let details = self.extract_game_details(&content);
 
         // Extract magnet links
-        let magnet_links = self.extract_magnet_links(content);
+        let magnet_links = self.extract_magnet_links(&content);
 
         Some(GameRepack {
             title,
@@ -159,6 +162,11 @@ impl FitGirlCrawler {
 
         // Get all text from content
         let full_text: String = content.text().collect();
+        
+        // Debug: Print first 500 chars to see what we're working with
+        if full_text.len() > 50 {
+            println!("  [DEBUG] Text preview: {}", &full_text[..std::cmp::min(500, full_text.len())]);
+        }
 
         // Extract genres/tags
         if let Ok(re) = Regex::new(r"(?i)Genres?[/\s]*Tags?:\s*(.+?)(?=Compan|Languages?|Original|$)") {
@@ -182,16 +190,32 @@ impl FitGirlCrawler {
         }
 
         // Extract original size
-        if let Ok(re) = Regex::new(r"(?i)Original Size:\s*(.+?)(?=Repack|$)") {
+        if let Ok(re) = Regex::new(r"(?i)Original Size:\s*(.+?)(?=\[|Repack|$)") {
             if let Some(caps) = re.captures(&full_text) {
-                details.original_size = Some(caps[1].trim().to_string());
+                let size = caps[1].trim();
+                // Clean up the size string
+                let cleaned_size = size
+                    .lines()
+                    .next()
+                    .unwrap_or(size)
+                    .trim()
+                    .to_string();
+                details.original_size = Some(cleaned_size);
             }
         }
 
         // Extract repack size
-        if let Ok(re) = Regex::new(r"(?i)Repack Size:\s*(.+?)(?=Download|$)") {
+        if let Ok(re) = Regex::new(r"(?i)Repack Size:\s*(.+?)(?=\[|Download|$)") {
             if let Some(caps) = re.captures(&full_text) {
-                details.repack_size = Some(caps[1].trim().to_string());
+                let size = caps[1].trim();
+                // Clean up the size string
+                let cleaned_size = size
+                    .lines()
+                    .next()
+                    .unwrap_or(size)
+                    .trim()
+                    .to_string();
+                details.repack_size = Some(cleaned_size);
             }
         }
 
