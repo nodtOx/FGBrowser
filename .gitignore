@@ -22,4 +22,7 @@ config/blacklist.txt
 # Test/temporary files
 test_*.py
 copy-pages/
+page*.html
+game_page.html
+rss_feed.xml
 

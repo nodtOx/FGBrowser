@@ -1,6 +1,5 @@
 <script lang="ts">
     import { invoke } from '@tauri-apps/api/core';
-    import { onMount } from 'svelte';
     
     export let isOpen = false;
     export let isUpdating = false;
@@ -8,20 +7,25 @@
     export let onComplete: () => void = () => {};
     export let onStart: () => void = () => {};
     
+    // Configuration
+    const MAX_PAGES = 10;
+    const GAMES_PER_PAGE = 10;
+    const MODAL_CLOSE_DELAY_MS = 1500; // Delay before closing modal after completion
+    
     let status = 'Initializing crawler...';
     let crawlerRunning = false;
-    let estimatedTotal = 500; // 50 pages estimate
+    let estimatedTotal = MAX_PAGES * GAMES_PER_PAGE;
     
     interface CrawlResult {
         total_games: number;
         status: string;
     }
     
-    onMount(() => {
-        if (isOpen && !crawlerRunning && !isUpdating) {
-            startCrawl();
-        }
-    });
+    // Watch for changes in isOpen - only trigger once
+    $: if (isOpen && !crawlerRunning && !isUpdating) {
+        console.log('Starting crawler from reactive statement');
+        startCrawl();
+    }
     
     async function startCrawl() {
         if (crawlerRunning) return;
@@ -31,7 +35,8 @@
         onStart(); // Start polling
         
         try {
-            const result = await invoke<CrawlResult>('start_crawler', { maxPages: 50 });
+            console.log('🎯 CrawlerModal calling start_crawler (no parameters - hardcoded in Rust)');
+            const result = await invoke<CrawlResult>('start_crawler');
             status = `Completed! Found ${result.total_games} games`;
             
             // Wait before closing
@@ -39,7 +44,7 @@
                 isOpen = false;
                 crawlerRunning = false;
                 onComplete();
-            }, 1500);
+            }, MODAL_CLOSE_DELAY_MS);
         } catch (error) {
             console.error('Crawler error:', error);
             status = `Error: ${error}`;
