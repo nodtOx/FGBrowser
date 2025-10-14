@@ -96,8 +96,8 @@ impl FitGirlCrawler {
         
         // Extract total pages from pagination (only on first page)
         if page_num == 1 {
-            if let Some(total) = self.extract_total_pages(&document) {
-                // println!("  [INFO] Total pages available: {}", total);
+            if let Some(_total) = self.extract_total_pages(&document) {
+                // println!("  [INFO] Total pages available: {}", _total);
             }
         }
 
@@ -272,6 +272,7 @@ impl FitGirlCrawler {
         details
     }
     
+    #[allow(dead_code)]
     fn strip_html_tags(&self, html: &str) -> String {
         // Simple HTML tag stripper - replace tags with spaces to preserve word boundaries
         let tag_re = Regex::new(r"<[^>]*>").unwrap();
@@ -326,6 +327,7 @@ impl FitGirlCrawler {
         magnet_links
     }
 
+    #[allow(dead_code)]
     pub async fn crawl_multiple_pages(&self, start_page: u32, max_pages: Option<u32>) -> Result<Vec<GameRepack>> {
         let mut all_repacks = Vec::new();
         let mut current_page = start_page;

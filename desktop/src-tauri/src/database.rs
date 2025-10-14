@@ -450,6 +450,36 @@ impl Database {
         Ok(categories)
     }
     
+    // Get games filtered by date range
+    pub fn get_games_by_date_range(&self, days_ago: i32, limit: i32, offset: i32) -> Result<Vec<Game>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, title, genres_tags, company, languages, original_size, repack_size, size, url, date 
+             FROM repacks 
+             WHERE date >= date('now', '-' || ? || ' days')
+             ORDER BY date DESC
+             LIMIT ? OFFSET ?"
+        )?;
+
+        let games = stmt
+            .query_map([days_ago, limit, offset], |row| {
+                Ok(Game {
+                    id: row.get(0)?,
+                    title: row.get(1)?,
+                    genres_tags: row.get(2)?,
+                    company: row.get(3)?,
+                    languages: row.get(4)?,
+                    original_size: row.get(5)?,
+                    repack_size: row.get(6)?,
+                    size: row.get(7)?,
+                    url: row.get(8)?,
+                    date: row.get(9)?,
+                })
+            })?
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(games)
+    }
+    
     pub fn get_games_by_category(&self, category_id: i64, limit: i32, offset: i32) -> Result<Vec<Game>> {
         let mut stmt = self.conn.prepare(
             "SELECT r.id, r.title, r.genres_tags, r.company, r.languages, r.original_size, r.repack_size, r.size, r.url, r.date 
