@@ -1,10 +1,5 @@
 <script lang="ts">
-    import { games, selectedIndex, selectGame } from '$lib/stores/games';
-    
-    function formatSize(size: string | null): string {
-        if (!size) return 'N/A';
-        return size;
-    }
+    import { formatSize, games, selectedIndex, selectGame } from '$lib/stores/games';
     
     function formatDate(date: string | null): string {
         if (!date) return 'N/A';
@@ -25,27 +20,37 @@
     }
 </script>
 
-<div class="game-list">
-    {#each $games as game, index (game.id)}
-        <div 
-            class="game-item"
-            class:selected={index === $selectedIndex}
-            on:click={() => handleGameClick(index)}
-            on:keydown={(e) => e.key === 'Enter' && handleGameClick(index)}
-            role="button"
-            tabindex={index === $selectedIndex ? 0 : -1}
-        >
-            <div class="game-date">
-                {formatDate(game.date)}
+<div class="game-list-container">
+    <!-- Header row -->
+    <div class="game-header">
+        <div class="header-date">Date</div>
+        <div class="header-title">Title</div>
+        <div class="header-size">Size</div>
+    </div>
+    
+    <!-- Scrollable game list -->
+    <div class="game-list">
+        {#each $games as game, index (game.id)}
+            <div 
+                class="game-item"
+                class:selected={index === $selectedIndex}
+                on:click={() => handleGameClick(index)}
+                on:keydown={(e) => e.key === 'Enter' && handleGameClick(index)}
+                role="button"
+                tabindex={index === $selectedIndex ? 0 : -1}
+            >
+                <div class="game-date">
+                    {formatDate(game.date)}
+                </div>
+                <div class="game-title">
+                    {game.title}
+                </div>
+                <div class="game-size">
+                    {formatSize(game.size)}
+                </div>
             </div>
-            <div class="game-title">
-                {game.title}
-            </div>
-            <div class="game-size">
-                {formatSize(game.repack_size)}
-            </div>
-        </div>
-    {/each}
+        {/each}
+    </div>
 </div>
 
 <style>

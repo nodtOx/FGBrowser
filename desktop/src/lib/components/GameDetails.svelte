@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { copyMagnetLink, openMagnetLink, selectedGame } from '$lib/stores/games';
+    import { copyMagnetLink, formatSize, openMagnetLink, selectedGame } from '$lib/stores/games';
     
     async function handleOpenMagnet(magnet: string) {
         await openMagnetLink(magnet);
@@ -40,7 +40,7 @@
                 
                 <div class="info-item">
                     <span class="info-label">Repack Size:</span>
-                    <span class="info-value">{$selectedGame.repack_size || 'N/A'}</span>
+                    <span class="info-value">{formatSize($selectedGame.size)}</span>
                 </div>
                 
                 <div class="info-item">

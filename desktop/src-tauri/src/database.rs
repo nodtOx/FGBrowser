@@ -11,6 +11,7 @@ pub struct Game {
     pub languages: Option<String>,
     pub original_size: Option<String>,
     pub repack_size: Option<String>,
+    pub size: Option<i64>, // Size in MB (parsed from repack_size)
     pub url: String,
     pub date: Option<String>,
 }
@@ -42,6 +43,7 @@ impl Database {
         Ok(db)
     }
     
+    
     pub fn init_tables(&self) -> Result<()> {
         // Create repacks table
         self.conn.execute(
@@ -53,6 +55,7 @@ impl Database {
                 languages TEXT,
                 original_size TEXT,
                 repack_size TEXT,
+                size INTEGER,
                 url TEXT UNIQUE,
                 date TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -97,7 +100,7 @@ impl Database {
     pub fn search_games(&self, query: &str, limit: i32) -> Result<Vec<Game>> {
         let search_pattern = format!("%{}%", query);
         let mut stmt = self.conn.prepare(
-            "SELECT id, title, genres_tags, company, languages, original_size, repack_size, url, date 
+            "SELECT id, title, genres_tags, company, languages, original_size, repack_size, size, url, date 
              FROM repacks 
              WHERE title LIKE ?1 
              ORDER BY date DESC 
@@ -114,8 +117,9 @@ impl Database {
                     languages: row.get(4)?,
                     original_size: row.get(5)?,
                     repack_size: row.get(6)?,
-                    url: row.get(7)?,
-                    date: row.get(8)?,
+                    size: row.get(7)?,
+                    url: row.get(8)?,
+                    date: row.get(9)?,
                 })
             })?
             .collect::<Result<Vec<_>>>()?;
@@ -125,7 +129,7 @@ impl Database {
 
     pub fn get_all_games(&self, limit: i32, offset: i32) -> Result<Vec<Game>> {
         let mut stmt = self.conn.prepare(
-            "SELECT id, title, genres_tags, company, languages, original_size, repack_size, url, date 
+            "SELECT id, title, genres_tags, company, languages, original_size, repack_size, size, url, date 
              FROM repacks 
              ORDER BY date DESC 
              LIMIT ?1 OFFSET ?2"
@@ -141,8 +145,9 @@ impl Database {
                     languages: row.get(4)?,
                     original_size: row.get(5)?,
                     repack_size: row.get(6)?,
-                    url: row.get(7)?,
-                    date: row.get(8)?,
+                    size: row.get(7)?,
+                    url: row.get(8)?,
+                    date: row.get(9)?,
                 })
             })?
             .collect::<Result<Vec<_>>>()?;
@@ -153,7 +158,7 @@ impl Database {
     pub fn get_game_details(&self, game_id: i64) -> Result<GameDetails> {
         // Get game info
         let game: Game = self.conn.query_row(
-            "SELECT id, title, genres_tags, company, languages, original_size, repack_size, url, date 
+            "SELECT id, title, genres_tags, company, languages, original_size, repack_size, size, url, date 
              FROM repacks WHERE id = ?1",
             [game_id],
             |row| {
@@ -165,8 +170,9 @@ impl Database {
                     languages: row.get(4)?,
                     original_size: row.get(5)?,
                     repack_size: row.get(6)?,
-                    url: row.get(7)?,
-                    date: row.get(8)?,
+                    size: row.get(7)?,
+                    url: row.get(8)?,
+                    date: row.get(9)?,
                 })
             },
         )?;
