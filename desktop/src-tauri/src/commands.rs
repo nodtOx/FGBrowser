@@ -175,6 +175,18 @@ pub async fn get_categories_for_filtered_games(
 }
 
 #[tauri::command]
+pub async fn get_games_by_date_range(
+    days_ago: i32,
+    limit: i32,
+    offset: i32,
+    state: State<'_, AppState>,
+) -> Result<Vec<Game>, String> {
+    let db_path = state.db_path.lock().unwrap().clone();
+    let db = Database::new(db_path).map_err(|e| e.to_string())?;
+    db.get_games_by_date_range(days_ago, limit, offset).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub async fn get_games_by_category(
     category_id: i64,
     limit: i32,

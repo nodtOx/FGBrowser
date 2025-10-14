@@ -45,6 +45,9 @@ export const isLoading = writable<boolean>(false);
 export const categories = writable<CategoryWithCount[]>([]);
 export const selectedCategories = writable<CategoryWithCount[]>([]);
 
+// Track active filter type to prevent conflicts
+export const activeFilterType = writable<'none' | 'category' | 'time' | 'size' | 'status'>('none');
+
 // Optimization: Debouncing for category filtering
 let filterDebounceTimer: number | null = null;
 const FILTER_DEBOUNCE_MS = 200;
@@ -59,6 +62,31 @@ export function debouncedApplyCategoryFilters() {
     applyCategoryFilters();
     filterDebounceTimer = null;
   }, FILTER_DEBOUNCE_MS) as unknown as number;
+}
+
+// Helper function to convert time filter names to days
+function getTimeFilterDays(timeFilter: string): number {
+  switch (timeFilter) {
+    case 'Today':
+      return 1;
+    case 'This Week':
+      return 7;
+    case 'This Month':
+      return 30;
+    default:
+      return 0;
+  }
+}
+
+// Apply time filter
+export async function applyTimeFilter(timeFilter: string) {
+  const daysAgo = getTimeFilterDays(timeFilter);
+  if (daysAgo > 0) {
+    activeFilterType.set('time');
+    await loadGamesByDateRange(daysAgo);
+    // When filtering by time, restore all categories
+    await loadCategories();
+  }
 }
 
 // Load games from database
@@ -139,6 +167,26 @@ export async function loadGamesByMultipleCategories(categoryIds: number[], limit
   }
 }
 
+// Load games by date range
+export async function loadGamesByDateRange(daysAgo: number, limit: number = 1000, offset: number = 0) {
+  isLoading.set(true);
+  try {
+    const result = await invoke<Game[]>('get_games_by_date_range', {
+      daysAgo,
+      limit,
+      offset,
+    });
+    games.set(result);
+    if (result.length > 0) {
+      await selectGame(0);
+    }
+  } catch (error) {
+    console.error('Failed to load games by date range:', error);
+  } finally {
+    isLoading.set(false);
+  }
+}
+
 // Toggle category selection
 export function toggleCategorySelection(category: CategoryWithCount) {
   selectedCategories.update((selected) => {
@@ -158,16 +206,30 @@ export function clearCategorySelection() {
   selectedCategories.set([]);
 }
 
+// Clear all filters and restore default state
+export async function clearAllFilters() {
+  activeFilterType.set('none');
+  clearCategorySelection();
+  await Promise.all([loadGames(), loadCategories()]);
+}
+
 // Apply category filters (with faceted filtering)
 export async function applyCategoryFilters() {
   let currentSelected: CategoryWithCount[] = [];
   selectedCategories.subscribe((s) => (currentSelected = s))();
 
   if (currentSelected.length === 0) {
-    // No categories selected - load all games and all categories
-    await Promise.all([loadGames(), loadCategories()]);
+    // No categories selected - only load all games if no other filter is active
+    let currentActiveFilter: string = 'none';
+    activeFilterType.subscribe((f) => (currentActiveFilter = f))();
+
+    if (currentActiveFilter === 'category' || currentActiveFilter === 'none') {
+      activeFilterType.set('none');
+      await Promise.all([loadGames(), loadCategories()]);
+    }
   } else {
     // Categories selected - filter both games and categories
+    activeFilterType.set('category');
     const categoryIds = currentSelected.map((c) => c.id);
     await Promise.all([loadGamesByMultipleCategories(categoryIds), loadFilteredCategories(categoryIds)]);
   }
@@ -180,10 +242,12 @@ export async function searchGames(query: string, limit: number = 100) {
 
   if (!query.trim()) {
     // If search is cleared, restore normal state (all games and categories)
+    activeFilterType.set('none');
     await Promise.all([loadGames(limit), loadCategories()]);
     return;
   }
 
+  activeFilterType.set('none'); // Search overrides all filters
   isLoading.set(true);
   try {
     const result = await invoke<Game[]>('search_games', { query, limit });
