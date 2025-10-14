@@ -7,6 +7,7 @@
   import { onMount } from 'svelte';
 
   import CrawlerModal from '$lib/components/CrawlerModal.svelte';
+  import GameDetailsModal from '$lib/components/GameDetailsModal.svelte';
   import Header from '$lib/components/Header.svelte';
   import Settings from '$lib/components/Settings.svelte';
   import Sidebar from '$lib/components/Sidebar.svelte';
@@ -130,6 +131,8 @@
     onComplete={onCrawlerComplete}
     onStart={onStartCrawl}
   />
+  
+  <GameDetailsModal />
 </div>
 
 <style>
