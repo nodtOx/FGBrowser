@@ -21,12 +21,6 @@
 
   let showCrawlerModal = false;
   let pollingInterval: any;
-
-  interface UpdateResult {
-    total_games: number;
-    status: string;
-  }
-
   let isUpdating = false;
 
   async function checkAndInitializeDatabase() {
@@ -49,35 +43,11 @@
   }
 
   async function checkForUpdates() {
-    try {
-      console.log('Checking for new games...');
-      
-      // Show modal for update
-      isUpdating = true;
-      showCrawlerModal = true;
-      onStartCrawl(); // Start polling
-      
-      const result = await invoke<UpdateResult>('update_database');
-      
-      if (result.total_games > 0) {
-        console.log(`Updated database with ${result.total_games} new games`);
-      } else {
-        console.log('Database is up to date');
-      }
-      
-      // Close modal after a brief delay
-      setTimeout(() => {
-        showCrawlerModal = false;
-        isUpdating = false;
-        stopPollingGames();
-        loadGames(GAMES_LOAD_LIMIT);
-      }, 1500);
-    } catch (error) {
-      console.error('Error updating database:', error);
-      showCrawlerModal = false;
-      isUpdating = false;
-      stopPollingGames();
-    }
+    console.log('Checking for new games...');
+    
+    // Show modal for update - let CrawlerModal handle the update logic
+    isUpdating = true;
+    showCrawlerModal = true;
   }
 
   function startPollingGames() {
@@ -102,6 +72,8 @@
 
   async function onCrawlerComplete() {
     stopPollingGames();
+    // Reset updating state
+    isUpdating = false;
     // Final load of all games
     await loadGames(100);
   }
