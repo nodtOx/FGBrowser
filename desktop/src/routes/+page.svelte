@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { games, loadGames } from '$lib/stores/games';
+  import { games, loadCategories, loadGames } from '$lib/stores/games';
   import { initKeyboardShortcuts } from '$lib/stores/keyboard';
   import { currentPage } from '$lib/stores/navigation';
   import { loadSavedTheme } from '$lib/stores/theme';
@@ -7,11 +7,11 @@
   import { onMount } from 'svelte';
 
   import CrawlerModal from '$lib/components/CrawlerModal.svelte';
-  import GameList from '$lib/components/GameList.svelte';
   import Header from '$lib/components/Header.svelte';
   import Settings from '$lib/components/Settings.svelte';
   import Sidebar from '$lib/components/Sidebar.svelte';
   import StatusBar from '$lib/components/StatusBar.svelte';
+  import VirtualizedGameList from '$lib/components/VirtualizedGameList.svelte';
 
   import '../app.css';
 
@@ -33,6 +33,7 @@
       } else {
         // Database has data, check for updates
         await loadGames(GAMES_LOAD_LIMIT);
+        await loadCategories();
         checkForUpdates();
       }
     } catch (error) {
@@ -74,8 +75,9 @@
     stopPollingGames();
     // Reset updating state
     isUpdating = false;
-    // Final load of all games
+    // Final load of all games and categories
     await loadGames(100);
+    await loadCategories();
   }
 
   onMount(async () => {
@@ -100,7 +102,7 @@
           <Sidebar totalGames={$games.length} />
 
           <div class="game-list-container">
-            <GameList />
+            <VirtualizedGameList />
           </div>
         </div>
       </div>

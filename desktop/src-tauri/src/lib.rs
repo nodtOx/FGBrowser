@@ -3,8 +3,8 @@ mod crawler;
 mod database;
 
 use commands::{
-    copy_to_clipboard, get_all_games, get_database_stats, get_disk_info, get_game_details,
-    get_settings, is_database_empty, open_magnet_link, reset_database, save_settings, 
+    clear_category_cache, copy_to_clipboard, get_all_games, get_categories_with_counts, get_categories_for_filtered_games, get_database_stats, get_disk_info, get_game_details,
+    get_games_by_category, get_games_by_multiple_categories, get_settings, is_database_empty, open_magnet_link, reset_database, save_settings, 
     search_games, start_crawler, update_database, AppState,
 };
 use std::path::PathBuf;
@@ -56,6 +56,11 @@ pub fn run() {
             get_all_games,
             get_game_details,
             get_database_stats,
+            get_categories_with_counts,
+            get_categories_for_filtered_games,
+            get_games_by_category,
+            get_games_by_multiple_categories,
+            clear_category_cache,
             is_database_empty,
             open_magnet_link,
             copy_to_clipboard,
