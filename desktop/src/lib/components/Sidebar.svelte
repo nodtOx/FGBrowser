@@ -1,15 +1,11 @@
 <script lang="ts">
     import type { CategoryWithCount } from '$lib/stores/games';
-    import { activeFilterType, applySizeFilter, applyTimeFilter, categories, clearAllFilters, clearCategorySelection, clearSizeFilter, debouncedApplyCategoryFilters, selectedCategories, toggleCategorySelection } from '$lib/stores/games';
+    import { activeFilters, activeSizeFilter, activeStatusFilter, activeTimeFilter, applySizeFilter, applyStatusFilter, applyTimeFilter, categories, clearAllFilters, debouncedApplyFilters, removeFilter, selectedCategories, toggleCategorySelection } from '$lib/stores/games';
     
     // Sidebar with categories and filters
     export let totalGames = 0;
     
-    let activeRecent = '';
-    let activeSize = '';
-    let activeStatus = '';
     let showAllCategories = false;
-    
     const INITIAL_CATEGORIES_COUNT = 10;
     
     // Get categories to display based on show state
@@ -17,10 +13,9 @@
         ? $categories 
         : $categories.slice(0, INITIAL_CATEGORIES_COUNT);
     
-    // Auto-apply filters when selection changes (debounced)
-    // Only apply if categories are selected and filter type allows it
-    $: if ($selectedCategories.length > 0 && ($activeFilterType === 'none' || $activeFilterType === 'category')) {
-        debouncedApplyCategoryFilters();
+    // Auto-apply filters when any selection changes (debounced)
+    $: if ($selectedCategories || $activeTimeFilter || $activeSizeFilter || $activeStatusFilter) {
+        debouncedApplyFilters();
     }
     
     function toggleShowAllCategories() {
@@ -33,55 +28,26 @@
     
     async function handleCategoryToggle(category: CategoryWithCount) {
         toggleCategorySelection(category);
-        activeRecent = '';
-        activeStatus = '';
-        // Keep activeSize - size filters work WITH categories
+        // Categories now work with all other filters - no need to clear them
     }
     
     async function handleClearAll() {
-        activeRecent = '';
-        activeSize = '';
-        activeStatus = '';
         await clearAllFilters();
     }
     
     async function selectRecent(recent: string) {
-        activeRecent = recent;
-        clearCategorySelection();
-        clearSizeFilter();
-        activeSize = '';
-        activeStatus = '';
         console.log('Recent filter selected:', recent);
         await applyTimeFilter(recent);
     }
     
-    async function clearTimeFilter() {
-        activeRecent = '';
-        await clearAllFilters();
-    }
-    
     async function selectSize(size: string) {
-        activeSize = size;
-        activeRecent = '';
-        activeStatus = '';
         console.log('Size filter selected:', size);
         await applySizeFilter(size);
     }
     
-    async function clearSizeFilterHandler() {
-        activeSize = '';
-        clearSizeFilter();
-        await debouncedApplyCategoryFilters(); // Re-apply category filters if any
-    }
-    
-    function selectStatus(status: string) {
-        activeStatus = status;
-        clearCategorySelection();
-        clearSizeFilter();
-        activeRecent = '';
-        activeSize = '';
+    async function selectStatus(status: string) {
         console.log('Status selected:', status);
-        // TODO: Filter by download status
+        await applyStatusFilter(status);
     }
     
     function handleKeydown(e: KeyboardEvent, action: () => void) {
@@ -93,26 +59,29 @@
 </script>
 
 <div class="sidebar">
+    <!-- Unified Active Filters Display (Above all sections) -->
+    {#if $activeFilters.length > 0}
+        <div class="selected-categories">
+            <div class="selected-header">
+                <span class="selected-count">{$activeFilters.length} active filter{$activeFilters.length === 1 ? '' : 's'}</span>
+                <button class="clear-all-btn" on:click={handleClearAll}>Clear All</button>
+            </div>
+            <div class="selected-chips">
+                {#each $activeFilters as filter (filter.type + '-' + filter.value)}
+                    <span class="category-chip" class:time-filter-chip={filter.type === 'time'} class:size-filter-chip={filter.type === 'size'} class:status-filter-chip={filter.type === 'status'}>
+                        {filter.label}
+                        <button class="chip-remove" on:click={() => removeFilter(filter.type, filter.value)}>×</button>
+                    </span>
+                {/each}
+            </div>
+        </div>
+    {/if}
+    
     <div class="sidebar-section">
         <div class="section-title">Categories</div>
         
-        <!-- Selected Categories Display -->
-        {#if $selectedCategories.length > 0}
-            <div class="selected-categories">
-                <div class="selected-header">
-                    <span class="selected-count">{$selectedCategories.length} selected</span>
-                    <button class="clear-all-btn" on:click={handleClearAll}>Clear All</button>
-                </div>
-                <div class="selected-chips">
-                    {#each $selectedCategories as category (category.id)}
-                        <span class="category-chip">
-                            {category.name}
-                            <button class="chip-remove" on:click={() => handleCategoryToggle(category)}>×</button>
-                        </span>
-                    {/each}
-                </div>
-            </div>
-        {:else}
+        <!-- Show "All" when no filters are active -->
+        {#if $activeFilters.length === 0}
             <div class="sidebar-item all-games">
                 <span>All ({totalGames})</span>
             </div>
@@ -142,81 +111,43 @@
             </div>
         {/if}
     </div>
-    
+    <div class="seperator"></div>
     <div class="sidebar-section">
         <div class="section-title">Recent</div>
-        <div class="sidebar-item" class:active={activeRecent === 'Today'} on:click={() => selectRecent('Today')} on:keydown={(e) => handleKeydown(e, () => selectRecent('Today'))} role="button" tabindex="0">
+        <div class="sidebar-item" class:active={$activeTimeFilter === 'Today'} on:click={() => selectRecent('Today')} on:keydown={(e) => handleKeydown(e, () => selectRecent('Today'))} role="button" tabindex="0">
             <span>Today</span>
-            {#if activeRecent === 'Today'}
-                <button class="time-filter-clear" on:click|stopPropagation={clearTimeFilter}>×</button>
-            {/if}
         </div>
-        <div class="sidebar-item" class:active={activeRecent === 'This Week'} on:click={() => selectRecent('This Week')} on:keydown={(e) => handleKeydown(e, () => selectRecent('This Week'))} role="button" tabindex="0">
+        <div class="sidebar-item" class:active={$activeTimeFilter === 'This Week'} on:click={() => selectRecent('This Week')} on:keydown={(e) => handleKeydown(e, () => selectRecent('This Week'))} role="button" tabindex="0">
             <span>This Week</span>
-            {#if activeRecent === 'This Week'}
-                <button class="time-filter-clear" on:click|stopPropagation={clearTimeFilter}>×</button>
-            {/if}
         </div>
-        <div class="sidebar-item" class:active={activeRecent === 'This Month'} on:click={() => selectRecent('This Month')} on:keydown={(e) => handleKeydown(e, () => selectRecent('This Month'))} role="button" tabindex="0">
+        <div class="sidebar-item" class:active={$activeTimeFilter === 'This Month'} on:click={() => selectRecent('This Month')} on:keydown={(e) => handleKeydown(e, () => selectRecent('This Month'))} role="button" tabindex="0">
             <span>This Month</span>
-            {#if activeRecent === 'This Month'}
-                <button class="time-filter-clear" on:click|stopPropagation={clearTimeFilter}>×</button>
-            {/if}
         </div>
     </div>
-    
+    <div class="seperator"></div>
     <div class="sidebar-section">
         <div class="section-title">Size</div>
-        <div class="sidebar-item" class:active={activeSize === '< 1 GB'} on:click={() => selectSize('< 1 GB')} on:keydown={(e) => handleKeydown(e, () => selectSize('< 1 GB'))} role="button" tabindex="0">
+        <div class="sidebar-item" class:active={$activeSizeFilter === '< 1 GB'} on:click={() => selectSize('< 1 GB')} on:keydown={(e) => handleKeydown(e, () => selectSize('< 1 GB'))} role="button" tabindex="0">
             <span>{'<'} 1 GB</span>
-            {#if activeSize === '< 1 GB'}
-                <button class="time-filter-clear" on:click|stopPropagation={clearSizeFilterHandler}>×</button>
-            {/if}
         </div>
-        <div class="sidebar-item" class:active={activeSize === '1-10 GB'} on:click={() => selectSize('1-10 GB')} on:keydown={(e) => handleKeydown(e, () => selectSize('1-10 GB'))} role="button" tabindex="0">
+        <div class="sidebar-item" class:active={$activeSizeFilter === '1-10 GB'} on:click={() => selectSize('1-10 GB')} on:keydown={(e) => handleKeydown(e, () => selectSize('1-10 GB'))} role="button" tabindex="0">
             <span>1-10 GB</span>
-            {#if activeSize === '1-10 GB'}
-                <button class="time-filter-clear" on:click|stopPropagation={clearSizeFilterHandler}>×</button>
-            {/if}
         </div>
-        <div class="sidebar-item" class:active={activeSize === '10-25 GB'} on:click={() => selectSize('10-25 GB')} on:keydown={(e) => handleKeydown(e, () => selectSize('10-25 GB'))} role="button" tabindex="0">
+        <div class="sidebar-item" class:active={$activeSizeFilter === '10-25 GB'} on:click={() => selectSize('10-25 GB')} on:keydown={(e) => handleKeydown(e, () => selectSize('10-25 GB'))} role="button" tabindex="0">
             <span>10-25 GB</span>
-            {#if activeSize === '10-25 GB'}
-                <button class="time-filter-clear" on:click|stopPropagation={clearSizeFilterHandler}>×</button>
-            {/if}
         </div>
-        <div class="sidebar-item" class:active={activeSize === '25-40 GB'} on:click={() => selectSize('25-40 GB')} on:keydown={(e) => handleKeydown(e, () => selectSize('25-40 GB'))} role="button" tabindex="0">
+        <div class="sidebar-item" class:active={$activeSizeFilter === '25-40 GB'} on:click={() => selectSize('25-40 GB')} on:keydown={(e) => handleKeydown(e, () => selectSize('25-40 GB'))} role="button" tabindex="0">
             <span>25-40 GB</span>
-            {#if activeSize === '25-40 GB'}
-                <button class="time-filter-clear" on:click|stopPropagation={clearSizeFilterHandler}>×</button>
-            {/if}
         </div>
-        <div class="sidebar-item" class:active={activeSize === '40-60 GB'} on:click={() => selectSize('40-60 GB')} on:keydown={(e) => handleKeydown(e, () => selectSize('40-60 GB'))} role="button" tabindex="0">
+        <div class="sidebar-item" class:active={$activeSizeFilter === '40-60 GB'} on:click={() => selectSize('40-60 GB')} on:keydown={(e) => handleKeydown(e, () => selectSize('40-60 GB'))} role="button" tabindex="0">
             <span>40-60 GB</span>
-            {#if activeSize === '40-60 GB'}
-                <button class="time-filter-clear" on:click|stopPropagation={clearSizeFilterHandler}>×</button>
-            {/if}
         </div>
-        <div class="sidebar-item" class:active={activeSize === '> 60 GB'} on:click={() => selectSize('> 60 GB')} on:keydown={(e) => handleKeydown(e, () => selectSize('> 60 GB'))} role="button" tabindex="0">
+        <div class="sidebar-item" class:active={$activeSizeFilter === '> 60 GB'} on:click={() => selectSize('> 60 GB')} on:keydown={(e) => handleKeydown(e, () => selectSize('> 60 GB'))} role="button" tabindex="0">
             <span>{'>'} 60 GB</span>
-            {#if activeSize === '> 60 GB'}
-                <button class="time-filter-clear" on:click|stopPropagation={clearSizeFilterHandler}>×</button>
-            {/if}
         </div>
     </div>
     
-    <div class="sidebar-section">
-        <div class="section-title">Status</div>
-        <div class="sidebar-item" class:active={activeStatus === 'Available'} on:click={() => selectStatus('Available')} on:keydown={(e) => handleKeydown(e, () => selectStatus('Available'))} role="button" tabindex="0">
-            <span>Available</span>
-        </div>
-        <div class="sidebar-item" class:active={activeStatus === 'Downloading'} on:click={() => selectStatus('Downloading')} on:keydown={(e) => handleKeydown(e, () => selectStatus('Downloading'))} role="button" tabindex="0">
-            <span>Downloading</span>
-        </div>
-        <div class="sidebar-item" class:active={activeStatus === 'Completed'} on:click={() => selectStatus('Completed')} on:keydown={(e) => handleKeydown(e, () => selectStatus('Completed'))} role="button" tabindex="0">
-            <span>Completed</span>
-        </div>
-    </div>
+    
 </div>
 
 <style>
@@ -275,7 +206,6 @@
         font-style: italic;
         font-size: calc(var(--base-font-size) * 0.85);
         margin-top: 4px;
-        border-top: 1px solid var(--color-border);
         padding-top: 6px;
     }
     
@@ -328,7 +258,10 @@
         gap: 4px;
         padding: 0 12px;
     }
-    
+    .seperator {
+        border-top: 1px solid var(--color-border);
+        /* margin: 4px 0; */
+    }
     .category-chip {
         display: inline-flex;
         align-items: center;
@@ -362,29 +295,36 @@
         background-color: rgba(255, 255, 255, 0.2);
     }
     
-    /* Time Filter Clear Button */
-    .time-filter-clear {
-        background: none;
-        border: none;
-        color: var(--color-selectedText);
-        cursor: pointer;
-        font-size: 14px;
-        line-height: 1;
-        padding: 2px;
-        margin-left: 8px;
-        width: 16px;
-        height: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 50%;
-        transition: var(--transition);
-        opacity: 0.8;
+    /* Filter Chip Variants */
+    .time-filter-chip {
+        background-color: var(--color-warning);
+        color: var(--color-background);
     }
     
-    .time-filter-clear:hover {
-        background-color: rgba(255, 255, 255, 0.2);
-        opacity: 1;
+    .time-filter-chip .chip-remove {
+        color: var(--color-background);
+    }
+    
+    .time-filter-chip .chip-remove:hover {
+        background-color: rgba(46, 52, 64, 0.2);
+    }
+    
+    .size-filter-chip {
+        background-color: var(--color-info);
+        color: var(--color-selectedText);
+    }
+    
+    .status-filter-chip {
+        background-color: var(--color-success);
+        color: var(--color-background);
+    }
+    
+    .status-filter-chip .chip-remove {
+        color: var(--color-background);
+    }
+    
+    .status-filter-chip .chip-remove:hover {
+        background-color: rgba(46, 52, 64, 0.2);
     }
     
     .all-games {

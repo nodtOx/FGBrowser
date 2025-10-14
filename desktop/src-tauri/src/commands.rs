@@ -175,6 +175,39 @@ pub async fn get_categories_for_filtered_games(
 }
 
 #[tauri::command]
+pub async fn get_categories_for_time_filtered_games(
+    days_ago: i32,
+    state: State<'_, AppState>,
+) -> Result<Vec<CategoryWithCount>, String> {
+    let db_path = state.db_path.lock().unwrap().clone();
+    let db = Database::new(db_path).map_err(|e| e.to_string())?;
+    db.get_categories_for_time_filtered_games(days_ago).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_categories_for_size_filtered_games(
+    min_size: Option<i64>,
+    max_size: Option<i64>,
+    state: State<'_, AppState>,
+) -> Result<Vec<CategoryWithCount>, String> {
+    let db_path = state.db_path.lock().unwrap().clone();
+    let db = Database::new(db_path).map_err(|e| e.to_string())?;
+    db.get_categories_for_size_filtered_games(min_size, max_size).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_categories_for_size_and_time_filtered_games(
+    min_size: Option<i64>,
+    max_size: Option<i64>,
+    days_ago: i32,
+    state: State<'_, AppState>,
+) -> Result<Vec<CategoryWithCount>, String> {
+    let db_path = state.db_path.lock().unwrap().clone();
+    let db = Database::new(db_path).map_err(|e| e.to_string())?;
+    db.get_categories_for_size_and_time_filtered_games(min_size, max_size, days_ago).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub async fn get_games_by_date_range(
     days_ago: i32,
     limit: i32,
@@ -211,6 +244,48 @@ pub async fn get_games_by_categories_and_size(
     let db_path = state.db_path.lock().unwrap().clone();
     let db = Database::new(db_path).map_err(|e| e.to_string())?;
     db.get_games_by_categories_and_size(&category_ids, min_size, max_size, limit, offset).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_games_by_categories_and_time(
+    category_ids: Vec<i64>,
+    days_ago: i32,
+    limit: i32,
+    offset: i32,
+    state: State<'_, AppState>,
+) -> Result<Vec<Game>, String> {
+    let db_path = state.db_path.lock().unwrap().clone();
+    let db = Database::new(db_path).map_err(|e| e.to_string())?;
+    db.get_games_by_categories_and_time(&category_ids, days_ago, limit, offset).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_games_by_size_and_time(
+    min_size: Option<i64>,
+    max_size: Option<i64>,
+    days_ago: i32,
+    limit: i32,
+    offset: i32,
+    state: State<'_, AppState>,
+) -> Result<Vec<Game>, String> {
+    let db_path = state.db_path.lock().unwrap().clone();
+    let db = Database::new(db_path).map_err(|e| e.to_string())?;
+    db.get_games_by_size_and_time(min_size, max_size, days_ago, limit, offset).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_games_by_categories_size_and_time(
+    category_ids: Vec<i64>,
+    min_size: Option<i64>,
+    max_size: Option<i64>,
+    days_ago: i32,
+    limit: i32,
+    offset: i32,
+    state: State<'_, AppState>,
+) -> Result<Vec<Game>, String> {
+    let db_path = state.db_path.lock().unwrap().clone();
+    let db = Database::new(db_path).map_err(|e| e.to_string())?;
+    db.get_games_by_categories_size_and_time(&category_ids, min_size, max_size, days_ago, limit, offset).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
