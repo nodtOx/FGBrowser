@@ -1,11 +1,13 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { Store } from '@tauri-apps/plugin-store';
   import { downloadDir } from '@tauri-apps/api/path';
+  import { invoke } from '@tauri-apps/api/core';
 
   let activeSection = 'general';
-  let store: Store | null = null;
   let defaultDownloadPath = '';
+  let crawlerRunning = false;
+  let crawlerProgress = '';
+  let crawlerMaxPages = 50;
 
   // General Settings
   let autoStart = false;
@@ -42,64 +44,65 @@
     activeSection = section;
   }
 
-  // Load settings from Tauri Store
+  // Load settings from database
   async function loadSettings() {
-    if (!store) return;
-
     try {
-      autoStart = (await store.get('autoStart')) ?? false;
-      minimizeToTray = (await store.get('minimizeToTray')) ?? false;
-      closeToTray = (await store.get('closeToTray')) ?? false;
-      notifications = (await store.get('notifications')) ?? true;
-      downloadPath = (await store.get('downloadPath')) ?? defaultDownloadPath;
-      maxSimultaneousDownloads = (await store.get('maxSimultaneousDownloads')) ?? 3;
-      autoStartDownloads = (await store.get('autoStartDownloads')) ?? true;
-      seedAfterComplete = (await store.get('seedAfterComplete')) ?? true;
-      seedRatio = (await store.get('seedRatio')) ?? 1.5;
-      maxDownloadSpeed = (await store.get('maxDownloadSpeed')) ?? 0;
-      maxUploadSpeed = (await store.get('maxUploadSpeed')) ?? 500;
-      port = (await store.get('port')) ?? 6881;
-      useUPnP = (await store.get('useUPnP')) ?? true;
-      useDHT = (await store.get('useDHT')) ?? true;
-      fontSize = (await store.get('fontSize')) ?? 14;
-      compactMode = (await store.get('compactMode')) ?? false;
-      showThumbnails = (await store.get('showThumbnails')) ?? true;
-      animationsEnabled = (await store.get('animationsEnabled')) ?? true;
-      dbPath = (await store.get('dbPath')) ?? '../repacks.db';
-      autoRefresh = (await store.get('autoRefresh')) ?? false;
-      refreshInterval = (await store.get('refreshInterval')) ?? 24;
+      const settings: any = await invoke('get_settings');
+
+      autoStart = settings.auto_start ?? false;
+      minimizeToTray = settings.minimize_to_tray ?? false;
+      closeToTray = settings.close_to_tray ?? false;
+      notifications = settings.notifications ?? true;
+      downloadPath = settings.download_path || defaultDownloadPath;
+      maxSimultaneousDownloads = settings.max_simultaneous_downloads ?? 3;
+      autoStartDownloads = settings.auto_start_downloads ?? true;
+      seedAfterComplete = settings.seed_after_complete ?? true;
+      seedRatio = settings.seed_ratio ?? 1.5;
+      maxDownloadSpeed = settings.max_download_speed ?? 0;
+      maxUploadSpeed = settings.max_upload_speed ?? 500;
+      port = settings.port ?? 6881;
+      useUPnP = settings.use_upnp ?? true;
+      useDHT = settings.use_dht ?? true;
+      fontSize = settings.font_size ?? 14;
+      compactMode = settings.compact_mode ?? false;
+      showThumbnails = settings.show_thumbnails ?? true;
+      animationsEnabled = settings.animations_enabled ?? true;
+      dbPath = settings.db_path || '../repacks.db';
+      autoRefresh = settings.auto_refresh ?? false;
+      refreshInterval = settings.refresh_interval ?? 24;
     } catch (e) {
       console.error('Failed to load settings:', e);
     }
   }
 
-  // Auto-save settings to Tauri Store
+  // Auto-save settings to database
   async function saveSettings() {
-    if (!store) return;
-
     try {
-      await store.set('autoStart', autoStart);
-      await store.set('minimizeToTray', minimizeToTray);
-      await store.set('closeToTray', closeToTray);
-      await store.set('notifications', notifications);
-      await store.set('downloadPath', downloadPath);
-      await store.set('maxSimultaneousDownloads', maxSimultaneousDownloads);
-      await store.set('autoStartDownloads', autoStartDownloads);
-      await store.set('seedAfterComplete', seedAfterComplete);
-      await store.set('seedRatio', seedRatio);
-      await store.set('maxDownloadSpeed', maxDownloadSpeed);
-      await store.set('maxUploadSpeed', maxUploadSpeed);
-      await store.set('port', port);
-      await store.set('useUPnP', useUPnP);
-      await store.set('useDHT', useDHT);
-      await store.set('fontSize', fontSize);
-      await store.set('compactMode', compactMode);
-      await store.set('showThumbnails', showThumbnails);
-      await store.set('animationsEnabled', animationsEnabled);
-      await store.set('dbPath', dbPath);
-      await store.set('autoRefresh', autoRefresh);
-      await store.set('refreshInterval', refreshInterval);
-      await store.save();
+      await invoke('save_settings', {
+        settings: {
+          auto_start: autoStart,
+          minimize_to_tray: minimizeToTray,
+          close_to_tray: closeToTray,
+          notifications: notifications,
+          download_path: downloadPath,
+          max_simultaneous_downloads: maxSimultaneousDownloads,
+          auto_start_downloads: autoStartDownloads,
+          seed_after_complete: seedAfterComplete,
+          seed_ratio: seedRatio,
+          max_download_speed: maxDownloadSpeed,
+          max_upload_speed: maxUploadSpeed,
+          port: port,
+          use_upnp: useUPnP,
+          use_dht: useDHT,
+          font_size: fontSize,
+          compact_mode: compactMode,
+          show_thumbnails: showThumbnails,
+          animations_enabled: animationsEnabled,
+          db_path: dbPath,
+          auto_refresh: autoRefresh,
+          refresh_interval: refreshInterval,
+        },
+      });
     } catch (e) {
       console.error('Failed to save settings:', e);
     }
@@ -107,8 +110,10 @@
 
   // Debounced auto-save whenever any setting changes
   let saveTimeout: number;
+  let settingsLoaded = false;
+
   $: {
-    if (typeof window !== 'undefined' && store) {
+    if (typeof window !== 'undefined' && settingsLoaded) {
       autoStart,
         minimizeToTray,
         closeToTray,
@@ -142,6 +147,35 @@
   function browseFolder(setting: 'download' | 'database') {
     // TODO: Implement folder browser dialog with Tauri
     console.log('Browse folder for:', setting);
+  }
+
+  async function runCrawler() {
+    if (crawlerRunning) return;
+
+    crawlerRunning = true;
+    crawlerProgress = 'Starting crawler...';
+
+    try {
+      const result: any = await invoke('start_crawler', {
+        maxPages: crawlerMaxPages > 0 ? crawlerMaxPages : null,
+      });
+
+      crawlerProgress = `Completed! Found ${result.total_games} games`;
+
+      // Reset after a delay
+      setTimeout(() => {
+        crawlerProgress = '';
+        crawlerRunning = false;
+      }, 5000);
+    } catch (error) {
+      crawlerProgress = `Error: ${error}`;
+      console.error('Crawler error:', error);
+
+      setTimeout(() => {
+        crawlerProgress = '';
+        crawlerRunning = false;
+      }, 5000);
+    }
   }
 
   function resetSettings() {
@@ -183,9 +217,9 @@
       defaultDownloadPath = 'Downloads/FitGirl';
     }
 
-    // Initialize the store
-    store = await Store.load('settings.json');
+    // Load settings from database
     await loadSettings();
+    settingsLoaded = true;
   });
 </script>
 
@@ -436,6 +470,26 @@
               <button class="browse-button" on:click={() => browseFolder('database')}>Browse</button>
             </div>
             <div class="setting-description">Path to repacks.db file</div>
+          </div>
+        </div>
+
+        <div class="setting-group">
+          <div class="group-title">Manual Crawler</div>
+
+          <div class="setting-item">
+            <div class="setting-label-text">Number of pages to crawl</div>
+            <input type="number" class="setting-input" bind:value={crawlerMaxPages} min="1" max="200" />
+            <div class="setting-description">How many pages to fetch (0 = crawl all pages)</div>
+          </div>
+
+          <div class="setting-item">
+            <button class="action-button primary" on:click={runCrawler} disabled={crawlerRunning}>
+              {crawlerRunning ? 'Crawling...' : 'Run Crawler Now'}
+            </button>
+            {#if crawlerProgress}
+              <div class="crawler-status">{crawlerProgress}</div>
+            {/if}
+            <div class="setting-description">Manually trigger the crawler to update the database</div>
           </div>
         </div>
 
@@ -763,6 +817,22 @@
   .action-button:hover {
     background-color: var(--color-hover);
     border-color: var(--color-primary);
+  }
+
+  .action-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .crawler-status {
+    margin-top: 12px;
+    padding: 10px 12px;
+    background-color: var(--color-backgroundTertiary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    color: var(--color-text);
+    font-size: 13px;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
   }
 
   /* About Section */

@@ -1,4 +1,5 @@
-use crate::database::{Database, Game, GameDetails, DatabaseStats};
+use crate::crawler::{FitGirlCrawler, GameRepack};
+use crate::database::{AppSettings, Database, Game, GameDetails, DatabaseStats};
 use std::path::PathBuf;
 use std::sync::Mutex;
 use tauri::State;
@@ -141,5 +142,101 @@ pub async fn get_disk_info() -> Result<DiskInfo, String> {
             used: 0,
         })
     }
+}
+
+// Crawler commands
+
+#[derive(Debug, serde::Serialize, Clone)]
+pub struct CrawlProgress {
+    pub current_page: u32,
+    pub total_games: usize,
+    pub status: String,
+}
+
+#[tauri::command]
+pub async fn start_crawler(
+    max_pages: Option<u32>,
+    state: State<'_, AppState>,
+) -> Result<CrawlProgress, String> {
+    // Create crawler
+    let crawler = FitGirlCrawler::new().map_err(|e| e.to_string())?;
+    
+    // Crawl pages
+    let repacks = crawler
+        .crawl_multiple_pages(1, max_pages)
+        .await
+        .map_err(|e| e.to_string())?;
+    
+    // Save to database
+    let db_path = state.db_path.lock().unwrap().clone();
+    save_repacks_to_db(&repacks, &db_path).map_err(|e| e.to_string())?;
+    
+    Ok(CrawlProgress {
+        current_page: max_pages.unwrap_or(0),
+        total_games: repacks.len(),
+        status: "Completed".to_string(),
+    })
+}
+
+fn save_repacks_to_db(repacks: &[GameRepack], db_path: &PathBuf) -> anyhow::Result<()> {
+    let db = Database::new(db_path.clone())?;
+    
+    for repack in repacks {
+        // Insert or update repack
+        db.conn.execute(
+            "INSERT INTO repacks (title, genres_tags, company, languages, original_size, repack_size, url, date, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, CURRENT_TIMESTAMP)
+             ON CONFLICT(url) DO UPDATE SET
+                title = excluded.title,
+                genres_tags = excluded.genres_tags,
+                company = excluded.company,
+                languages = excluded.languages,
+                original_size = excluded.original_size,
+                repack_size = excluded.repack_size,
+                date = excluded.date,
+                updated_at = CURRENT_TIMESTAMP",
+            (&repack.title, &repack.genres_tags, &repack.company, &repack.languages, 
+             &repack.original_size, &repack.repack_size, &repack.url, &repack.date),
+        )?;
+        
+        // Get repack_id
+        let repack_id: i64 = db.conn.query_row(
+            "SELECT id FROM repacks WHERE url = ?1",
+            [&repack.url],
+            |row| row.get(0),
+        )?;
+        
+        // Insert magnet links
+        for magnet in &repack.magnet_links {
+            db.conn.execute(
+                "INSERT INTO magnet_links (repack_id, source, magnet)
+                 VALUES (?1, ?2, ?3)
+                 ON CONFLICT(repack_id, source) DO UPDATE SET magnet = excluded.magnet",
+                (repack_id, &magnet.source, &magnet.magnet),
+            )?;
+        }
+    }
+    
+    println!("Saved {} repacks to database", repacks.len());
+    Ok(())
+}
+
+// Settings commands
+
+#[tauri::command]
+pub async fn get_settings(state: State<'_, AppState>) -> Result<AppSettings, String> {
+    let db_path = state.db_path.lock().unwrap().clone();
+    let db = Database::new(db_path).map_err(|e| e.to_string())?;
+    db.get_settings().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn save_settings(
+    settings: AppSettings,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let db_path = state.db_path.lock().unwrap().clone();
+    let db = Database::new(db_path).map_err(|e| e.to_string())?;
+    db.save_settings(&settings).map_err(|e| e.to_string())
 }
 

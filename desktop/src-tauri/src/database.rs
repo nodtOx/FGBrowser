@@ -31,7 +31,7 @@ pub struct GameDetails {
 }
 
 pub struct Database {
-    conn: Connection,
+    pub conn: Connection,
 }
 
 impl Database {
@@ -156,4 +156,97 @@ impl Database {
 pub struct DatabaseStats {
     pub total_games: i64,
     pub total_magnets: i64,
+}
+
+// Settings management
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+pub struct AppSettings {
+    // General
+    pub auto_start: bool,
+    pub minimize_to_tray: bool,
+    pub close_to_tray: bool,
+    pub notifications: bool,
+
+    // Download
+    pub download_path: String,
+    pub max_simultaneous_downloads: i32,
+    pub auto_start_downloads: bool,
+    pub seed_after_complete: bool,
+    pub seed_ratio: f64,
+
+    // Network
+    pub max_download_speed: i32,
+    pub max_upload_speed: i32,
+    pub port: i32,
+    pub use_upnp: bool,
+    pub use_dht: bool,
+
+    // Appearance
+    pub font_size: i32,
+    pub compact_mode: bool,
+    pub show_thumbnails: bool,
+    pub animations_enabled: bool,
+
+    // Database
+    pub db_path: String,
+    pub auto_refresh: bool,
+    pub refresh_interval: i32,
+}
+
+impl Database {
+    pub fn init_settings_table(&self) -> Result<()> {
+        self.conn.execute(
+            "CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )",
+            [],
+        )?;
+        Ok(())
+    }
+
+    pub fn get_settings(&self) -> Result<AppSettings> {
+        // Ensure settings table exists
+        let _ = self.init_settings_table();
+
+        // Try to get settings from database
+        match self.conn.query_row(
+            "SELECT value FROM settings WHERE key = 'app_settings'",
+            [],
+            |row| row.get::<_, String>(0),
+        ) {
+            Ok(json_str) => {
+                // Parse JSON
+                serde_json::from_str(&json_str)
+                    .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))
+            }
+            Err(rusqlite::Error::QueryReturnedNoRows) => {
+                // Return default settings if not found
+                Ok(AppSettings::default())
+            }
+            Err(e) => Err(e),
+        }
+    }
+
+    pub fn save_settings(&self, settings: &AppSettings) -> Result<()> {
+        // Ensure settings table exists
+        self.init_settings_table()?;
+
+        // Serialize to JSON
+        let json_str = serde_json::to_string(settings)
+            .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
+
+        // Insert or replace
+        self.conn.execute(
+            "INSERT INTO settings (key, value, updated_at) 
+             VALUES ('app_settings', ?1, CURRENT_TIMESTAMP)
+             ON CONFLICT(key) DO UPDATE SET 
+                value = excluded.value,
+                updated_at = CURRENT_TIMESTAMP",
+            [&json_str],
+        )?;
+
+        Ok(())
+    }
 }
