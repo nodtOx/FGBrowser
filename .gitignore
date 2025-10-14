@@ -4,9 +4,6 @@ __pycache__/
 *.pyc
 *.pyo
 
-# Database
-*.db
-*.db-journal
 
 # Config (user-specific)
 config/blacklist.txt
