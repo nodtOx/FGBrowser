@@ -20,37 +20,27 @@
     }
 </script>
 
-<div class="game-list-container">
-    <!-- Header row -->
-    <div class="game-header">
-        <div class="header-date">Date</div>
-        <div class="header-title">Title</div>
-        <div class="header-size">Size</div>
-    </div>
-    
-    <!-- Scrollable game list -->
-    <div class="game-list">
-        {#each $games as game, index (game.id)}
-            <div 
-                class="game-item"
-                class:selected={index === $selectedIndex}
-                on:click={() => handleGameClick(index)}
-                on:keydown={(e) => e.key === 'Enter' && handleGameClick(index)}
-                role="button"
-                tabindex={index === $selectedIndex ? 0 : -1}
-            >
-                <div class="game-date">
-                    {formatDate(game.date)}
-                </div>
-                <div class="game-title">
-                    {game.title}
-                </div>
-                <div class="game-size">
-                    {formatSize(game.size)}
-                </div>
+<div class="game-list">
+    {#each $games as game, index (game.id)}
+        <div 
+            class="game-item"
+            class:selected={index === $selectedIndex}
+            on:click={() => handleGameClick(index)}
+            on:keydown={(e) => e.key === 'Enter' && handleGameClick(index)}
+            role="button"
+            tabindex={index === $selectedIndex ? 0 : -1}
+        >
+            <div class="game-date">
+                {formatDate(game.date)}
             </div>
-        {/each}
-    </div>
+            <div class="game-title">
+                {game.title}
+            </div>
+            <div class="game-size">
+                {formatSize(game.size)}
+            </div>
+        </div>
+    {/each}
 </div>
 
 <style>
