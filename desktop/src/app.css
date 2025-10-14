@@ -20,23 +20,20 @@
   --color-warning: #ebcb8b;
   --color-error: #bf616a;
   --color-info: #81a1c1;
-  
+
   /* Layout */
   --sidebar-width: 240px;
   --header-height: 32px;
   --footer-height: 24px;
   --border-radius: 0px;
   --spacing: 4px;
-  
+
   /* Typography */
   --base-font-size: 16px;
-  
+
   /* Effects */
-  --blur: 10px;
-  --shadow: none;
-  --shadow-hover: none;
-  --transition: all 0.15s ease;
-  
+  --transition: none;
+
   /* Game List */
   --row-height: 20px;
 }
@@ -92,4 +89,3 @@ body {
   outline: 2px solid var(--color-primary);
   outline-offset: -2px;
 }
-

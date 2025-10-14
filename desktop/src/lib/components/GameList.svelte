@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { games, selectedIndex, selectGame, type Game } from '$lib/stores/games';
+    import { games, selectedIndex, selectGame } from '$lib/stores/games';
     
     function formatSize(size: string | null): string {
         if (!size) return 'N/A';
@@ -65,7 +65,7 @@
         padding: 3px 12px;
         gap: 16px;
         cursor: pointer;
-        transition: var(--transition);
+        
         border-bottom: 1px solid transparent;
     }
     
@@ -76,7 +76,6 @@
     .game-item.selected {
         background-color: var(--color-primary);
         color: var(--color-selectedText);
-        font-weight: 600;
     }
     
     .game-date {

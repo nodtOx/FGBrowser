@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { downloadDir } from '@tauri-apps/api/path';
   import { invoke } from '@tauri-apps/api/core';
+  import { downloadDir } from '@tauri-apps/api/path';
+  import { onMount } from 'svelte';
 
   let activeSection = 'general';
   let defaultDownloadPath = '';
@@ -744,7 +744,7 @@
     max-width: 300px;
     height: 6px;
     background: var(--color-border);
-    border-radius: 3px;
+    border-radius: var(--border-radius);
     outline: none;
     appearance: none;
     -webkit-appearance: none;
