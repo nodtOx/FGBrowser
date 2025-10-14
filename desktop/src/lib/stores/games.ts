@@ -21,8 +21,20 @@ export interface MagnetLink {
   magnet: string;
 }
 
+export interface Category {
+  id: number;
+  name: string;
+}
+
+export interface CategoryWithCount {
+  id: number;
+  name: string;
+  game_count: number;
+}
+
 export interface GameDetails extends Game {
   magnet_links: MagnetLink[];
+  categories: Category[];
 }
 
 export const games = writable<Game[]>([]);
@@ -30,6 +42,24 @@ export const selectedGame = writable<GameDetails | null>(null);
 export const selectedIndex = writable<number>(0);
 export const searchQuery = writable<string>('');
 export const isLoading = writable<boolean>(false);
+export const categories = writable<CategoryWithCount[]>([]);
+export const selectedCategories = writable<CategoryWithCount[]>([]);
+
+// Optimization: Debouncing for category filtering
+let filterDebounceTimer: number | null = null;
+const FILTER_DEBOUNCE_MS = 200;
+
+// Debounced category filtering
+export function debouncedApplyCategoryFilters() {
+  if (filterDebounceTimer) {
+    clearTimeout(filterDebounceTimer);
+  }
+
+  filterDebounceTimer = setTimeout(() => {
+    applyCategoryFilters();
+    filterDebounceTimer = null;
+  }, FILTER_DEBOUNCE_MS) as unknown as number;
+}
 
 // Load games from database
 export async function loadGames(limit: number = 100, offset: number = 0) {
@@ -47,10 +77,111 @@ export async function loadGames(limit: number = 100, offset: number = 0) {
   }
 }
 
+// Load categories from database
+export async function loadCategories() {
+  try {
+    const result = await invoke<CategoryWithCount[]>('get_categories_with_counts');
+    categories.set(result);
+  } catch (error) {
+    console.error('Failed to load categories:', error);
+  }
+}
+
+// Load categories filtered by selected categories (faceted filtering)
+export async function loadFilteredCategories(selectedCategoryIds: number[]) {
+  try {
+    const result = await invoke<CategoryWithCount[]>('get_categories_for_filtered_games', {
+      selectedCategoryIds,
+    });
+    categories.set(result);
+  } catch (error) {
+    console.error('Failed to load filtered categories:', error);
+  }
+}
+
+// Load games by category
+export async function loadGamesByCategory(categoryId: number, limit: number = 100, offset: number = 0) {
+  isLoading.set(true);
+  try {
+    const result = await invoke<Game[]>('get_games_by_category', {
+      categoryId,
+      limit,
+      offset,
+    });
+    games.set(result);
+    if (result.length > 0) {
+      await selectGame(0);
+    }
+  } catch (error) {
+    console.error('Failed to load games by category:', error);
+  } finally {
+    isLoading.set(false);
+  }
+}
+
+// Load games by multiple categories
+export async function loadGamesByMultipleCategories(categoryIds: number[], limit: number = 1000, offset: number = 0) {
+  isLoading.set(true);
+  try {
+    const result = await invoke<Game[]>('get_games_by_multiple_categories', {
+      categoryIds,
+      limit,
+      offset,
+    });
+    games.set(result);
+    if (result.length > 0) {
+      await selectGame(0);
+    }
+  } catch (error) {
+    console.error('Failed to load games by multiple categories:', error);
+  } finally {
+    isLoading.set(false);
+  }
+}
+
+// Toggle category selection
+export function toggleCategorySelection(category: CategoryWithCount) {
+  selectedCategories.update((selected) => {
+    const index = selected.findIndex((c) => c.id === category.id);
+    if (index >= 0) {
+      // Remove if already selected
+      return selected.filter((c) => c.id !== category.id);
+    } else {
+      // Add if not selected
+      return [...selected, category];
+    }
+  });
+}
+
+// Clear all selected categories
+export function clearCategorySelection() {
+  selectedCategories.set([]);
+}
+
+// Apply category filters (with faceted filtering)
+export async function applyCategoryFilters() {
+  let currentSelected: CategoryWithCount[] = [];
+  selectedCategories.subscribe((s) => (currentSelected = s))();
+
+  if (currentSelected.length === 0) {
+    // No categories selected - load all games and all categories
+    await Promise.all([loadGames(), loadCategories()]);
+  } else {
+    // Categories selected - filter both games and categories
+    const categoryIds = currentSelected.map((c) => c.id);
+    await Promise.all([loadGamesByMultipleCategories(categoryIds), loadFilteredCategories(categoryIds)]);
+  }
+}
+
 // Search games
 export async function searchGames(query: string, limit: number = 100) {
+  // Clear selected categories when searching
+  clearCategorySelection();
+
   if (!query.trim()) {
-    return loadGames(limit);
+    // If search is cleared, restore normal state (all games and categories)
+    await Promise.all([loadGames(limit), loadCategories()]);
+    return;
   }
 
   isLoading.set(true);

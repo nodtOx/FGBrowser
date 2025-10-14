@@ -1,5 +1,5 @@
 use crate::crawler::{FitGirlCrawler, GameRepack};
-use crate::database::{AppSettings, Database, Game, GameDetails, DatabaseStats};
+use crate::database::{AppSettings, Database, Game, GameDetails, DatabaseStats, CategoryWithCount};
 use std::path::PathBuf;
 use std::sync::Mutex;
 use tauri::State;
@@ -153,6 +153,56 @@ pub async fn get_database_stats(
     let db_path = state.db_path.lock().unwrap().clone();
     let db = Database::new(db_path).map_err(|e| e.to_string())?;
     db.get_stats().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_categories_with_counts(
+    state: State<'_, AppState>,
+) -> Result<Vec<CategoryWithCount>, String> {
+    let db_path = state.db_path.lock().unwrap().clone();
+    let db = Database::new(db_path).map_err(|e| e.to_string())?;
+    db.get_categories_with_counts().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_categories_for_filtered_games(
+    selected_category_ids: Vec<i64>,
+    state: State<'_, AppState>,
+) -> Result<Vec<CategoryWithCount>, String> {
+    let db_path = state.db_path.lock().unwrap().clone();
+    let db = Database::new(db_path).map_err(|e| e.to_string())?;
+    db.get_categories_for_filtered_games(&selected_category_ids).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_games_by_category(
+    category_id: i64,
+    limit: i32,
+    offset: i32,
+    state: State<'_, AppState>,
+) -> Result<Vec<Game>, String> {
+    let db_path = state.db_path.lock().unwrap().clone();
+    let db = Database::new(db_path).map_err(|e| e.to_string())?;
+    db.get_games_by_category(category_id, limit, offset).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_games_by_multiple_categories(
+    category_ids: Vec<i64>,
+    limit: i32,
+    offset: i32,
+    state: State<'_, AppState>,
+) -> Result<Vec<Game>, String> {
+    let db_path = state.db_path.lock().unwrap().clone();
+    let db = Database::new(db_path).map_err(|e| e.to_string())?;
+    db.get_games_by_multiple_categories(&category_ids, limit, offset).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn clear_category_cache() -> Result<(), String> {
+    Database::clear_category_cache();
+    println!("🧹 Category cache cleared");
+    Ok(())
 }
 
 #[tauri::command]
@@ -414,6 +464,38 @@ fn save_repacks_to_db(repacks: &[GameRepack], db_path: &PathBuf) -> anyhow::Resu
                 )?;
             }
             
+            // Insert categories if genres_tags is present
+            if let Some(genres_tags) = &repack.genres_tags {
+                if !genres_tags.trim().is_empty() {
+                    let categories: Vec<String> = genres_tags
+                        .split(',')
+                        .map(|s| s.trim().to_string())
+                        .filter(|s| !s.is_empty())
+                        .collect();
+                    
+                    for category_name in categories {
+                        // Insert category if not exists
+                        db.conn.execute(
+                            "INSERT OR IGNORE INTO categories (name) VALUES (?1)",
+                            [&category_name],
+                        )?;
+                        
+                        // Get category ID
+                        let category_id: i64 = db.conn.query_row(
+                            "SELECT id FROM categories WHERE name = ?1",
+                            [&category_name],
+                            |row| row.get(0),
+                        )?;
+                        
+                        // Insert game-category relationship
+                        db.conn.execute(
+                            "INSERT OR IGNORE INTO game_categories (repack_id, category_id) VALUES (?1, ?2)",
+                            [repack_id, category_id],
+                        )?;
+                    }
+                }
+            }
+            
             Ok(())
         })();
         
@@ -428,6 +510,9 @@ fn save_repacks_to_db(repacks: &[GameRepack], db_path: &PathBuf) -> anyhow::Resu
     
     if saved_count > 0 {
         println!("Saved {}/{} repacks to database", saved_count, repacks.len());
+        // Clear category cache since new games were added
+        Database::clear_category_cache();
+        println!("🧹 Category cache cleared after adding {} games", saved_count);
     }
     
     Ok(())
@@ -460,6 +545,10 @@ pub async fn reset_database(state: State<'_, AppState>) -> Result<(), String> {
     if db_path.exists() {
         fs::remove_file(&db_path).map_err(|e| format!("Failed to delete database: {}", e))?;
         println!("Database deleted: {:?}", db_path);
+        
+        // Clear cache since database was reset
+        Database::clear_category_cache();
+        println!("🧹 Category cache cleared after database reset");
     }
     
     Ok(())
