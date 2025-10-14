@@ -1,5 +1,6 @@
 <script lang="ts">
     import { formatSize, games, selectedIndex, selectGame } from '$lib/stores/games';
+    import { openGameDetails } from '$lib/stores/navigation';
     import { onMount, tick } from 'svelte';
     
     // Virtualization parameters
@@ -36,10 +37,18 @@
         await selectGame(startIndex + gameIndex);
     }
     
+    async function handleGameDoubleClick(gameIndex: number) {
+        await selectGame(startIndex + gameIndex);
+        openGameDetails();
+    }
+    
     function handleKeydown(e: KeyboardEvent, gameIndex: number) {
         if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             handleGameClick(gameIndex);
+        } else if (e.key === 'Enter' && e.shiftKey) {
+            e.preventDefault();
+            handleGameDoubleClick(gameIndex);
         }
     }
     
@@ -90,6 +99,7 @@
                     class="game-item"
                     class:selected={globalIndex === $selectedIndex}
                     on:click={() => handleGameClick(index)}
+                    on:dblclick={() => handleGameDoubleClick(index)}
                     on:keydown={(e) => handleKeydown(e, index)}
                     role="button"
                     tabindex={globalIndex === $selectedIndex ? 0 : -1}
