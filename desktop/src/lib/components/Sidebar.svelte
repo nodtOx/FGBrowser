@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { CategoryWithCount } from '$lib/stores/games';
-    import { activeFilterType, applyTimeFilter, categories, clearAllFilters, clearCategorySelection, debouncedApplyCategoryFilters, selectedCategories, toggleCategorySelection } from '$lib/stores/games';
+    import { activeFilterType, applySizeFilter, applyTimeFilter, categories, clearAllFilters, clearCategorySelection, clearSizeFilter, debouncedApplyCategoryFilters, selectedCategories, toggleCategorySelection } from '$lib/stores/games';
     
     // Sidebar with categories and filters
     export let totalGames = 0;
@@ -34,8 +34,8 @@
     async function handleCategoryToggle(category: CategoryWithCount) {
         toggleCategorySelection(category);
         activeRecent = '';
-        activeSize = '';
         activeStatus = '';
+        // Keep activeSize - size filters work WITH categories
     }
     
     async function handleClearAll() {
@@ -48,6 +48,7 @@
     async function selectRecent(recent: string) {
         activeRecent = recent;
         clearCategorySelection();
+        clearSizeFilter();
         activeSize = '';
         activeStatus = '';
         console.log('Recent filter selected:', recent);
@@ -59,18 +60,24 @@
         await clearAllFilters();
     }
     
-    function selectSize(size: string) {
+    async function selectSize(size: string) {
         activeSize = size;
-        clearCategorySelection();
         activeRecent = '';
         activeStatus = '';
         console.log('Size filter selected:', size);
-        // TODO: Filter games by size
+        await applySizeFilter(size);
+    }
+    
+    async function clearSizeFilterHandler() {
+        activeSize = '';
+        clearSizeFilter();
+        await debouncedApplyCategoryFilters(); // Re-apply category filters if any
     }
     
     function selectStatus(status: string) {
         activeStatus = status;
         clearCategorySelection();
+        clearSizeFilter();
         activeRecent = '';
         activeSize = '';
         console.log('Status selected:', status);
@@ -160,14 +167,41 @@
     
     <div class="sidebar-section">
         <div class="section-title">Size</div>
-        <div class="sidebar-item" class:active={activeSize === '< 10 GB'} on:click={() => selectSize('< 10 GB')} on:keydown={(e) => handleKeydown(e, () => selectSize('< 10 GB'))} role="button" tabindex="0">
-            <span>{'<'} 10 GB</span>
+        <div class="sidebar-item" class:active={activeSize === '< 1 GB'} on:click={() => selectSize('< 1 GB')} on:keydown={(e) => handleKeydown(e, () => selectSize('< 1 GB'))} role="button" tabindex="0">
+            <span>{'<'} 1 GB</span>
+            {#if activeSize === '< 1 GB'}
+                <button class="time-filter-clear" on:click|stopPropagation={clearSizeFilterHandler}>×</button>
+            {/if}
         </div>
-        <div class="sidebar-item" class:active={activeSize === '10-50 GB'} on:click={() => selectSize('10-50 GB')} on:keydown={(e) => handleKeydown(e, () => selectSize('10-50 GB'))} role="button" tabindex="0">
-            <span>10-50 GB</span>
+        <div class="sidebar-item" class:active={activeSize === '1-10 GB'} on:click={() => selectSize('1-10 GB')} on:keydown={(e) => handleKeydown(e, () => selectSize('1-10 GB'))} role="button" tabindex="0">
+            <span>1-10 GB</span>
+            {#if activeSize === '1-10 GB'}
+                <button class="time-filter-clear" on:click|stopPropagation={clearSizeFilterHandler}>×</button>
+            {/if}
         </div>
-        <div class="sidebar-item" class:active={activeSize === '> 50 GB'} on:click={() => selectSize('> 50 GB')} on:keydown={(e) => handleKeydown(e, () => selectSize('> 50 GB'))} role="button" tabindex="0">
-            <span>{'>'} 50 GB</span>
+        <div class="sidebar-item" class:active={activeSize === '10-25 GB'} on:click={() => selectSize('10-25 GB')} on:keydown={(e) => handleKeydown(e, () => selectSize('10-25 GB'))} role="button" tabindex="0">
+            <span>10-25 GB</span>
+            {#if activeSize === '10-25 GB'}
+                <button class="time-filter-clear" on:click|stopPropagation={clearSizeFilterHandler}>×</button>
+            {/if}
+        </div>
+        <div class="sidebar-item" class:active={activeSize === '25-40 GB'} on:click={() => selectSize('25-40 GB')} on:keydown={(e) => handleKeydown(e, () => selectSize('25-40 GB'))} role="button" tabindex="0">
+            <span>25-40 GB</span>
+            {#if activeSize === '25-40 GB'}
+                <button class="time-filter-clear" on:click|stopPropagation={clearSizeFilterHandler}>×</button>
+            {/if}
+        </div>
+        <div class="sidebar-item" class:active={activeSize === '40-60 GB'} on:click={() => selectSize('40-60 GB')} on:keydown={(e) => handleKeydown(e, () => selectSize('40-60 GB'))} role="button" tabindex="0">
+            <span>40-60 GB</span>
+            {#if activeSize === '40-60 GB'}
+                <button class="time-filter-clear" on:click|stopPropagation={clearSizeFilterHandler}>×</button>
+            {/if}
+        </div>
+        <div class="sidebar-item" class:active={activeSize === '> 60 GB'} on:click={() => selectSize('> 60 GB')} on:keydown={(e) => handleKeydown(e, () => selectSize('> 60 GB'))} role="button" tabindex="0">
+            <span>{'>'} 60 GB</span>
+            {#if activeSize === '> 60 GB'}
+                <button class="time-filter-clear" on:click|stopPropagation={clearSizeFilterHandler}>×</button>
+            {/if}
         </div>
     </div>
     
