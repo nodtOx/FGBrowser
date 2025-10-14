@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { CategoryWithCount } from '$lib/stores/games';
-    import { categories, clearCategorySelection, debouncedApplyCategoryFilters, selectedCategories, toggleCategorySelection } from '$lib/stores/games';
+    import { activeFilterType, applyTimeFilter, categories, clearAllFilters, clearCategorySelection, debouncedApplyCategoryFilters, selectedCategories, toggleCategorySelection } from '$lib/stores/games';
     
     // Sidebar with categories and filters
     export let totalGames = 0;
@@ -18,7 +18,8 @@
         : $categories.slice(0, INITIAL_CATEGORIES_COUNT);
     
     // Auto-apply filters when selection changes (debounced)
-    $: if ($selectedCategories) {
+    // Only apply if categories are selected and filter type allows it
+    $: if ($selectedCategories.length > 0 && ($activeFilterType === 'none' || $activeFilterType === 'category')) {
         debouncedApplyCategoryFilters();
     }
     
@@ -38,19 +39,24 @@
     }
     
     async function handleClearAll() {
-        clearCategorySelection();
         activeRecent = '';
         activeSize = '';
         activeStatus = '';
+        await clearAllFilters();
     }
     
-    function selectRecent(recent: string) {
+    async function selectRecent(recent: string) {
         activeRecent = recent;
         clearCategorySelection();
         activeSize = '';
         activeStatus = '';
         console.log('Recent filter selected:', recent);
-        // TODO: Filter games by date
+        await applyTimeFilter(recent);
+    }
+    
+    async function clearTimeFilter() {
+        activeRecent = '';
+        await clearAllFilters();
     }
     
     function selectSize(size: string) {
@@ -101,7 +107,7 @@
             </div>
         {:else}
             <div class="sidebar-item all-games">
-                All ({totalGames})
+                <span>All ({totalGames})</span>
             </div>
         {/if}
         
@@ -125,30 +131,57 @@
         
         {#if $categories.length > INITIAL_CATEGORIES_COUNT}
             <div class="sidebar-item more-button" on:click={toggleShowAllCategories} on:keydown={(e) => handleKeydown(e, toggleShowAllCategories)} role="button" tabindex="0">
-                {showAllCategories ? `Less (${$categories.length - INITIAL_CATEGORIES_COUNT} hidden)` : `More (${$categories.length - INITIAL_CATEGORIES_COUNT} more)`}
+                <span>{showAllCategories ? `Less (${$categories.length - INITIAL_CATEGORIES_COUNT} hidden)` : `More (${$categories.length - INITIAL_CATEGORIES_COUNT} more)`}</span>
             </div>
         {/if}
     </div>
     
     <div class="sidebar-section">
         <div class="section-title">Recent</div>
-        <div class="sidebar-item" class:active={activeRecent === 'Today'} on:click={() => selectRecent('Today')} on:keydown={(e) => handleKeydown(e, () => selectRecent('Today'))} role="button" tabindex="0">Today</div>
-        <div class="sidebar-item" class:active={activeRecent === 'This Week'} on:click={() => selectRecent('This Week')} on:keydown={(e) => handleKeydown(e, () => selectRecent('This Week'))} role="button" tabindex="0">This Week</div>
-        <div class="sidebar-item" class:active={activeRecent === 'This Month'} on:click={() => selectRecent('This Month')} on:keydown={(e) => handleKeydown(e, () => selectRecent('This Month'))} role="button" tabindex="0">This Month</div>
+        <div class="sidebar-item" class:active={activeRecent === 'Today'} on:click={() => selectRecent('Today')} on:keydown={(e) => handleKeydown(e, () => selectRecent('Today'))} role="button" tabindex="0">
+            <span>Today</span>
+            {#if activeRecent === 'Today'}
+                <button class="time-filter-clear" on:click|stopPropagation={clearTimeFilter}>×</button>
+            {/if}
+        </div>
+        <div class="sidebar-item" class:active={activeRecent === 'This Week'} on:click={() => selectRecent('This Week')} on:keydown={(e) => handleKeydown(e, () => selectRecent('This Week'))} role="button" tabindex="0">
+            <span>This Week</span>
+            {#if activeRecent === 'This Week'}
+                <button class="time-filter-clear" on:click|stopPropagation={clearTimeFilter}>×</button>
+            {/if}
+        </div>
+        <div class="sidebar-item" class:active={activeRecent === 'This Month'} on:click={() => selectRecent('This Month')} on:keydown={(e) => handleKeydown(e, () => selectRecent('This Month'))} role="button" tabindex="0">
+            <span>This Month</span>
+            {#if activeRecent === 'This Month'}
+                <button class="time-filter-clear" on:click|stopPropagation={clearTimeFilter}>×</button>
+            {/if}
+        </div>
     </div>
     
     <div class="sidebar-section">
         <div class="section-title">Size</div>
-        <div class="sidebar-item" class:active={activeSize === '< 10 GB'} on:click={() => selectSize('< 10 GB')} on:keydown={(e) => handleKeydown(e, () => selectSize('< 10 GB'))} role="button" tabindex="0">{'<'} 10 GB</div>
-        <div class="sidebar-item" class:active={activeSize === '10-50 GB'} on:click={() => selectSize('10-50 GB')} on:keydown={(e) => handleKeydown(e, () => selectSize('10-50 GB'))} role="button" tabindex="0">10-50 GB</div>
-        <div class="sidebar-item" class:active={activeSize === '> 50 GB'} on:click={() => selectSize('> 50 GB')} on:keydown={(e) => handleKeydown(e, () => selectSize('> 50 GB'))} role="button" tabindex="0">{'>'} 50 GB</div>
+        <div class="sidebar-item" class:active={activeSize === '< 10 GB'} on:click={() => selectSize('< 10 GB')} on:keydown={(e) => handleKeydown(e, () => selectSize('< 10 GB'))} role="button" tabindex="0">
+            <span>{'<'} 10 GB</span>
+        </div>
+        <div class="sidebar-item" class:active={activeSize === '10-50 GB'} on:click={() => selectSize('10-50 GB')} on:keydown={(e) => handleKeydown(e, () => selectSize('10-50 GB'))} role="button" tabindex="0">
+            <span>10-50 GB</span>
+        </div>
+        <div class="sidebar-item" class:active={activeSize === '> 50 GB'} on:click={() => selectSize('> 50 GB')} on:keydown={(e) => handleKeydown(e, () => selectSize('> 50 GB'))} role="button" tabindex="0">
+            <span>{'>'} 50 GB</span>
+        </div>
     </div>
     
     <div class="sidebar-section">
         <div class="section-title">Status</div>
-        <div class="sidebar-item" class:active={activeStatus === 'Available'} on:click={() => selectStatus('Available')} on:keydown={(e) => handleKeydown(e, () => selectStatus('Available'))} role="button" tabindex="0">Available</div>
-        <div class="sidebar-item" class:active={activeStatus === 'Downloading'} on:click={() => selectStatus('Downloading')} on:keydown={(e) => handleKeydown(e, () => selectStatus('Downloading'))} role="button" tabindex="0">Downloading</div>
-        <div class="sidebar-item" class:active={activeStatus === 'Completed'} on:click={() => selectStatus('Completed')} on:keydown={(e) => handleKeydown(e, () => selectStatus('Completed'))} role="button" tabindex="0">Completed</div>
+        <div class="sidebar-item" class:active={activeStatus === 'Available'} on:click={() => selectStatus('Available')} on:keydown={(e) => handleKeydown(e, () => selectStatus('Available'))} role="button" tabindex="0">
+            <span>Available</span>
+        </div>
+        <div class="sidebar-item" class:active={activeStatus === 'Downloading'} on:click={() => selectStatus('Downloading')} on:keydown={(e) => handleKeydown(e, () => selectStatus('Downloading'))} role="button" tabindex="0">
+            <span>Downloading</span>
+        </div>
+        <div class="sidebar-item" class:active={activeStatus === 'Completed'} on:click={() => selectStatus('Completed')} on:keydown={(e) => handleKeydown(e, () => selectStatus('Completed'))} role="button" tabindex="0">
+            <span>Completed</span>
+        </div>
     </div>
 </div>
 
@@ -187,6 +220,9 @@
         cursor: pointer;
         transition: var(--transition);
         line-height: 1.4;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
     
     .sidebar-item:hover {
@@ -290,6 +326,31 @@
     
     .chip-remove:hover {
         background-color: rgba(255, 255, 255, 0.2);
+    }
+    
+    /* Time Filter Clear Button */
+    .time-filter-clear {
+        background: none;
+        border: none;
+        color: var(--color-selectedText);
+        cursor: pointer;
+        font-size: 14px;
+        line-height: 1;
+        padding: 2px;
+        margin-left: 8px;
+        width: 16px;
+        height: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        transition: var(--transition);
+        opacity: 0.8;
+    }
+    
+    .time-filter-clear:hover {
+        background-color: rgba(255, 255, 255, 0.2);
+        opacity: 1;
     }
     
     .all-games {
