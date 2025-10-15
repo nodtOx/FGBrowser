@@ -1,0 +1,8 @@
+---
+alwaysApply: true
+---
+
+- when you need to add/remove fields, you only update 3 places:
+  - The Game struct definition
+  - The GAME_SELECT_FIELDS constants
+  - The map_row_to_game() function
