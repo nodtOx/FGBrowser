@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { featureFlags } from '$lib/featureFlags';
     import { addDownload } from '$lib/stores/downloads';
     import { copyMagnetLink, formatSize, openMagnetLink, selectedGame } from '$lib/stores/games';
     import { invoke } from '@tauri-apps/api/core';
@@ -98,6 +99,7 @@
                                 <span class="magnet-index">[{index + 1}]</span>
                                 <span class="magnet-source">{link.source}</span>
                                 <div class="magnet-actions">
+                                    {#if featureFlags.torrentClient}
                                     <button 
                                         class="btn btn-download"
                                         on:click={() => handleDownload(link.magnet)}
@@ -105,6 +107,7 @@
                                     >
                                         ⬇ Download
                                     </button>
+                                    {/if}
                                     <button 
                                         class="btn btn-primary"
                                         on:click={() => handleOpenMagnet(link.magnet)}

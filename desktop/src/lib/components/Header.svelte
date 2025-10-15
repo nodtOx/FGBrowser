@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { featureFlags } from '$lib/featureFlags';
     import { currentPage, navigateTo, type Page } from '$lib/stores/navigation';
     import { applyTheme, availableThemes, currentTheme } from '$lib/stores/theme';
     import { invoke } from '@tauri-apps/api/core';
@@ -64,6 +65,7 @@
                 >
                     Popular
                 </button>
+                {#if featureFlags.torrentClient}
                 <button 
                     class="nav-tab"
                     class:active={$currentPage === 'downloads'}
@@ -71,6 +73,7 @@
                 >
                     Downloads
                 </button>
+                {/if}
                 <button 
                     class="nav-tab"
                     class:active={$currentPage === 'settings'}
@@ -78,6 +81,7 @@
                 >
                     Settings
                 </button>
+                {#if featureFlags.stats}
                 <button 
                     class="nav-tab"
                     class:active={$currentPage === 'stats'}
@@ -85,6 +89,7 @@
                 >
                     Stats
                 </button>
+                {/if}
             </nav>
         </div>
         
