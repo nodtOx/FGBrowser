@@ -34,7 +34,7 @@
                 {formatDate(game.date)}
             </div>
             <div class="game-title">
-                {game.title}
+                {game.clean_name || game.title}
             </div>
             <div class="game-size">
                 {formatSize(game.size)}

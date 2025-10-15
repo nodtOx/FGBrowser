@@ -1,6 +1,6 @@
 import { writable } from 'svelte/store';
 
-export type Page = 'browse' | 'downloads' | 'settings' | 'stats' | 'about';
+export type Page = 'browse' | 'popular' | 'downloads' | 'settings' | 'stats' | 'about';
 
 export const currentPage = writable<Page>('browse');
 export const showGameDetails = writable<boolean>(false);

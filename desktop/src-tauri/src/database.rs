@@ -15,6 +15,7 @@ const MAX_CACHE_ENTRIES: usize = 100;
 pub struct Game {
     pub id: i64,
     pub title: String,
+    pub clean_name: Option<String>,
     pub genres_tags: Option<String>,
     pub company: Option<String>,
     pub languages: Option<String>,
@@ -23,6 +24,7 @@ pub struct Game {
     pub size: Option<i64>, // Size in MB (parsed from repack_size)
     pub url: String,
     pub date: Option<String>,
+    pub image_url: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -66,6 +68,7 @@ impl Database {
             "CREATE TABLE IF NOT EXISTS repacks (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT NOT NULL,
+                clean_name TEXT,
                 genres_tags TEXT,
                 company TEXT,
                 languages TEXT,
@@ -74,6 +77,7 @@ impl Database {
                 size INTEGER,
                 url TEXT UNIQUE,
                 date TEXT,
+                image_url TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )",
@@ -118,6 +122,24 @@ impl Database {
             [],
         )?;
         
+        // Create popular_repacks table
+        self.conn.execute(
+            "CREATE TABLE IF NOT EXISTS popular_repacks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                url TEXT NOT NULL,
+                title TEXT NOT NULL,
+                image_url TEXT,
+                rank INTEGER NOT NULL,
+                period TEXT NOT NULL DEFAULT 'month',
+                repack_id INTEGER,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (repack_id) REFERENCES repacks (id) ON DELETE SET NULL,
+                UNIQUE(url, period)
+            )",
+            [],
+        )?;
+        
         // Create indexes
         self.conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_repacks_title ON repacks(title)",
@@ -150,8 +172,210 @@ impl Database {
             [],
         )?;
         
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_popular_repacks_period_rank ON popular_repacks(period, rank)",
+            [],
+        )?;
+        
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_popular_repacks_url_period ON popular_repacks(url, period)",
+            [],
+        )?;
+        
         // Run migration to convert genres_tags to m2m structure
         self.migrate_categories_data()?;
+        
+        // Run migration to add period column to popular_repacks
+        self.migrate_popular_repacks_period()?;
+        
+        // Run migration to add image_url column to repacks
+        self.migrate_repacks_image_url()?;
+        
+        // Run migration to add clean_name column to repacks
+        self.migrate_repacks_clean_name()?;
+        
+        // Populate clean names for existing games
+        self.populate_clean_names()?;
+        
+        Ok(())
+    }
+    
+    pub fn migrate_repacks_image_url(&self) -> Result<()> {
+        // Check if image_url column exists
+        let column_exists: Result<i64, _> = self.conn.query_row(
+            "SELECT COUNT(*) FROM pragma_table_info('repacks') WHERE name = 'image_url'",
+            [],
+            |row| row.get(0),
+        );
+        
+        match column_exists {
+            Ok(count) if count == 0 => {
+                println!("🔄 Adding image_url column to repacks table...");
+                
+                // Add image_url column
+                self.conn.execute(
+                    "ALTER TABLE repacks ADD COLUMN image_url TEXT",
+                    [],
+                )?;
+                
+                println!("✅ Migration completed! Added image_url column to repacks");
+            }
+            Ok(_) => {
+                // Column already exists, do nothing
+            }
+            Err(e) => {
+                eprintln!("Warning: Could not check for image_url column: {}", e);
+            }
+        }
+        
+        Ok(())
+    }
+    
+    pub fn migrate_repacks_clean_name(&self) -> Result<()> {
+        // Check if clean_name column exists
+        let column_exists: Result<i64, _> = self.conn.query_row(
+            "SELECT COUNT(*) FROM pragma_table_info('repacks') WHERE name = 'clean_name'",
+            [],
+            |row| row.get(0),
+        );
+        
+        match column_exists {
+            Ok(count) if count == 0 => {
+                println!("🔄 Adding clean_name column to repacks table...");
+                
+                // Add clean_name column
+                self.conn.execute(
+                    "ALTER TABLE repacks ADD COLUMN clean_name TEXT",
+                    [],
+                )?;
+                
+                println!("✅ Migration completed! Added clean_name column to repacks");
+            }
+            Ok(_) => {
+                // Column already exists, do nothing
+            }
+            Err(e) => {
+                eprintln!("Warning: Could not check for clean_name column: {}", e);
+            }
+        }
+        
+        Ok(())
+    }
+    
+    pub fn populate_clean_names(&self) -> Result<()> {
+        // Check if there are any games without clean names
+        let count: i64 = self.conn.query_row(
+            "SELECT COUNT(*) FROM repacks WHERE clean_name IS NULL OR clean_name = ''",
+            [],
+            |row| row.get(0),
+        )?;
+        
+        if count > 0 {
+            println!("🔄 Populating clean names for {} existing games...", count);
+            
+            // Get all games that need clean names
+            let mut stmt = self.conn.prepare("SELECT id, title FROM repacks WHERE clean_name IS NULL OR clean_name = ''")?;
+            let rows = stmt.query_map([], |row| {
+                Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?))
+            })?;
+            
+            let mut updated_count = 0;
+            for row in rows {
+                if let Ok((id, title)) = row {
+                    // Generate clean name using the crawler function
+                    let clean_name = crate::crawler::clean_game_title(&title);
+                    
+                    // Update the record
+                    self.conn.execute(
+                        "UPDATE repacks SET clean_name = ?1 WHERE id = ?2",
+                        (&clean_name, id),
+                    )?;
+                    
+                    updated_count += 1;
+                    
+                    // Print progress every 50 games
+                    if updated_count % 50 == 0 {
+                        println!("  ✓ Processed {} games...", updated_count);
+                    }
+                }
+            }
+            
+            println!("✅ Clean names populated for {} games", updated_count);
+        }
+        
+        Ok(())
+    }
+    
+    pub fn migrate_popular_repacks_period(&self) -> Result<()> {
+        // Check if period column exists
+        let column_exists: Result<i64, _> = self.conn.query_row(
+            "SELECT COUNT(*) FROM pragma_table_info('popular_repacks') WHERE name = 'period'",
+            [],
+            |row| row.get(0),
+        );
+        
+        match column_exists {
+            Ok(count) if count == 0 => {
+                println!("🔄 Migrating popular_repacks table to add period column...");
+                
+                // Add period column with default value 'month'
+                self.conn.execute(
+                    "ALTER TABLE popular_repacks ADD COLUMN period TEXT NOT NULL DEFAULT 'month'",
+                    [],
+                )?;
+                
+                // Drop old unique constraint and create new composite one
+                // SQLite doesn't support DROP CONSTRAINT, so we need to recreate the table
+                self.conn.execute(
+                    "CREATE TABLE popular_repacks_new (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        url TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        image_url TEXT,
+                        rank INTEGER NOT NULL,
+                        period TEXT NOT NULL DEFAULT 'month',
+                        repack_id INTEGER,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (repack_id) REFERENCES repacks (id) ON DELETE SET NULL,
+                        UNIQUE(url, period)
+                    )",
+                    [],
+                )?;
+                
+                // Copy data from old table
+                self.conn.execute(
+                    "INSERT INTO popular_repacks_new (id, url, title, image_url, rank, period, repack_id, created_at, updated_at)
+                     SELECT id, url, title, image_url, rank, period, repack_id, created_at, updated_at FROM popular_repacks",
+                    [],
+                )?;
+                
+                // Drop old table
+                self.conn.execute("DROP TABLE popular_repacks", [])?;
+                
+                // Rename new table
+                self.conn.execute("ALTER TABLE popular_repacks_new RENAME TO popular_repacks", [])?;
+                
+                // Recreate indexes
+                self.conn.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_popular_repacks_period_rank ON popular_repacks(period, rank)",
+                    [],
+                )?;
+                
+                self.conn.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_popular_repacks_url_period ON popular_repacks(url, period)",
+                    [],
+                )?;
+                
+                println!("✅ Migration completed! Added period column to popular_repacks");
+            }
+            Ok(_) => {
+                // Column already exists, do nothing
+            }
+            Err(e) => {
+                eprintln!("Warning: Could not check for period column: {}", e);
+            }
+        }
         
         Ok(())
     }
@@ -234,7 +458,7 @@ impl Database {
     pub fn search_games(&self, query: &str, limit: i32) -> Result<Vec<Game>> {
         let search_pattern = format!("%{}%", query);
         let mut stmt = self.conn.prepare(
-            "SELECT id, title, genres_tags, company, languages, original_size, repack_size, size, url, date 
+            "SELECT id, title, clean_name, genres_tags, company, languages, original_size, repack_size, size, url, date, image_url 
              FROM repacks 
              WHERE title LIKE ?1 
              ORDER BY date DESC 
@@ -246,14 +470,16 @@ impl Database {
                 Ok(Game {
                     id: row.get(0)?,
                     title: row.get(1)?,
-                    genres_tags: row.get(2)?,
-                    company: row.get(3)?,
-                    languages: row.get(4)?,
-                    original_size: row.get(5)?,
-                    repack_size: row.get(6)?,
-                    size: row.get(7)?,
-                    url: row.get(8)?,
-                    date: row.get(9)?,
+                    clean_name: row.get(2)?,
+                    genres_tags: row.get(3)?,
+                    company: row.get(4)?,
+                    languages: row.get(5)?,
+                    original_size: row.get(6)?,
+                    repack_size: row.get(7)?,
+                    size: row.get(8)?,
+                    url: row.get(9)?,
+                    date: row.get(10)?,
+                    image_url: row.get(11)?,
                 })
             })?
             .collect::<Result<Vec<_>>>()?;
@@ -263,7 +489,7 @@ impl Database {
 
     pub fn get_all_games(&self, limit: i32, offset: i32) -> Result<Vec<Game>> {
         let mut stmt = self.conn.prepare(
-            "SELECT id, title, genres_tags, company, languages, original_size, repack_size, size, url, date 
+            "SELECT id, title, clean_name, genres_tags, company, languages, original_size, repack_size, size, url, date, image_url 
              FROM repacks 
              ORDER BY date DESC 
              LIMIT ?1 OFFSET ?2"
@@ -274,14 +500,16 @@ impl Database {
                 Ok(Game {
                     id: row.get(0)?,
                     title: row.get(1)?,
-                    genres_tags: row.get(2)?,
-                    company: row.get(3)?,
-                    languages: row.get(4)?,
-                    original_size: row.get(5)?,
-                    repack_size: row.get(6)?,
-                    size: row.get(7)?,
-                    url: row.get(8)?,
-                    date: row.get(9)?,
+                    clean_name: row.get(2)?,
+                    genres_tags: row.get(3)?,
+                    company: row.get(4)?,
+                    languages: row.get(5)?,
+                    original_size: row.get(6)?,
+                    repack_size: row.get(7)?,
+                    size: row.get(8)?,
+                    url: row.get(9)?,
+                    date: row.get(10)?,
+                    image_url: row.get(11)?,
                 })
             })?
             .collect::<Result<Vec<_>>>()?;
@@ -292,21 +520,23 @@ impl Database {
     pub fn get_game_details(&self, game_id: i64) -> Result<GameDetails> {
         // Get game info
         let game: Game = self.conn.query_row(
-            "SELECT id, title, genres_tags, company, languages, original_size, repack_size, size, url, date 
+            "SELECT id, title, clean_name, genres_tags, company, languages, original_size, repack_size, size, url, date, image_url 
              FROM repacks WHERE id = ?1",
             [game_id],
             |row| {
                 Ok(Game {
                     id: row.get(0)?,
                     title: row.get(1)?,
-                    genres_tags: row.get(2)?,
-                    company: row.get(3)?,
-                    languages: row.get(4)?,
-                    original_size: row.get(5)?,
-                    repack_size: row.get(6)?,
-                    size: row.get(7)?,
-                    url: row.get(8)?,
-                    date: row.get(9)?,
+                    clean_name: row.get(2)?,
+                    genres_tags: row.get(3)?,
+                    company: row.get(4)?,
+                    languages: row.get(5)?,
+                    original_size: row.get(6)?,
+                    repack_size: row.get(7)?,
+                    size: row.get(8)?,
+                    url: row.get(9)?,
+                    date: row.get(10)?,
+                    image_url: row.get(11)?,
                 })
             },
         )?;
@@ -559,7 +789,7 @@ impl Database {
     // Get games filtered by date range
     pub fn get_games_by_date_range(&self, days_ago: i32, limit: i32, offset: i32) -> Result<Vec<Game>> {
         let mut stmt = self.conn.prepare(
-            "SELECT id, title, genres_tags, company, languages, original_size, repack_size, size, url, date 
+            "SELECT id, title, clean_name, genres_tags, company, languages, original_size, repack_size, size, url, date, image_url 
              FROM repacks 
              WHERE date >= date('now', '-' || ? || ' days')
              ORDER BY date DESC
@@ -571,14 +801,16 @@ impl Database {
                 Ok(Game {
                     id: row.get(0)?,
                     title: row.get(1)?,
-                    genres_tags: row.get(2)?,
-                    company: row.get(3)?,
-                    languages: row.get(4)?,
-                    original_size: row.get(5)?,
-                    repack_size: row.get(6)?,
-                    size: row.get(7)?,
-                    url: row.get(8)?,
-                    date: row.get(9)?,
+                    clean_name: row.get(2)?,
+                    genres_tags: row.get(3)?,
+                    company: row.get(4)?,
+                    languages: row.get(5)?,
+                    original_size: row.get(6)?,
+                    repack_size: row.get(7)?,
+                    size: row.get(8)?,
+                    url: row.get(9)?,
+                    date: row.get(10)?,
+                    image_url: row.get(11)?,
                 })
             })?
             .collect::<Result<Vec<_>>>()?;
@@ -588,7 +820,7 @@ impl Database {
     
     // Get games filtered by size range (in MB)
     pub fn get_games_by_size_range(&self, min_size: Option<i64>, max_size: Option<i64>, limit: i32, offset: i32) -> Result<Vec<Game>> {
-        let mut query = "SELECT id, title, genres_tags, company, languages, original_size, repack_size, size, url, date FROM repacks WHERE 1=1".to_string();
+        let mut query = "SELECT id, title, clean_name, genres_tags, company, languages, original_size, repack_size, size, url, date, image_url FROM repacks WHERE 1=1".to_string();
         let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
         
         if let Some(min) = min_size {
@@ -613,14 +845,16 @@ impl Database {
                 Ok(Game {
                     id: row.get(0)?,
                     title: row.get(1)?,
-                    genres_tags: row.get(2)?,
-                    company: row.get(3)?,
-                    languages: row.get(4)?,
-                    original_size: row.get(5)?,
-                    repack_size: row.get(6)?,
-                    size: row.get(7)?,
-                    url: row.get(8)?,
-                    date: row.get(9)?,
+                    clean_name: row.get(2)?,
+                    genres_tags: row.get(3)?,
+                    company: row.get(4)?,
+                    languages: row.get(5)?,
+                    original_size: row.get(6)?,
+                    repack_size: row.get(7)?,
+                    size: row.get(8)?,
+                    url: row.get(9)?,
+                    date: row.get(10)?,
+                    image_url: row.get(11)?,
                 })
             })?
             .collect::<Result<Vec<_>>>()?;
@@ -637,7 +871,7 @@ impl Database {
         
         let placeholders = category_ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
         let mut query = format!(
-            "SELECT r.id, r.title, r.genres_tags, r.company, r.languages, r.original_size, r.repack_size, r.size, r.url, r.date 
+            "SELECT r.id, r.title, r.clean_name, r.genres_tags, r.company, r.languages, r.original_size, r.repack_size, r.size, r.url, r.date, r.image_url 
              FROM repacks r
              WHERE r.id IN (
                  SELECT gc.repack_id 
@@ -680,14 +914,16 @@ impl Database {
                 Ok(Game {
                     id: row.get(0)?,
                     title: row.get(1)?,
-                    genres_tags: row.get(2)?,
-                    company: row.get(3)?,
-                    languages: row.get(4)?,
-                    original_size: row.get(5)?,
-                    repack_size: row.get(6)?,
-                    size: row.get(7)?,
-                    url: row.get(8)?,
-                    date: row.get(9)?,
+                    clean_name: row.get(2)?,
+                    genres_tags: row.get(3)?,
+                    company: row.get(4)?,
+                    languages: row.get(5)?,
+                    original_size: row.get(6)?,
+                    repack_size: row.get(7)?,
+                    size: row.get(8)?,
+                    url: row.get(9)?,
+                    date: row.get(10)?,
+                    image_url: row.get(11)?,
                 })
             })?
             .collect::<Result<Vec<_>>>()?;
@@ -704,7 +940,7 @@ impl Database {
         
         let placeholders = category_ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
         let mut query = format!(
-            "SELECT r.id, r.title, r.genres_tags, r.company, r.languages, r.original_size, r.repack_size, r.size, r.url, r.date 
+            "SELECT r.id, r.title, r.clean_name, r.genres_tags, r.company, r.languages, r.original_size, r.repack_size, r.size, r.url, r.date, r.image_url 
              FROM repacks r
              WHERE r.id IN (
                  SELECT gc.repack_id 
@@ -751,14 +987,16 @@ impl Database {
                 Ok(Game {
                     id: row.get(0)?,
                     title: row.get(1)?,
-                    genres_tags: row.get(2)?,
-                    company: row.get(3)?,
-                    languages: row.get(4)?,
-                    original_size: row.get(5)?,
-                    repack_size: row.get(6)?,
-                    size: row.get(7)?,
-                    url: row.get(8)?,
-                    date: row.get(9)?,
+                    clean_name: row.get(2)?,
+                    genres_tags: row.get(3)?,
+                    company: row.get(4)?,
+                    languages: row.get(5)?,
+                    original_size: row.get(6)?,
+                    repack_size: row.get(7)?,
+                    size: row.get(8)?,
+                    url: row.get(9)?,
+                    date: row.get(10)?,
+                    image_url: row.get(11)?,
                 })
             })?
             .collect::<Result<Vec<_>>>()?;
@@ -768,7 +1006,7 @@ impl Database {
     
     // Get games by size AND time (dual combination)
     pub fn get_games_by_size_and_time(&self, min_size: Option<i64>, max_size: Option<i64>, days_ago: i32, limit: i32, offset: i32) -> Result<Vec<Game>> {
-        let mut query = "SELECT id, title, genres_tags, company, languages, original_size, repack_size, size, url, date FROM repacks WHERE 1=1".to_string();
+        let mut query = "SELECT id, title, clean_name, genres_tags, company, languages, original_size, repack_size, size, url, date, image_url FROM repacks WHERE 1=1".to_string();
         let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
         
         if let Some(min) = min_size {
@@ -796,14 +1034,16 @@ impl Database {
                 Ok(Game {
                     id: row.get(0)?,
                     title: row.get(1)?,
-                    genres_tags: row.get(2)?,
-                    company: row.get(3)?,
-                    languages: row.get(4)?,
-                    original_size: row.get(5)?,
-                    repack_size: row.get(6)?,
-                    size: row.get(7)?,
-                    url: row.get(8)?,
-                    date: row.get(9)?,
+                    clean_name: row.get(2)?,
+                    genres_tags: row.get(3)?,
+                    company: row.get(4)?,
+                    languages: row.get(5)?,
+                    original_size: row.get(6)?,
+                    repack_size: row.get(7)?,
+                    size: row.get(8)?,
+                    url: row.get(9)?,
+                    date: row.get(10)?,
+                    image_url: row.get(11)?,
                 })
             })?
             .collect::<Result<Vec<_>>>()?;
@@ -819,7 +1059,7 @@ impl Database {
         
         let placeholders = category_ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
         let query = format!(
-            "SELECT r.id, r.title, r.genres_tags, r.company, r.languages, r.original_size, r.repack_size, r.size, r.url, r.date 
+            "SELECT r.id, r.title, r.clean_name, r.genres_tags, r.company, r.languages, r.original_size, r.repack_size, r.size, r.url, r.date, r.image_url 
              FROM repacks r
              WHERE r.id IN (
                  SELECT gc.repack_id 
@@ -852,14 +1092,16 @@ impl Database {
                 Ok(Game {
                     id: row.get(0)?,
                     title: row.get(1)?,
-                    genres_tags: row.get(2)?,
-                    company: row.get(3)?,
-                    languages: row.get(4)?,
-                    original_size: row.get(5)?,
-                    repack_size: row.get(6)?,
-                    size: row.get(7)?,
-                    url: row.get(8)?,
-                    date: row.get(9)?,
+                    clean_name: row.get(2)?,
+                    genres_tags: row.get(3)?,
+                    company: row.get(4)?,
+                    languages: row.get(5)?,
+                    original_size: row.get(6)?,
+                    repack_size: row.get(7)?,
+                    size: row.get(8)?,
+                    url: row.get(9)?,
+                    date: row.get(10)?,
+                    image_url: row.get(11)?,
                 })
             })?
             .collect::<Result<Vec<_>>>()?;
@@ -869,7 +1111,7 @@ impl Database {
     
     pub fn get_games_by_category(&self, category_id: i64, limit: i32, offset: i32) -> Result<Vec<Game>> {
         let mut stmt = self.conn.prepare(
-            "SELECT r.id, r.title, r.genres_tags, r.company, r.languages, r.original_size, r.repack_size, r.size, r.url, r.date 
+            "SELECT r.id, r.title, r.clean_name, r.genres_tags, r.company, r.languages, r.original_size, r.repack_size, r.size, r.url, r.date, r.image_url 
              FROM repacks r
              JOIN game_categories gc ON r.id = gc.repack_id
              WHERE gc.category_id = ?1
@@ -882,14 +1124,16 @@ impl Database {
                 Ok(Game {
                     id: row.get(0)?,
                     title: row.get(1)?,
-                    genres_tags: row.get(2)?,
-                    company: row.get(3)?,
-                    languages: row.get(4)?,
-                    original_size: row.get(5)?,
-                    repack_size: row.get(6)?,
-                    size: row.get(7)?,
-                    url: row.get(8)?,
-                    date: row.get(9)?,
+                    clean_name: row.get(2)?,
+                    genres_tags: row.get(3)?,
+                    company: row.get(4)?,
+                    languages: row.get(5)?,
+                    original_size: row.get(6)?,
+                    repack_size: row.get(7)?,
+                    size: row.get(8)?,
+                    url: row.get(9)?,
+                    date: row.get(10)?,
+                    image_url: row.get(11)?,
                 })
             })?
             .collect::<Result<Vec<_>>>()?;
@@ -956,7 +1200,7 @@ impl Database {
         let placeholders = category_ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
         
         let query = format!(
-            "SELECT r.id, r.title, r.genres_tags, r.company, r.languages, r.original_size, r.repack_size, r.size, r.url, r.date 
+            "SELECT r.id, r.title, r.clean_name, r.genres_tags, r.company, r.languages, r.original_size, r.repack_size, r.size, r.url, r.date, r.image_url 
              FROM repacks r
              WHERE r.id IN (
                  SELECT gc.repack_id 
@@ -987,14 +1231,16 @@ impl Database {
                 Ok(Game {
                     id: row.get(0)?,
                     title: row.get(1)?,
-                    genres_tags: row.get(2)?,
-                    company: row.get(3)?,
-                    languages: row.get(4)?,
-                    original_size: row.get(5)?,
-                    repack_size: row.get(6)?,
-                    size: row.get(7)?,
-                    url: row.get(8)?,
-                    date: row.get(9)?,
+                    clean_name: row.get(2)?,
+                    genres_tags: row.get(3)?,
+                    company: row.get(4)?,
+                    languages: row.get(5)?,
+                    original_size: row.get(6)?,
+                    repack_size: row.get(7)?,
+                    size: row.get(8)?,
+                    url: row.get(9)?,
+                    date: row.get(10)?,
+                    image_url: row.get(11)?,
                 })
             })?
             .collect::<Result<Vec<_>>>()?;
@@ -1019,6 +1265,28 @@ pub struct CategoryWithCount {
     pub id: i64,
     pub name: String,
     pub game_count: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct PopularRepack {
+    pub id: i64,
+    pub url: String,
+    pub title: String,
+    pub image_url: Option<String>,
+    pub rank: i32,
+    pub period: String, // 'month' or 'year'
+    pub repack_id: Option<i64>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct PopularRepackWithGame {
+    pub id: i64,
+    pub url: String,
+    pub title: String,
+    pub image_url: Option<String>,
+    pub rank: i32,
+    pub period: String, // 'month' or 'year'
+    pub game: Option<Game>,
 }
 
 // Settings management
@@ -1111,5 +1379,138 @@ impl Database {
         )?;
 
         Ok(())
+    }
+    
+    // Popular repacks methods
+    pub fn save_popular_repack(&self, url: &str, title: &str, image_url: Option<&str>, rank: i32, period: &str) -> Result<i64> {
+        // First, try to find the repack_id by URL
+        let repack_id: Option<i64> = self.conn.query_row(
+            "SELECT id FROM repacks WHERE url = ?1",
+            [url],
+            |row| row.get(0),
+        ).ok();
+        
+        // Insert or update popular repack
+        self.conn.execute(
+            "INSERT INTO popular_repacks (url, title, image_url, rank, period, repack_id, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, CURRENT_TIMESTAMP)
+             ON CONFLICT(url, period) DO UPDATE SET
+                title = excluded.title,
+                image_url = excluded.image_url,
+                rank = excluded.rank,
+                repack_id = excluded.repack_id,
+                updated_at = CURRENT_TIMESTAMP",
+            (url, title, image_url, rank, period, repack_id),
+        )?;
+        
+        // Return the ID
+        let id: i64 = self.conn.query_row(
+            "SELECT id FROM popular_repacks WHERE url = ?1 AND period = ?2",
+            (url, period),
+            |row| row.get(0),
+        )?;
+        
+        Ok(id)
+    }
+    
+    pub fn get_popular_repacks(&self, period: &str, limit: i32) -> Result<Vec<PopularRepack>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, url, title, image_url, rank, period, repack_id 
+             FROM popular_repacks 
+             WHERE period = ?1
+             ORDER BY rank ASC
+             LIMIT ?2"
+        )?;
+
+        let repacks = stmt
+            .query_map([period, &limit.to_string()], |row| {
+                Ok(PopularRepack {
+                    id: row.get(0)?,
+                    url: row.get(1)?,
+                    title: row.get(2)?,
+                    image_url: row.get(3)?,
+                    rank: row.get(4)?,
+                    period: row.get(5)?,
+                    repack_id: row.get(6)?,
+                })
+            })?
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(repacks)
+    }
+    
+    pub fn get_popular_repacks_with_games(&self, period: &str, limit: i32) -> Result<Vec<PopularRepackWithGame>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT 
+                pr.id, pr.url, pr.title, pr.image_url, pr.rank, pr.period,
+                r.id, r.title, r.clean_name, r.genres_tags, r.company, r.languages, 
+                r.original_size, r.repack_size, r.size, r.url, r.date, r.image_url
+             FROM popular_repacks pr
+             LEFT JOIN repacks r ON pr.repack_id = r.id
+             WHERE pr.period = ?1
+             ORDER BY pr.rank ASC
+             LIMIT ?2"
+        )?;
+
+        let repacks = stmt
+            .query_map([period, &limit.to_string()], |row| {
+                let game = if let Ok(game_id) = row.get::<_, i64>(6) {
+                    Some(Game {
+                        id: game_id,
+                        title: row.get(7)?,
+                        clean_name: row.get(8)?,
+                        genres_tags: row.get(9)?,
+                        company: row.get(10)?,
+                        languages: row.get(11)?,
+                        original_size: row.get(12)?,
+                        repack_size: row.get(13)?,
+                        size: row.get(14)?,
+                        url: row.get(15)?,
+                        date: row.get(16)?,
+                        image_url: row.get(17)?,
+                    })
+                } else {
+                    None
+                };
+                
+                Ok(PopularRepackWithGame {
+                    id: row.get(0)?,
+                    url: row.get(1)?,
+                    title: row.get(2)?,
+                    image_url: row.get(3)?,
+                    rank: row.get(4)?,
+                    period: row.get(5)?,
+                    game,
+                })
+            })?
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(repacks)
+    }
+    
+    pub fn clear_popular_repacks(&self, period: &str) -> Result<()> {
+        self.conn.execute("DELETE FROM popular_repacks WHERE period = ?1", [period])?;
+        Ok(())
+    }
+    
+    pub fn update_popular_repack_links(&self, period: Option<&str>) -> Result<usize> {
+        // Update repack_id for all popular repacks where URL matches
+        let count = if let Some(p) = period {
+            self.conn.execute(
+                "UPDATE popular_repacks 
+                 SET repack_id = (SELECT id FROM repacks WHERE repacks.url = popular_repacks.url)
+                 WHERE period = ?1 AND EXISTS (SELECT 1 FROM repacks WHERE repacks.url = popular_repacks.url)",
+                [p],
+            )?
+        } else {
+            self.conn.execute(
+                "UPDATE popular_repacks 
+                 SET repack_id = (SELECT id FROM repacks WHERE repacks.url = popular_repacks.url)
+                 WHERE EXISTS (SELECT 1 FROM repacks WHERE repacks.url = popular_repacks.url)",
+                [],
+            )?
+        };
+        
+        Ok(count)
     }
 }
