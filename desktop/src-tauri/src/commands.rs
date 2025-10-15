@@ -1,3 +1,4 @@
+use crate::constants::AppConstants;
 use crate::crawler::{FitGirlCrawler, GameRepack, clean_game_title};
 use crate::database::{AppSettings, Database, Game, GameDetails, DatabaseStats, CategoryWithCount};
 use std::path::PathBuf;
@@ -205,6 +206,16 @@ pub async fn get_categories_for_size_and_time_filtered_games(
     let db_path = state.db_path.lock().unwrap().clone();
     let db = Database::new(db_path).map_err(|e| e.to_string())?;
     db.get_categories_for_size_and_time_filtered_games(min_size, max_size, days_ago).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_categories_for_search(
+    search_query: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<CategoryWithCount>, String> {
+    let db_path = state.db_path.lock().unwrap().clone();
+    let db = Database::new(db_path).map_err(|e| e.to_string())?;
+    db.get_categories_for_search(&search_query).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -998,5 +1009,10 @@ pub async fn crawl_single_popular_game(
             Err(e.to_string())
         }
     }
+}
+
+#[tauri::command]
+pub fn get_app_constants() -> AppConstants {
+    AppConstants::new()
 }
 
