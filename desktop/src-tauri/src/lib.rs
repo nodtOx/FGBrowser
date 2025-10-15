@@ -1,7 +1,7 @@
-mod commands;
+pub mod commands;
 mod constants;
-mod crawler;
-mod database;
+pub mod crawler;
+pub mod database;
 
 use commands::{
     add_download, clear_category_cache, copy_to_clipboard, crawl_popular_games, crawl_single_popular_game, fetch_popular_repacks, get_all_games, get_app_constants, get_categories_with_counts, get_categories_for_filtered_games, get_categories_for_search, get_categories_for_size_and_time_filtered_games, get_categories_for_size_filtered_games, get_categories_for_time_filtered_games, get_database_stats, get_disk_info, get_downloads, get_game_details,
