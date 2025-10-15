@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { games, isCrawlingPopular, loadCategories, loadGames, popularCrawlProgress } from '$lib/stores/games';
+  import { games, isCrawlingPopular, loadCategories, loadGames, popularCrawlProgress, totalGamesCount } from '$lib/stores/games';
   import { initKeyboardShortcuts } from '$lib/stores/keyboard';
   import { currentPage } from '$lib/stores/navigation';
   import { loadSavedTheme } from '$lib/stores/theme';
@@ -15,11 +15,8 @@
   import StatusBar from '$lib/components/StatusBar.svelte';
   import VirtualizedGameList from '$lib/components/VirtualizedGameList.svelte';
 
+  import { LOAD_ALL_GAMES, POLLING_INTERVAL_MS } from '$lib/constants';
   import '../app.css';
-
-  // Configuration
-  const GAMES_LOAD_LIMIT = 100; // Number of games to load at once
-  const POLLING_INTERVAL_MS = 2000; // How often to poll for new games during crawling
 
   let showCrawlerModal = false;
   let pollingInterval: any;
@@ -34,7 +31,7 @@
         showCrawlerModal = true;
       } else {
         // Database has data, check for updates
-        await loadGames(GAMES_LOAD_LIMIT);
+        await loadGames(LOAD_ALL_GAMES);
         await loadCategories();
         
         // Load popular repacks in the background (non-blocking)
@@ -47,7 +44,7 @@
     } catch (error) {
       console.error('Error checking database:', error);
       // Try to load games anyway
-      await loadGames(GAMES_LOAD_LIMIT);
+      await loadGames(LOAD_ALL_GAMES);
     }
   }
   
@@ -74,7 +71,7 @@
   function startPollingGames() {
     // Poll every 2 seconds to update game list while crawler is running
     pollingInterval = setInterval(async () => {
-      await loadGames(GAMES_LOAD_LIMIT);
+      await loadGames(LOAD_ALL_GAMES);
     }, POLLING_INTERVAL_MS);
   }
 
@@ -87,7 +84,7 @@
 
   async function onStartCrawl() {
     // Crawler started, start polling
-    await loadGames(100);
+    await loadGames(LOAD_ALL_GAMES);
     startPollingGames();
   }
 
@@ -96,7 +93,7 @@
     // Reset updating state
     isUpdating = false;
     // Final load of all games and categories
-    await loadGames(100);
+    await loadGames(LOAD_ALL_GAMES);
     await loadCategories();
     
     // Fetch popular repacks from website after crawling
@@ -174,7 +171,7 @@
     {#if $currentPage === 'browse'}
       <div class="browse-page">
         <div class="browse-layout">
-          <Sidebar totalGames={$games.length} />
+          <Sidebar totalGames={$totalGamesCount} />
 
           <div class="game-list-container">
             <VirtualizedGameList />

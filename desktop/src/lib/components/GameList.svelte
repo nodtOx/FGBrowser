@@ -1,5 +1,10 @@
 <script lang="ts">
-    import { formatSize, games, selectedIndex, selectGame } from '$lib/stores/games';
+    import { SEARCH_DEBOUNCE_MS } from '$lib/constants';
+    import { formatSize, games, searchGames, searchQuery, selectedIndex, selectGame } from '$lib/stores/games';
+    
+    let searchInput: HTMLInputElement;
+    let searchTimeout: any;
+    let previousQuery: string = '';
     
     function formatDate(date: string | null): string {
         if (!date) return 'N/A';
@@ -18,9 +23,48 @@
     async function handleGameClick(index: number) {
         await selectGame(index);
     }
+    
+    function handleSearch() {
+        // Clear previous timeout
+        if (searchTimeout) {
+            clearTimeout(searchTimeout);
+        }
+        
+        const currentQuery = $searchQuery.trim();
+        
+        // Debounce search
+        searchTimeout = setTimeout(async () => {
+            // Only search if query has actually changed
+            if (currentQuery !== previousQuery) {
+                previousQuery = currentQuery;
+                await searchGames(currentQuery);
+            }
+        }, SEARCH_DEBOUNCE_MS);
+    }
+    
+    function handleKeydown(e: KeyboardEvent) {
+        if (e.key === 'Escape') {
+            searchQuery.set('');
+            previousQuery = '';
+            searchGames('');
+            searchInput.blur();
+        }
+    }
 </script>
 
-<div class="game-list">
+<div class="game-list-container">
+    <div class="search-bar">
+        <input
+            bind:this={searchInput}
+            bind:value={$searchQuery}
+            on:input={handleSearch}
+            on:keydown={handleKeydown}
+            type="search"
+            placeholder="Search games... (press / to focus, Esc to clear)"
+            class="search-input"
+        />
+    </div>
+    <div class="game-list">
     {#each $games as game, index (game.id)}
         <div 
             class="game-item"
@@ -41,9 +85,45 @@
             </div>
         </div>
     {/each}
+    </div>
 </div>
 
 <style>
+    .game-list-container {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    
+    .search-bar {
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--color-border);
+        background-color: var(--color-backgroundSecondary);
+    }
+    
+    .search-input {
+        width: 100%;
+        padding: 6px 12px;
+        background-color: var(--color-backgroundSecondary);
+        /* border: 1px solid var(--color-border); */
+        color: var(--color-text);
+        font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        font-size: calc(var(--base-font-size) * 0.95);
+        outline: none;
+        transition: var(--transition);
+    }
+    
+    .search-input:focus {
+        /* border-color: var(--color-primary); */
+        background-color: var(--color-background);
+    }
+    
+    .search-input::placeholder {
+        color: var(--color-textSecondary);
+        opacity: 0.6;
+    }
+    
     .game-list {
         flex: 1;
         overflow-y: auto;

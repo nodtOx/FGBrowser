@@ -1,5 +1,5 @@
 import { get, writable } from 'svelte/store';
-import { copyMagnetLink, moveSelection, openMagnetLink, selectedGame } from './games';
+import { moveSelection } from './games';
 import { currentPage, navigateTo, type Page } from './navigation';
 
 export const keyboardEnabled = writable<boolean>(true);
@@ -43,15 +43,30 @@ function handleKeyPress(e: KeyboardEvent): boolean {
   const ctrl = e.ctrlKey || e.metaKey;
   const shift = e.shiftKey;
 
-  // Navigation between games
-  if ((key === 'ArrowUp' || key === 'k') && !ctrl) {
+  // Check if user is typing in an input field
+  const target = e.target as HTMLElement;
+  const isTyping = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+
+  // Allow Cmd+F and / to focus search even when in input
+  if ((key === '/' || (ctrl && key === 'f')) && !shift) {
+    focusSearch();
+    return true;
+  }
+
+  // Navigation between games (arrow keys work everywhere, including in search)
+  if (key === 'ArrowUp' && !ctrl) {
     moveSelection('up');
     return true;
   }
 
-  if ((key === 'ArrowDown' || key === 'j') && !ctrl) {
+  if (key === 'ArrowDown' && !ctrl) {
     moveSelection('down');
     return true;
+  }
+
+  // Skip other shortcuts if user is typing
+  if (isTyping) {
+    return false;
   }
 
   // Page navigation - cycle through tabs
@@ -65,52 +80,6 @@ function handleKeyPress(e: KeyboardEvent): boolean {
     return true;
   }
 
-  // Search
-  if ((key === '/' || (ctrl && key === 'f')) && !shift) {
-    focusSearch();
-    return true;
-  }
-
-  // Open first magnet link
-  if (key === 'Enter') {
-    const game = get(selectedGame);
-    if (game && game.magnet_links.length > 0) {
-      openMagnetLink(game.magnet_links[0].magnet);
-    }
-    return true;
-  }
-
-  // Open specific magnet link (1-9)
-  if (!ctrl && key >= '1' && key <= '9') {
-    const game = get(selectedGame);
-    const index = parseInt(key) - 1;
-    if (game && game.magnet_links[index]) {
-      openMagnetLink(game.magnet_links[index].magnet);
-    }
-    return true;
-  }
-
-  // Copy first magnet link
-  if (key === 'c' && !ctrl) {
-    const game = get(selectedGame);
-    if (game && game.magnet_links.length > 0) {
-      copyMagnetLink(game.magnet_links[0].magnet);
-    }
-    return true;
-  }
-
-  // Quit
-  if ((ctrl && key === 'q') || key === 'Q') {
-    // Handle quit
-    return true;
-  }
-
-  // Fullscreen
-  if (key === 'F11') {
-    toggleFullscreen();
-    return true;
-  }
-
   return false;
 }
 
@@ -119,13 +88,5 @@ function focusSearch() {
   if (searchInput) {
     searchInput.focus();
     searchInput.select();
-  }
-}
-
-function toggleFullscreen() {
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen();
-  } else {
-    document.exitFullscreen();
   }
 }

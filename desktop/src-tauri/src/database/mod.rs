@@ -114,6 +114,11 @@ impl Database {
         )?;
         
         self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_repacks_clean_name ON repacks(clean_name)",
+            [],
+        )?;
+        
+        self.conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_repacks_date ON repacks(date)",
             [],
         )?;
@@ -231,6 +236,10 @@ impl Database {
     
     pub fn get_categories_for_size_and_time_filtered_games(&self, min_size: Option<i64>, max_size: Option<i64>, days_ago: i32) -> Result<Vec<CategoryWithCount>> {
         CategoryQueries::get_categories_for_size_and_time_filtered_games(&self.conn, min_size, max_size, days_ago)
+    }
+
+    pub fn get_categories_for_search(&self, search_query: &str) -> Result<Vec<CategoryWithCount>> {
+        CategoryQueries::get_categories_for_search(&self.conn, search_query)
     }
 
     // Popular repack methods - delegate to PopularQueries

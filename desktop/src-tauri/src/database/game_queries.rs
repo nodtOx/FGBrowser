@@ -31,7 +31,16 @@ impl GameQueries {
     pub fn search_games(conn: &rusqlite::Connection, query: &str, limit: i32) -> Result<Vec<Game>> {
         let search_pattern = format!("%{}%", query);
         let mut stmt = conn.prepare(&format!(
-            "SELECT {} FROM repacks WHERE title LIKE ?1 ORDER BY date DESC LIMIT ?2",
+            "SELECT {} FROM repacks 
+             WHERE title LIKE ?1 OR clean_name LIKE ?1 
+             ORDER BY 
+               CASE 
+                 WHEN clean_name LIKE ?1 THEN 1 
+                 WHEN title LIKE ?1 THEN 2 
+                 ELSE 3 
+               END,
+               date DESC 
+             LIMIT ?2",
             GAME_SELECT_FIELDS
         ))?;
 
