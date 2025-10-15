@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { games, loadCategories, loadGames } from '$lib/stores/games';
+  import { games, isCrawlingPopular, loadCategories, loadGames, popularCrawlProgress } from '$lib/stores/games';
   import { initKeyboardShortcuts } from '$lib/stores/keyboard';
   import { currentPage } from '$lib/stores/navigation';
   import { loadSavedTheme } from '$lib/stores/theme';
@@ -9,6 +9,7 @@
   import CrawlerModal from '$lib/components/CrawlerModal.svelte';
   import GameDetailsModal from '$lib/components/GameDetailsModal.svelte';
   import Header from '$lib/components/Header.svelte';
+  import Popular from '$lib/components/Popular.svelte';
   import Settings from '$lib/components/Settings.svelte';
   import Sidebar from '$lib/components/Sidebar.svelte';
   import StatusBar from '$lib/components/StatusBar.svelte';
@@ -35,12 +36,30 @@
         // Database has data, check for updates
         await loadGames(GAMES_LOAD_LIMIT);
         await loadCategories();
+        
+        // Load popular repacks in the background (non-blocking)
+        loadPopularRepacks().catch(err => 
+          console.warn('Failed to load popular repacks:', err)
+        );
+        
         checkForUpdates();
       }
     } catch (error) {
       console.error('Error checking database:', error);
       // Try to load games anyway
       await loadGames(GAMES_LOAD_LIMIT);
+    }
+  }
+  
+  async function loadPopularRepacks() {
+    try {
+      // Load both month and year popular repacks from database
+      const monthlyRepacks = await invoke<any[]>('get_popular_repacks', { period: 'month', limit: 50 });
+      const yearlyRepacks = await invoke<any[]>('get_popular_repacks', { period: 'year', limit: 150 });
+      console.log(`Loaded ${monthlyRepacks.length} monthly + ${yearlyRepacks.length} yearly popular repacks from database`);
+      // TODO: Store in a store for UI display
+    } catch (error) {
+      console.warn('No popular repacks in database yet');
     }
   }
 
@@ -79,6 +98,61 @@
     // Final load of all games and categories
     await loadGames(100);
     await loadCategories();
+    
+    // Fetch popular repacks from website after crawling
+    // This runs after both:
+    // 1. Initial database crawl (start_crawler)
+    // 2. Database updates (update_database)
+    fetchPopularRepacks().catch(err => 
+      console.error('Failed to fetch popular repacks:', err)
+    );
+  }
+  
+  async function fetchPopularRepacks() {
+    try {
+      console.log('\n' + '='.repeat(60));
+      console.log('🌟 POPULAR REPACKS UPDATE STARTED');
+      console.log('='.repeat(60));
+      
+      // Fetch both monthly and yearly
+      console.log('Step 1/4: Fetching monthly popular repacks from website...');
+      const monthCount = await invoke<number>('fetch_popular_repacks', { period: 'month' });
+      console.log(`  ✅ Saved ${monthCount} monthly popular repacks`);
+      
+      console.log('Step 2/4: Fetching yearly popular repacks from website...');
+      const yearCount = await invoke<number>('fetch_popular_repacks', { period: 'year' });
+      console.log(`  ✅ Saved ${yearCount} yearly popular repacks`);
+      
+      console.log('Step 3/4: Crawling full game data for popular games...');
+      
+      // Set crawling state
+      isCrawlingPopular.set(true);
+      const totalCount = monthCount + yearCount;
+      popularCrawlProgress.set({ crawled: 0, total: totalCount });
+      
+      // Crawl both periods (this may take a while)
+      const monthCrawled = await invoke<number>('crawl_popular_games', { period: 'month' });
+      console.log(`  ✅ Crawled ${monthCrawled} new monthly popular games`);
+      
+      const yearCrawled = await invoke<number>('crawl_popular_games', { period: 'year' });
+      console.log(`  ✅ Crawled ${yearCrawled} new yearly popular games`);
+      
+      // Clear crawling state
+      isCrawlingPopular.set(false);
+      
+      console.log('Step 4/4: Reloading popular repacks into UI...');
+      await loadPopularRepacks();
+      console.log('  ✅ UI updated');
+      
+      console.log('='.repeat(60));
+      console.log('🎉 POPULAR REPACKS UPDATE COMPLETED');
+      console.log(`   Total: ${monthCrawled + yearCrawled} games crawled`);
+      console.log('='.repeat(60) + '\n');
+    } catch (error) {
+      console.error('❌ Failed to fetch popular repacks:', error);
+      isCrawlingPopular.set(false);
+      throw error;
+    }
   }
 
   onMount(async () => {
@@ -107,6 +181,8 @@
           </div>
         </div>
       </div>
+    {:else if $currentPage === 'popular'}
+      <Popular />
     {:else if $currentPage === 'downloads'}
       <div class="page-placeholder">
         <h2>Downloads Page</h2>

@@ -17,7 +17,14 @@
         </div>
         
         <div class="details-content">
-            <div class="info-grid">
+            {#if $selectedGame.image_url}
+                <div class="cover-art">
+                    <img src={$selectedGame.image_url} alt={$selectedGame.title} />
+                </div>
+            {/if}
+            
+            <div class="details-info">
+                <div class="info-grid">
                 <div class="info-item">
                     <span class="info-label">Categories:</span>
                     <div class="info-value">
@@ -86,6 +93,7 @@
                     </div>
                 </div>
             {/if}
+            </div>
         </div>
     {:else}
         <div class="no-selection">
@@ -119,6 +127,28 @@
     .details-content {
         padding: 16px;
         flex: 1;
+        display: flex;
+        gap: 20px;
+    }
+    
+    .cover-art {
+        flex-shrink: 0;
+        text-align: center;
+    }
+    
+    .cover-art img {
+        max-width: 200px;
+        max-height: 280px;
+        width: auto;
+        height: auto;
+        border: 1px solid var(--color-border);
+        border-radius: 4px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+    
+    .details-info {
+        flex: 1;
+        min-width: 0;
     }
     
     .info-grid {
@@ -147,6 +177,9 @@
     
     .magnets-section {
         margin-top: 20px;
+        grid-column: 1 / -1;
+        border-top: 1px solid var(--color-border);
+        padding-top: 16px;
     }
     
     .magnets-section h3 {

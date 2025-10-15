@@ -4,6 +4,7 @@ import { derived, writable } from 'svelte/store';
 export interface Game {
   id: number;
   title: string;
+  clean_name: string | null;
   genres_tags: string | null;
   company: string | null;
   languages: string | null;
@@ -12,6 +13,7 @@ export interface Game {
   size: number | null; // Size in MB (parsed from repack_size)
   url: string;
   date: string | null;
+  image_url: string | null;
 }
 
 export interface MagnetLink {
@@ -44,6 +46,10 @@ export const searchQuery = writable<string>('');
 export const isLoading = writable<boolean>(false);
 export const categories = writable<CategoryWithCount[]>([]);
 export const selectedCategories = writable<CategoryWithCount[]>([]);
+
+// Popular games crawling state
+export const isCrawlingPopular = writable<boolean>(false);
+export const popularCrawlProgress = writable<{ crawled: number; total: number }>({ crawled: 0, total: 0 });
 
 // All active filters (unified system)
 export const activeTimeFilter = writable<string>('');
