@@ -45,9 +45,13 @@ regex = "1.11"
 
 # Async runtime
 tokio = { version = "1.40", features = ["full"] }
+async-trait = "0.1"
 
 # Error handling
 anyhow = "1.0"
+
+# CLI argument parsing
+clap = { version = "4.5", features = ["derive"] }
 
 # Torrent client (we'll use a Rust implementation)
 # For now, we'll use libtorrent-rasterbar bindings
