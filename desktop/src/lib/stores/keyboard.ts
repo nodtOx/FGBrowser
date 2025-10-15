@@ -1,11 +1,26 @@
+import { featureFlags } from '$lib/featureFlags';
 import { get, writable } from 'svelte/store';
 import { moveSelection } from './games';
 import { currentPage, navigateTo, type Page } from './navigation';
 
 export const keyboardEnabled = writable<boolean>(true);
 
-// Tab order for cycling
-const TAB_ORDER: Page[] = ['browse', 'popular', 'downloads', 'settings', 'stats'];
+// Tab order for cycling (filtered by enabled features)
+function getTabOrder(): Page[] {
+  const tabs: Page[] = ['browse', 'popular'];
+
+  if (featureFlags.torrentClient) {
+    tabs.push('downloads');
+  }
+
+  tabs.push('settings');
+
+  if (featureFlags.stats) {
+    tabs.push('stats');
+  }
+
+  return tabs;
+}
 
 export function initKeyboardShortcuts() {
   if (typeof window === 'undefined') return;
@@ -24,6 +39,7 @@ export function initKeyboardShortcuts() {
 
 function cycleTab(direction: 'next' | 'previous') {
   const current = get(currentPage);
+  const TAB_ORDER = getTabOrder();
   const currentIndex = TAB_ORDER.indexOf(current);
 
   if (currentIndex === -1) return;
