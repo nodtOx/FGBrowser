@@ -7,12 +7,14 @@ pub mod migrations;
 pub mod game_queries;
 pub mod category_queries;
 pub mod popular_queries;
+pub mod downloads_queries;
 pub mod settings;
 pub mod cache;
 
 // Re-export commonly used types for convenience
 pub use models::*;
 pub use game_queries::GameQueries;
+pub use downloads_queries::DownloadQueries;
 pub use category_queries::CategoryQueries;
 pub use popular_queries::PopularQueries;
 pub use settings::SettingsQueries;
@@ -107,6 +109,35 @@ impl Database {
             [],
         )?;
         
+        // Create downloads table
+        self.conn.execute(
+            "CREATE TABLE IF NOT EXISTS downloads (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                repack_id INTEGER NOT NULL,
+                game_title TEXT NOT NULL,
+                magnet_link TEXT NOT NULL,
+                info_hash TEXT NOT NULL UNIQUE,
+                status TEXT NOT NULL DEFAULT 'queued',
+                save_path TEXT NOT NULL,
+                total_size INTEGER DEFAULT 0,
+                downloaded_bytes INTEGER DEFAULT 0,
+                uploaded_bytes INTEGER DEFAULT 0,
+                download_speed INTEGER DEFAULT 0,
+                upload_speed INTEGER DEFAULT 0,
+                progress REAL DEFAULT 0.0,
+                peers INTEGER DEFAULT 0,
+                seeds INTEGER DEFAULT 0,
+                eta_seconds INTEGER,
+                error_message TEXT,
+                started_at TIMESTAMP,
+                completed_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (repack_id) REFERENCES repacks (id) ON DELETE CASCADE
+            )",
+            [],
+        )?;
+        
         // Create indexes
         self.conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_repacks_title ON repacks(title)",
@@ -151,6 +182,21 @@ impl Database {
         
         self.conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_popular_repacks_url_period ON popular_repacks(url, period)",
+            [],
+        )?;
+        
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_downloads_status ON downloads(status)",
+            [],
+        )?;
+        
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_downloads_repack_id ON downloads(repack_id)",
+            [],
+        )?;
+        
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_downloads_info_hash ON downloads(info_hash)",
             [],
         )?;
         
@@ -270,6 +316,55 @@ impl Database {
 
     pub fn save_settings(&self, settings: &AppSettings) -> Result<()> {
         SettingsQueries::save_settings(&self.conn, settings)
+    }
+
+    // Download methods - delegate to DownloadQueries
+    pub fn get_all_downloads(&self) -> Result<Vec<Download>> {
+        DownloadQueries::get_all_downloads(&self.conn)
+    }
+
+    pub fn get_download_by_info_hash(&self, info_hash: &str) -> Result<Option<Download>> {
+        DownloadQueries::get_download_by_info_hash(&self.conn, info_hash)
+    }
+
+    pub fn create_download(&self, repack_id: i64, game_title: &str, magnet_link: &str, info_hash: &str, save_path: &str) -> Result<i64> {
+        DownloadQueries::create_download(&self.conn, repack_id, game_title, magnet_link, info_hash, save_path)
+    }
+
+    pub fn update_download_status(&self, info_hash: &str, status: &str, error_message: Option<&str>) -> Result<()> {
+        DownloadQueries::update_download_status(&self.conn, info_hash, status, error_message)
+    }
+
+    pub fn update_download_progress(
+        &self,
+        info_hash: &str,
+        total_size: i64,
+        downloaded_bytes: i64,
+        uploaded_bytes: i64,
+        download_speed: i64,
+        upload_speed: i64,
+        progress: f64,
+        peers: i32,
+        seeds: i32,
+        eta_seconds: Option<i64>,
+    ) -> Result<()> {
+        DownloadQueries::update_download_progress(
+            &self.conn,
+            info_hash,
+            total_size,
+            downloaded_bytes,
+            uploaded_bytes,
+            download_speed,
+            upload_speed,
+            progress,
+            peers,
+            seeds,
+            eta_seconds,
+        )
+    }
+
+    pub fn delete_download(&self, info_hash: &str) -> Result<()> {
+        DownloadQueries::delete_download(&self.conn, info_hash)
     }
 
     // Cache management - delegate to cache module

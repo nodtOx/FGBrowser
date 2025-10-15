@@ -73,6 +73,29 @@ pub struct PopularRepackWithGame {
     pub game: Option<Game>,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Download {
+    pub id: i64,
+    pub repack_id: i64,
+    pub game_title: String,
+    pub magnet_link: String,
+    pub info_hash: String,
+    pub status: String, // 'queued', 'downloading', 'seeding', 'paused', 'completed', 'error'
+    pub save_path: String,
+    pub total_size: i64, // bytes
+    pub downloaded_bytes: i64,
+    pub uploaded_bytes: i64,
+    pub download_speed: i64, // bytes/sec
+    pub upload_speed: i64, // bytes/sec
+    pub progress: f64, // 0.0 to 100.0
+    pub peers: i32,
+    pub seeds: i32,
+    pub eta_seconds: Option<i64>,
+    pub error_message: Option<String>,
+    pub started_at: Option<String>,
+    pub completed_at: Option<String>,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct AppSettings {
     // General

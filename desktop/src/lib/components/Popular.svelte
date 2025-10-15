@@ -4,6 +4,7 @@
   import { openGameDetails } from '$lib/stores/navigation';
   import { invoke } from '@tauri-apps/api/core';
   import { onDestroy, onMount } from 'svelte';
+  import PopularSidebar from './PopularSidebar.svelte';
 
   interface Game {
     id: number;
@@ -104,33 +105,20 @@
 </script>
 
 <div class="popular-page">
-  <div class="popular-header">
-    <div class="header-content">
-      <div class="header-title">
+  <div class="popular-layout">
+    <PopularSidebar 
+      bind:selectedPeriod 
+      monthlyCount={selectedPeriod === 'month' ? popularRepacks.length : POPULAR_MONTHLY_LIMIT}
+      yearlyCount={selectedPeriod === 'year' ? popularRepacks.length : POPULAR_YEARLY_LIMIT}
+    />
+
+    <div class="popular-main">
+      <div class="popular-header">
         <h1>
           {selectedPeriod === 'month' ? 'Most Popular Repacks of the Month' : 'Most Popular Repacks of the Year'}
         </h1>
         <p class="subtitle">Top {popularRepacks.length} most downloaded games</p>
       </div>
-      
-      <div class="period-tabs">
-        <button 
-          class="period-tab"
-          class:active={selectedPeriod === 'month'}
-          on:click={() => switchPeriod('month')}
-        >
-          Month (Top {POPULAR_MONTHLY_LIMIT})
-        </button>
-        <button 
-          class="period-tab"
-          class:active={selectedPeriod === 'year'}
-          on:click={() => switchPeriod('year')}
-        >
-          Year (Top {POPULAR_YEARLY_LIMIT})
-        </button>
-      </div>
-    </div>
-  </div>
 
   {#if $isCrawlingPopular}
     <div class="crawling-banner">
@@ -191,15 +179,29 @@
       {/each}
     </div>
   {/if}
+    </div>
+  </div>
 </div>
 
 <style>
   .popular-page {
+    height: 100%;
     display: flex;
     flex-direction: column;
-    height: 100%;
-    overflow: hidden;
     background-color: var(--color-background);
+  }
+
+  .popular-layout {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .popular-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
   }
 
   .popular-header {
@@ -208,16 +210,6 @@
     background-color: var(--color-backgroundSecondary);
   }
 
-  .header-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 24px;
-  }
-
-  .header-title {
-    flex: 1;
-  }
 
   .popular-header h1 {
     margin: 0 0 8px 0;
@@ -232,33 +224,6 @@
     color: var(--color-textSecondary);
   }
 
-  .period-tabs {
-    display: flex;
-    gap: 8px;
-  }
-
-  .period-tab {
-    background: var(--color-backgroundTertiary);
-    border: 1px solid var(--color-border);
-    color: var(--color-text);
-    padding: 8px 16px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
-    transition: all 0.2s;
-  }
-
-  .period-tab:hover {
-    background: var(--color-hover);
-    border-color: var(--color-primary);
-  }
-
-  .period-tab.active {
-    background: var(--color-primary);
-    border-color: var(--color-primary);
-    color: var(--color-selectedText);
-    font-weight: 600;
-  }
 
   .loading,
   .error,
