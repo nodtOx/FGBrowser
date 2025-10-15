@@ -4,9 +4,9 @@ mod crawler;
 mod database;
 
 use commands::{
-    clear_category_cache, copy_to_clipboard, crawl_popular_games, crawl_single_popular_game, fetch_popular_repacks, get_all_games, get_app_constants, get_categories_with_counts, get_categories_for_filtered_games, get_categories_for_search, get_categories_for_size_and_time_filtered_games, get_categories_for_size_filtered_games, get_categories_for_time_filtered_games, get_database_stats, get_disk_info, get_game_details,
-    get_games_by_categories_and_size, get_games_by_categories_and_time, get_games_by_categories_size_and_time, get_games_by_category, get_games_by_date_range, get_games_by_multiple_categories, get_games_by_size_and_time, get_games_by_size_range, get_popular_repacks, get_popular_repacks_with_games, get_settings, is_database_empty, open_magnet_link, parse_popular_repacks_from_file, reset_database, save_settings, 
-    search_games, start_crawler, update_database, update_popular_repack_links, AppState,
+    add_download, clear_category_cache, copy_to_clipboard, crawl_popular_games, crawl_single_popular_game, fetch_popular_repacks, get_all_games, get_app_constants, get_categories_with_counts, get_categories_for_filtered_games, get_categories_for_search, get_categories_for_size_and_time_filtered_games, get_categories_for_size_filtered_games, get_categories_for_time_filtered_games, get_database_stats, get_disk_info, get_downloads, get_game_details,
+    get_games_by_categories_and_size, get_games_by_categories_and_time, get_games_by_categories_size_and_time, get_games_by_category, get_games_by_date_range, get_games_by_multiple_categories, get_games_by_size_and_time, get_games_by_size_range, get_popular_repacks, get_popular_repacks_with_games, get_settings, is_database_empty, open_download_folder, open_magnet_link, parse_popular_repacks_from_file, pause_download, remove_download, reset_database, resume_download, save_settings, 
+    search_games, select_download_folder, set_speed_limits, start_crawler, update_database, update_popular_repack_links, AppState,
 };
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -88,7 +88,15 @@ pub fn run() {
             get_popular_repacks_with_games,
             update_popular_repack_links,
             crawl_popular_games,
-            crawl_single_popular_game
+            crawl_single_popular_game,
+            get_downloads,
+            add_download,
+            pause_download,
+            resume_download,
+            remove_download,
+            set_speed_limits,
+            select_download_folder,
+            open_download_folder
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

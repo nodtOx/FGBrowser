@@ -7,6 +7,7 @@
   import { onMount } from 'svelte';
 
   import CrawlerModal from '$lib/components/CrawlerModal.svelte';
+  import Downloads from '$lib/components/Downloads.svelte';
   import GameDetailsModal from '$lib/components/GameDetailsModal.svelte';
   import Header from '$lib/components/Header.svelte';
   import Popular from '$lib/components/Popular.svelte';
@@ -181,10 +182,7 @@
     {:else if $currentPage === 'popular'}
       <Popular />
     {:else if $currentPage === 'downloads'}
-      <div class="page-placeholder">
-        <h2>Downloads Page</h2>
-        <p>Torrent client integration coming soon...</p>
-      </div>
+      <Downloads />
     {:else if $currentPage === 'settings'}
       <Settings />
     {:else if $currentPage === 'stats'}

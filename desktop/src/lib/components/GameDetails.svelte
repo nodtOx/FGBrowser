@@ -1,5 +1,7 @@
 <script lang="ts">
+    import { addDownload } from '$lib/stores/downloads';
     import { copyMagnetLink, formatSize, openMagnetLink, selectedGame } from '$lib/stores/games';
+    import { invoke } from '@tauri-apps/api/core';
     
     async function handleOpenMagnet(magnet: string) {
         await openMagnetLink(magnet);
@@ -7,6 +9,27 @@
     
     async function handleCopyMagnet(magnet: string) {
         await copyMagnetLink(magnet);
+    }
+    
+    async function handleDownload(magnet: string) {
+        if (!$selectedGame) return;
+        
+        try {
+            // Open folder picker dialog using Tauri command
+            const selectedPath = await invoke<string | null>('select_download_folder');
+            
+            if (!selectedPath) {
+                // User cancelled
+                return;
+            }
+            
+            // Start download
+            await addDownload(magnet, $selectedGame.id, selectedPath);
+            alert('Download started!');
+        } catch (error) {
+            console.error('Failed to start download:', error);
+            alert('Failed to start download: ' + error);
+        }
     }
 </script>
 
@@ -76,8 +99,16 @@
                                 <span class="magnet-source">{link.source}</span>
                                 <div class="magnet-actions">
                                     <button 
+                                        class="btn btn-download"
+                                        on:click={() => handleDownload(link.magnet)}
+                                        title="Download with built-in torrent client"
+                                    >
+                                        ⬇ Download
+                                    </button>
+                                    <button 
                                         class="btn btn-primary"
                                         on:click={() => handleOpenMagnet(link.magnet)}
+                                        title="Open with external torrent client"
                                     >
                                         Open
                                     </button>
@@ -235,6 +266,17 @@
     
     .btn-primary:hover {
         opacity: 0.9;
+        transform: translateY(-1px);
+    }
+    
+    .btn-download {
+        background-color: #4CAF50;
+        color: white;
+        font-weight: 600;
+    }
+    
+    .btn-download:hover {
+        background-color: #45a049;
         transform: translateY(-1px);
     }
     
