@@ -1,10 +1,11 @@
-import { writable } from 'svelte/store';
-import { moveSelection, searchGames, openMagnetLink, copyMagnetLink } from './games';
-import { navigateTo, type Page } from './navigation';
-import { get } from 'svelte/store';
-import { selectedGame } from './games';
+import { get, writable } from 'svelte/store';
+import { copyMagnetLink, moveSelection, openMagnetLink, selectedGame } from './games';
+import { currentPage, navigateTo, type Page } from './navigation';
 
 export const keyboardEnabled = writable<boolean>(true);
+
+// Tab order for cycling
+const TAB_ORDER: Page[] = ['browse', 'popular', 'downloads', 'settings', 'stats'];
 
 export function initKeyboardShortcuts() {
   if (typeof window === 'undefined') return;
@@ -19,6 +20,22 @@ export function initKeyboardShortcuts() {
       e.preventDefault();
     }
   });
+}
+
+function cycleTab(direction: 'next' | 'previous') {
+  const current = get(currentPage);
+  const currentIndex = TAB_ORDER.indexOf(current);
+
+  if (currentIndex === -1) return;
+
+  let nextIndex: number;
+  if (direction === 'next') {
+    nextIndex = (currentIndex + 1) % TAB_ORDER.length;
+  } else {
+    nextIndex = (currentIndex - 1 + TAB_ORDER.length) % TAB_ORDER.length;
+  }
+
+  navigateTo(TAB_ORDER[nextIndex]);
 }
 
 function handleKeyPress(e: KeyboardEvent): boolean {
@@ -37,10 +54,14 @@ function handleKeyPress(e: KeyboardEvent): boolean {
     return true;
   }
 
-  // Page navigation
-  if (ctrl && key >= '1' && key <= '5') {
-    const pages: Page[] = ['browse', 'downloads', 'settings', 'stats', 'about'];
-    navigateTo(pages[parseInt(key) - 1]);
+  // Page navigation - cycle through tabs
+  if (ctrl && key === ']') {
+    cycleTab('next');
+    return true;
+  }
+
+  if (ctrl && key === '[') {
+    cycleTab('previous');
     return true;
   }
 
