@@ -1,5 +1,6 @@
 <script lang="ts">
     import { DISK_INFO_REFRESH_INTERVAL_MS } from '$lib/constants';
+    import { formatSpeed, totalDownloadSpeed, totalUploadSpeed } from '$lib/stores/downloads';
     import { totalGamesCount } from '$lib/stores/games';
     import { invoke } from '@tauri-apps/api/core';
     import { onMount } from 'svelte';
@@ -11,8 +12,6 @@
     }
     
     let diskInfo: DiskInfo = { total: 0, free: 0, used: 0 };
-    let downloadSpeed = '0 KB/s';
-    let uploadSpeed = '0 KB/s';
     
     function formatBytes(bytes: number): string {
         if (bytes === 0) return '0 B';
@@ -47,12 +46,12 @@
         
         <div class="status-item">
             <i class="fas fa-download"></i>
-            <span>{downloadSpeed}</span>
+            <span>{formatSpeed($totalDownloadSpeed)}</span>
         </div>
         
         <div class="status-item">
             <i class="fas fa-upload"></i>
-            <span>{uploadSpeed}</span>
+            <span>{formatSpeed($totalUploadSpeed)}</span>
         </div>
     </div>
     
