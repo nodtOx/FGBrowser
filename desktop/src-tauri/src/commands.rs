@@ -542,7 +542,7 @@ pub async fn start_crawler(
     })
 }
 
-fn save_repacks_to_db(repacks: &[GameRepack], db_path: &PathBuf) -> anyhow::Result<()> {
+pub fn save_repacks_to_db(repacks: &[GameRepack], db_path: &PathBuf) -> anyhow::Result<()> {
     let db = Database::new(db_path.clone())?;
     
     // Process each repack individually with error handling

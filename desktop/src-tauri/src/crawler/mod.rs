@@ -9,11 +9,15 @@ pub mod models;
 pub mod title_cleaner;
 pub mod extractors;
 pub mod popular;
+pub mod site_crawler;
+pub mod fitgirl;
 
 // Re-export commonly used types for convenience
 pub use models::*;
 pub use title_cleaner::clean_game_title;
 pub use popular::PopularRepacks;
+pub use site_crawler::{SiteCrawler, CrawlerRegistry};
+pub use fitgirl::FitGirlCrawler as FitGirlSiteCrawler;
 use extractors::Extractors;
 
 pub struct FitGirlCrawler {
@@ -334,5 +338,20 @@ impl FitGirlCrawler {
     pub fn parse_popular_repacks_from_file(&self, file_path: &str) -> Result<Vec<PopularRepackEntry>> {
         PopularRepacks::parse_popular_repacks_from_file(file_path)
     }
+}
+
+/// Create a crawler registry with all available sites
+pub fn create_crawler_registry() -> Result<CrawlerRegistry> {
+    let mut registry = CrawlerRegistry::new();
+    
+    // Register FitGirl Repacks crawler
+    let fitgirl = FitGirlSiteCrawler::new()?;
+    registry.register(Box::new(fitgirl));
+    
+    // Future sites can be added here:
+    // let dodi = DodiRepacksCrawler::new()?;
+    // registry.register(Box::new(dodi));
+    
+    Ok(registry)
 }
 
