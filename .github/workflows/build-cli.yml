@@ -1,0 +1,103 @@
+name: Build CLI Binary
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'desktop/src-tauri/**'
+      - '.github/workflows/build-cli.yml'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libglib2.0-dev
+      
+      - name: Cache cargo registry
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+      
+      - name: Cache cargo index
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+      
+      - name: Cache target directory
+        uses: actions/cache@v3
+        with:
+          path: desktop/src-tauri/target
+          key: ${{ runner.os }}-cargo-target-${{ hashFiles('**/Cargo.lock') }}
+      
+      - name: Build CLI
+        working-directory: desktop/src-tauri
+        run: cargo build --bin cli --release
+      
+      - name: Strip binary
+        working-directory: desktop/src-tauri
+        run: strip target/release/cli
+      
+      - name: Get binary info
+        id: binary_info
+        working-directory: desktop/src-tauri
+        run: |
+          SIZE=$(du -h target/release/cli | cut -f1)
+          echo "size=$SIZE" >> $GITHUB_OUTPUT
+          echo "Binary size: $SIZE"
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: fitboy-cli-linux-x86_64
+          path: desktop/src-tauri/target/release/cli
+          retention-days: 90
+      
+      - name: Create Release (on main push)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: cli-${{ github.sha }}
+          name: CLI Build ${{ github.run_number }}
+          body: |
+            Automated CLI build from commit ${{ github.sha }}
+            
+            **Binary Info:**
+            - Platform: Linux x86_64
+            - Size: ${{ steps.binary_info.outputs.size }}
+            - Built: ${{ github.event.head_commit.timestamp }}
+            
+            **Download:**
+            Download `fitboy-cli-linux-x86_64` from assets below.
+            
+            **Usage:**
+            ```bash
+            chmod +x cli
+            ./cli --help
+            ```
+          files: desktop/src-tauri/target/release/cli
+          draft: false
+          prerelease: false
+
