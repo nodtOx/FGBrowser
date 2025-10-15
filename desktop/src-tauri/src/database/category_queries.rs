@@ -184,5 +184,33 @@ impl CategoryQueries {
 
         Ok(categories)
     }
+
+    // Get categories for search results
+    pub fn get_categories_for_search(conn: &rusqlite::Connection, search_query: &str) -> Result<Vec<CategoryWithCount>> {
+        let search_pattern = format!("%{}%", search_query);
+        
+        let mut stmt = conn.prepare(
+            "SELECT c.id, c.name, COUNT(DISTINCT r.id) as game_count
+             FROM categories c
+             JOIN game_categories gc ON c.id = gc.category_id
+             JOIN repacks r ON gc.repack_id = r.id
+             WHERE r.title LIKE ?1 OR r.clean_name LIKE ?1
+             GROUP BY c.id, c.name
+             HAVING game_count > 0
+             ORDER BY game_count DESC, c.name ASC"
+        )?;
+
+        let categories = stmt
+            .query_map([&search_pattern], |row| {
+                Ok(CategoryWithCount {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    game_count: row.get(2)?,
+                })
+            })?
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(categories)
+    }
 }
 

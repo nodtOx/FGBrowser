@@ -1,3 +1,4 @@
+import { DEFAULT_OFFSET, LOAD_ALL_GAMES } from '$lib/constants';
 import { invoke } from '@tauri-apps/api/core';
 import { derived, writable } from 'svelte/store';
 
@@ -46,6 +47,7 @@ export const searchQuery = writable<string>('');
 export const isLoading = writable<boolean>(false);
 export const categories = writable<CategoryWithCount[]>([]);
 export const selectedCategories = writable<CategoryWithCount[]>([]);
+export const totalGamesCount = writable<number>(0);
 
 // Popular games crawling state
 export const isCrawlingPopular = writable<boolean>(false);
@@ -273,11 +275,17 @@ export async function removeFilter(type: string, value: string) {
 }
 
 // Load games from database
-export async function loadGames(limit: number = 100, offset: number = 0) {
+export async function loadGames(limit: number = LOAD_ALL_GAMES, offset: number = DEFAULT_OFFSET) {
   isLoading.set(true);
   try {
-    const result = await invoke<Game[]>('get_all_games', { limit, offset });
+    const [result, stats] = await Promise.all([
+      invoke<Game[]>('get_all_games', { limit, offset }),
+      invoke<{ total_games: number; total_magnets: number }>('get_database_stats'),
+    ]);
+
     games.set(result);
+    totalGamesCount.set(stats.total_games);
+
     if (result.length > 0) {
       await selectGame(0);
     }
@@ -352,7 +360,11 @@ export async function loadCategoriesForSizeAndTimeFilter(minSize?: number, maxSi
 }
 
 // Load games by category
-export async function loadGamesByCategory(categoryId: number, limit: number = 100, offset: number = 0) {
+export async function loadGamesByCategory(
+  categoryId: number,
+  limit: number = LOAD_ALL_GAMES,
+  offset: number = DEFAULT_OFFSET,
+) {
   isLoading.set(true);
   try {
     const result = await invoke<Game[]>('get_games_by_category', {
@@ -372,7 +384,11 @@ export async function loadGamesByCategory(categoryId: number, limit: number = 10
 }
 
 // Load games by multiple categories
-export async function loadGamesByMultipleCategories(categoryIds: number[], limit: number = 1000, offset: number = 0) {
+export async function loadGamesByMultipleCategories(
+  categoryIds: number[],
+  limit: number = LOAD_ALL_GAMES,
+  offset: number = DEFAULT_OFFSET,
+) {
   isLoading.set(true);
   try {
     const result = await invoke<Game[]>('get_games_by_multiple_categories', {
@@ -392,7 +408,11 @@ export async function loadGamesByMultipleCategories(categoryIds: number[], limit
 }
 
 // Load games by date range
-export async function loadGamesByDateRange(daysAgo: number, limit: number = 1000, offset: number = 0) {
+export async function loadGamesByDateRange(
+  daysAgo: number,
+  limit: number = LOAD_ALL_GAMES,
+  offset: number = DEFAULT_OFFSET,
+) {
   isLoading.set(true);
   try {
     const result = await invoke<Game[]>('get_games_by_date_range', {
@@ -412,7 +432,12 @@ export async function loadGamesByDateRange(daysAgo: number, limit: number = 1000
 }
 
 // Load games by size range
-export async function loadGamesBySize(minSize?: number, maxSize?: number, limit: number = 1000, offset: number = 0) {
+export async function loadGamesBySize(
+  minSize?: number,
+  maxSize?: number,
+  limit: number = LOAD_ALL_GAMES,
+  offset: number = DEFAULT_OFFSET,
+) {
   isLoading.set(true);
   try {
     const result = await invoke<Game[]>('get_games_by_size_range', {
@@ -437,8 +462,8 @@ export async function loadGamesByCategoriesAndSize(
   categoryIds: number[],
   minSize?: number,
   maxSize?: number,
-  limit: number = 1000,
-  offset: number = 0,
+  limit: number = LOAD_ALL_GAMES,
+  offset: number = DEFAULT_OFFSET,
 ) {
   isLoading.set(true);
   try {
@@ -464,8 +489,8 @@ export async function loadGamesByCategoriesAndSize(
 export async function loadGamesByCategoriesAndTime(
   categoryIds: number[],
   daysAgo: number,
-  limit: number = 1000,
-  offset: number = 0,
+  limit: number = LOAD_ALL_GAMES,
+  offset: number = DEFAULT_OFFSET,
 ) {
   isLoading.set(true);
   try {
@@ -491,8 +516,8 @@ export async function loadGamesBySizeAndTime(
   minSize?: number,
   maxSize?: number,
   daysAgo?: number,
-  limit: number = 1000,
-  offset: number = 0,
+  limit: number = LOAD_ALL_GAMES,
+  offset: number = DEFAULT_OFFSET,
 ) {
   if (daysAgo === undefined) return;
 
@@ -522,8 +547,8 @@ export async function loadGamesByCategoriesSizeAndTime(
   minSize?: number,
   maxSize?: number,
   daysAgo?: number,
-  limit: number = 1000,
-  offset: number = 0,
+  limit: number = LOAD_ALL_GAMES,
+  offset: number = DEFAULT_OFFSET,
 ) {
   if (daysAgo === undefined) return;
 
@@ -581,25 +606,44 @@ export async function applyCategoryFilters() {
   await applyAllFilters();
 }
 
-// Search games (clears all filters)
-export async function searchGames(query: string, limit: number = 100) {
-  // Clear all filters when searching
-  selectedCategories.set([]);
-  activeTimeFilter.set('');
-  activeSizeFilter.set('');
-  activeStatusFilter.set('');
+// Track last search state
+let lastSearchQuery = '';
 
-  if (!query.trim()) {
-    // If search is cleared, restore normal state
+// Search games (clears all filters)
+export async function searchGames(query: string, limit: number = LOAD_ALL_GAMES) {
+  const trimmedQuery = query.trim();
+
+  // If transitioning from search to no-search, reload everything
+  if (!trimmedQuery && lastSearchQuery) {
+    lastSearchQuery = '';
+    // Clear all filters when exiting search
+    selectedCategories.set([]);
+    activeTimeFilter.set('');
+    activeSizeFilter.set('');
+    activeStatusFilter.set('');
     await Promise.all([loadGames(limit), loadCategories()]);
     return;
   }
 
+  // Don't do anything if the query is empty
+  if (!trimmedQuery) {
+    return;
+  }
+
+  lastSearchQuery = trimmedQuery;
+
   // Search overrides all filters
   isLoading.set(true);
   try {
-    const result = await invoke<Game[]>('search_games', { query, limit });
+    // Run search and category fetch in parallel
+    const [result, searchCategories] = await Promise.all([
+      invoke<Game[]>('search_games', { query: trimmedQuery, limit }),
+      invoke<CategoryWithCount[]>('get_categories_for_search', { searchQuery: trimmedQuery }),
+    ]);
+
     games.set(result);
+    categories.set(searchCategories);
+
     if (result.length > 0) {
       await selectGame(0);
     }

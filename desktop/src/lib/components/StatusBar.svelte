@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { games } from '$lib/stores/games';
+    import { DISK_INFO_REFRESH_INTERVAL_MS } from '$lib/constants';
+    import { totalGamesCount } from '$lib/stores/games';
     import { invoke } from '@tauri-apps/api/core';
     import { onMount } from 'svelte';
     
@@ -31,8 +32,8 @@
     
     onMount(() => {
         loadDiskInfo();
-        // Refresh disk info every 30 seconds
-        const interval = setInterval(loadDiskInfo, 30000);
+        // Refresh disk info periodically
+        const interval = setInterval(loadDiskInfo, DISK_INFO_REFRESH_INTERVAL_MS);
         return () => clearInterval(interval);
     });
 </script>
@@ -41,7 +42,7 @@
     <div class="status-left">
         <div class="status-item">
             <i class="fas fa-database"></i>
-            <span>{$games.length} games</span>
+            <span>{$totalGamesCount.toLocaleString()} games</span>
         </div>
         
         <div class="status-item">
@@ -57,12 +58,8 @@
     
     <div class="status-center">
         <div class="shortcuts">
-            <span class="shortcut">Search: /</span>
+            <span class="shortcut">Search: / or Ctrl+F</span>
             <span class="shortcut">Navigate: ↑↓</span>
-            <span class="shortcut">Open: Enter</span>
-            <span class="shortcut">Copy: C</span>
-            <span class="shortcut">Refresh: R</span>
-            <span class="shortcut">Quit: Q</span>
         </div>
     </div>
     

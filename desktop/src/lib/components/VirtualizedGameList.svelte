@@ -1,15 +1,15 @@
 <script lang="ts">
-    import { formatSize, games, selectedIndex, selectGame } from '$lib/stores/games';
+    import { ITEM_HEIGHT, OVERSCAN, SEARCH_DEBOUNCE_MS } from '$lib/constants';
+    import { formatSize, games, searchGames, searchQuery, selectedIndex, selectGame } from '$lib/stores/games';
     import { openGameDetails } from '$lib/stores/navigation';
     import { onMount, tick } from 'svelte';
-    
-    // Virtualization parameters
-    const ITEM_HEIGHT = 30; // Height of each game item in pixels
-    const OVERSCAN = 5; // Extra items to render outside visible area for smooth scrolling
     
     let containerHeight: number = 0;
     let scrollTop: number = 0;
     let containerElement: HTMLElement;
+    let searchInput: HTMLInputElement;
+    let searchTimeout: any;
+    let previousQuery: string = '';
     
     // Calculated values
     $: visibleCount = Math.ceil(containerHeight / ITEM_HEIGHT);
@@ -77,6 +77,33 @@
         scrollTop = target.scrollTop;
     }
     
+    function handleSearch() {
+        // Clear previous timeout
+        if (searchTimeout) {
+            clearTimeout(searchTimeout);
+        }
+        
+        const currentQuery = $searchQuery.trim();
+        
+        // Debounce search
+        searchTimeout = setTimeout(async () => {
+            // Only search if query has actually changed
+            if (currentQuery !== previousQuery) {
+                previousQuery = currentQuery;
+                await searchGames(currentQuery);
+            }
+        }, SEARCH_DEBOUNCE_MS);
+    }
+    
+    function handleSearchKeydown(e: KeyboardEvent) {
+        if (e.key === 'Escape') {
+            searchQuery.set('');
+            previousQuery = '';
+            searchGames('');
+            searchInput.blur();
+        }
+    }
+    
     onMount(() => {
         // Scroll to selected item on mount
         if ($selectedIndex >= 0) {
@@ -85,12 +112,25 @@
     });
 </script>
 
-<div 
-    class="virtualized-list" 
-    bind:this={containerElement}
-    bind:clientHeight={containerHeight}
-    on:scroll={handleScroll}
->
+<div class="list-container">
+    <div class="search-bar">
+        <input
+            bind:this={searchInput}
+            bind:value={$searchQuery}
+            on:input={handleSearch}
+            on:keydown={handleSearchKeydown}
+            type="search"
+            placeholder="Search games... (press / to focus, Esc to clear)"
+            class="search-input"
+        />
+    </div>
+    
+    <div 
+        class="virtualized-list" 
+        bind:this={containerElement}
+        bind:clientHeight={containerHeight}
+        on:scroll={handleScroll}
+    >
     <div class="scroll-area" style="height: {totalHeight}px;">
         <div class="visible-items" style="transform: translateY({offsetY}px);">
             {#each visibleGames as game, index (game.id)}
@@ -118,9 +158,45 @@
             {/each}
         </div>
     </div>
+    </div>
 </div>
 
 <style>
+    .list-container {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    
+    .search-bar {
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--color-border);
+        background-color: var(--color-backgroundSecondary);
+    }
+    
+    .search-input {
+        width: 100%;
+        padding: 6px 12px;
+        background-color: var(--color-backgroundSecondary);
+        border: 1px solid var(--color-border);
+        color: var(--color-text);
+        font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        font-size: calc(var(--base-font-size) * 0.95);
+        outline: none;
+        transition: var(--transition);
+    }
+    
+    .search-input:focus {
+        border-color: var(--color-primary);
+        background-color: var(--color-background);
+    }
+    
+    .search-input::placeholder {
+        color: var(--color-textSecondary);
+        opacity: 0.6;
+    }
+    
     .virtualized-list {
         flex: 1;
         overflow-y: auto;

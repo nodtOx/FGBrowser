@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { POPULAR_MONTHLY_LIMIT, POPULAR_REFRESH_INTERVAL_MS, POPULAR_YEARLY_LIMIT } from '$lib/constants';
   import { formatSize, isCrawlingPopular, selectedGame } from '$lib/stores/games';
   import { openGameDetails } from '$lib/stores/navigation';
   import { invoke } from '@tauri-apps/api/core';
@@ -38,7 +39,7 @@
     try {
       isLoading = true;
       error = '';
-      const limit = selectedPeriod === 'month' ? 50 : 150;
+      const limit = selectedPeriod === 'month' ? POPULAR_MONTHLY_LIMIT : POPULAR_YEARLY_LIMIT;
       popularRepacks = await invoke<PopularRepackWithGame[]>('get_popular_repacks_with_games', { 
         period: selectedPeriod, 
         limit 
@@ -71,12 +72,12 @@
   }
   
   function startAutoRefresh() {
-    // Refresh every 3 seconds while crawling to show new games
+    // Refresh periodically while crawling to show new games
     refreshInterval = setInterval(async () => {
       if ($isCrawlingPopular) {
         await loadPopularRepacks();
       }
-    }, 3000);
+    }, POPULAR_REFRESH_INTERVAL_MS);
   }
   
   function stopAutoRefresh() {
@@ -118,14 +119,14 @@
           class:active={selectedPeriod === 'month'}
           on:click={() => switchPeriod('month')}
         >
-          Month (Top 50)
+          Month (Top {POPULAR_MONTHLY_LIMIT})
         </button>
         <button 
           class="period-tab"
           class:active={selectedPeriod === 'year'}
           on:click={() => switchPeriod('year')}
         >
-          Year (Top 150)
+          Year (Top {POPULAR_YEARLY_LIMIT})
         </button>
       </div>
     </div>
