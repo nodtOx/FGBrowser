@@ -1,4 +1,4 @@
-use crate::crawler::{FitGirlCrawler, GameRepack};
+use crate::crawler::{FitGirlCrawler, GameRepack, clean_game_title};
 use crate::database::{AppSettings, Database, Game, GameDetails, DatabaseStats, CategoryWithCount};
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -543,12 +543,16 @@ fn save_repacks_to_db(repacks: &[GameRepack], db_path: &PathBuf) -> anyhow::Resu
             // Parse size from repack_size for the integer column
             let parsed_size = parse_size_to_mb(&repack.repack_size);
             
+            // Generate clean name
+            let clean_name = clean_game_title(&repack.title);
+            
             // Insert or update repack
             db.conn.execute(
-                "INSERT INTO repacks (title, genres_tags, company, languages, original_size, repack_size, size, url, date, updated_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, CURRENT_TIMESTAMP)
+                "INSERT INTO repacks (title, clean_name, genres_tags, company, languages, original_size, repack_size, size, url, date, image_url, updated_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, CURRENT_TIMESTAMP)
                  ON CONFLICT(url) DO UPDATE SET
                     title = excluded.title,
+                    clean_name = excluded.clean_name,
                     genres_tags = excluded.genres_tags,
                     company = excluded.company,
                     languages = excluded.languages,
@@ -556,9 +560,10 @@ fn save_repacks_to_db(repacks: &[GameRepack], db_path: &PathBuf) -> anyhow::Resu
                     repack_size = excluded.repack_size,
                     size = excluded.size,
                     date = excluded.date,
+                    image_url = excluded.image_url,
                     updated_at = CURRENT_TIMESTAMP",
-                (&repack.title, &repack.genres_tags, &repack.company, &repack.languages, 
-                 &repack.original_size, &repack.repack_size, &parsed_size, &repack.url, &repack.date),
+                (&repack.title, &clean_name, &repack.genres_tags, &repack.company, &repack.languages, 
+                 &repack.original_size, &repack.repack_size, &parsed_size, &repack.url, &repack.date, &repack.image_url),
             )?;
             
             // Get repack_id
@@ -773,5 +778,225 @@ pub async fn update_database(
         total_games: total_new_games,
         status: "Updated".to_string(),
     })
+}
+
+// Popular repacks commands
+
+#[tauri::command]
+pub async fn fetch_popular_repacks(
+    period: String,
+    state: State<'_, AppState>,
+) -> Result<usize, String> {
+    use crate::crawler::FitGirlCrawler;
+    use crate::database::Database;
+    
+    println!("🌟 Fetching popular repacks ({}) from website...", period);
+    
+    let crawler = FitGirlCrawler::new().map_err(|e| e.to_string())?;
+    let popular_entries = crawler.fetch_popular_repacks(&period).await.map_err(|e| e.to_string())?;
+    
+    let db_path = state.db_path.lock().unwrap().clone();
+    let db = Database::new(db_path).map_err(|e| e.to_string())?;
+    
+    // Clear existing popular repacks for this period
+    db.clear_popular_repacks(&period).map_err(|e| e.to_string())?;
+    
+    // Save new popular repacks with rank based on order (1, 2, 3...)
+    let mut saved_count = 0;
+    for (index, entry) in popular_entries.iter().enumerate() {
+        let rank = (index + 1) as i32;
+        match db.save_popular_repack(
+            &entry.url, 
+            &entry.title, 
+            entry.image_url.as_deref(), 
+            rank,
+            &period
+        ) {
+            Ok(_) => saved_count += 1,
+            Err(e) => eprintln!("Failed to save popular repack '{}': {}", entry.title, e),
+        }
+    }
+    
+    // Update links to existing games for this period
+    let linked_count = db.update_popular_repack_links(Some(&period)).map_err(|e| e.to_string())?;
+    
+    println!("✅ Saved {} popular repacks ({}) ({} linked to existing games)", saved_count, period, linked_count);
+    
+    Ok(saved_count)
+}
+
+#[tauri::command]
+pub async fn parse_popular_repacks_from_file(
+    file_path: String,
+    period: String,
+    state: State<'_, AppState>,
+) -> Result<usize, String> {
+    use crate::crawler::FitGirlCrawler;
+    use crate::database::Database;
+    
+    println!("📄 Parsing popular repacks from file: {}", file_path);
+    
+    let crawler = FitGirlCrawler::new().map_err(|e| e.to_string())?;
+    let popular_entries = crawler.parse_popular_repacks_from_file(&file_path).map_err(|e| e.to_string())?;
+    
+    let db_path = state.db_path.lock().unwrap().clone();
+    let db = Database::new(db_path).map_err(|e| e.to_string())?;
+    
+    // Clear existing popular repacks for this period
+    db.clear_popular_repacks(&period).map_err(|e| e.to_string())?;
+    
+    // Save new popular repacks with rank based on order (1, 2, 3...)
+    let mut saved_count = 0;
+    for (index, entry) in popular_entries.iter().enumerate() {
+        let rank = (index + 1) as i32;
+        match db.save_popular_repack(
+            &entry.url, 
+            &entry.title, 
+            entry.image_url.as_deref(), 
+            rank,
+            &period
+        ) {
+            Ok(_) => saved_count += 1,
+            Err(e) => eprintln!("Failed to save popular repack '{}': {}", entry.title, e),
+        }
+    }
+    
+    // Update links to existing games for this period
+    let linked_count = db.update_popular_repack_links(Some(&period)).map_err(|e| e.to_string())?;
+    
+    println!("✅ Saved {} popular repacks ({}) ({} linked to existing games)", saved_count, period, linked_count);
+    
+    Ok(saved_count)
+}
+
+#[tauri::command]
+pub async fn get_popular_repacks(
+    period: String,
+    limit: i32,
+    state: State<'_, AppState>,
+) -> Result<Vec<crate::database::PopularRepack>, String> {
+    let db_path = state.db_path.lock().unwrap().clone();
+    let db = Database::new(db_path).map_err(|e| e.to_string())?;
+    db.get_popular_repacks(&period, limit).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_popular_repacks_with_games(
+    period: String,
+    limit: i32,
+    state: State<'_, AppState>,
+) -> Result<Vec<crate::database::PopularRepackWithGame>, String> {
+    let db_path = state.db_path.lock().unwrap().clone();
+    let db = Database::new(db_path).map_err(|e| e.to_string())?;
+    db.get_popular_repacks_with_games(&period, limit).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn update_popular_repack_links(
+    period: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<usize, String> {
+    let db_path = state.db_path.lock().unwrap().clone();
+    let db = Database::new(db_path).map_err(|e| e.to_string())?;
+    let count = db.update_popular_repack_links(period.as_deref()).map_err(|e| e.to_string())?;
+    println!("🔗 Updated links for {} popular repacks", count);
+    Ok(count)
+}
+
+#[tauri::command]
+pub async fn crawl_popular_games(
+    period: String,
+    state: State<'_, AppState>,
+) -> Result<usize, String> {
+    use crate::crawler::FitGirlCrawler;
+    use crate::database::Database;
+    
+    println!("🎮 Crawling popular games data ({})...", period);
+    
+    let db_path = state.db_path.lock().unwrap().clone();
+    let db = Database::new(db_path.clone()).map_err(|e| e.to_string())?;
+    
+    // Get popular repacks for the specified period
+    let popular_repacks = db.get_popular_repacks(&period, 200).map_err(|e| e.to_string())?;
+    
+    if popular_repacks.is_empty() {
+        return Err(format!("No popular repacks ({}) found. Fetch popular repacks first.", period));
+    }
+    
+    let crawler = FitGirlCrawler::new().map_err(|e| e.to_string())?;
+    let mut crawled_count = 0;
+    let mut skipped_count = 0;
+    
+    for popular in &popular_repacks {
+        // Skip if already linked to a game in database
+        if popular.repack_id.is_some() {
+            skipped_count += 1;
+            continue;
+        }
+        
+        println!("  Crawling: {}", popular.title);
+        
+        // Crawl the game page
+        match crawler.crawl_single_game(&popular.url).await {
+            Ok(Some(game_repack)) => {
+                // Save to database
+                if let Err(e) = save_repacks_to_db(&[game_repack], &db_path) {
+                    eprintln!("    ❌ Failed to save: {}", e);
+                } else {
+                    crawled_count += 1;
+                    println!("    ✓ Saved");
+                }
+            }
+            Ok(None) => {
+                eprintln!("    ⚠ Could not extract game data");
+            }
+            Err(e) => {
+                eprintln!("    ❌ Crawl error: {}", e);
+            }
+        }
+    }
+    
+    // Update links after crawling for this period
+    let linked = db.update_popular_repack_links(Some(&period)).map_err(|e| e.to_string())?;
+    
+    println!("\n✅ Crawled {} new games ({}), skipped {} existing, linked {}", 
+             crawled_count, period, skipped_count, linked);
+    
+    Ok(crawled_count)
+}
+
+#[tauri::command]
+pub async fn crawl_single_popular_game(
+    url: String,
+    state: State<'_, AppState>,
+) -> Result<bool, String> {
+    use crate::crawler::FitGirlCrawler;
+    
+    println!("🎮 Crawling single game: {}", url);
+    
+    let crawler = FitGirlCrawler::new().map_err(|e| e.to_string())?;
+    let db_path = state.db_path.lock().unwrap().clone();
+    
+    match crawler.crawl_single_game(&url).await {
+        Ok(Some(game_repack)) => {
+            // Save to database
+            save_repacks_to_db(&[game_repack], &db_path).map_err(|e| e.to_string())?;
+            
+            // Update links for all periods
+            let db = Database::new(db_path).map_err(|e| e.to_string())?;
+            db.update_popular_repack_links(None).map_err(|e| e.to_string())?;
+            
+            println!("✅ Game crawled and saved");
+            Ok(true)
+        }
+        Ok(None) => {
+            println!("⚠ Could not extract game data");
+            Ok(false)
+        }
+        Err(e) => {
+            eprintln!("❌ Crawl error: {}", e);
+            Err(e.to_string())
+        }
+    }
 }
 

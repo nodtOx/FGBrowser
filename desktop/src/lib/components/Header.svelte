@@ -59,6 +59,13 @@
                 </button>
                 <button 
                     class="nav-tab"
+                    class:active={$currentPage === 'popular'}
+                    on:click={() => handleNavClick('popular')}
+                >
+                    Popular
+                </button>
+                <button 
+                    class="nav-tab"
                     class:active={$currentPage === 'downloads'}
                     on:click={() => handleNavClick('downloads')}
                 >
