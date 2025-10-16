@@ -2,7 +2,7 @@
     import { featureFlags } from '$lib/featureFlags';
     import { addDownload } from '$lib/stores/downloads';
     import { formatSize, openMagnetLink, selectedGame } from '$lib/stores/games';
-    import { browseView, goBack } from '$lib/stores/navigation';
+    import { goBack } from '$lib/stores/navigation';
     import { invoke } from '@tauri-apps/api/core';
     import { onDestroy } from 'svelte';
     
@@ -89,9 +89,11 @@
         }
     }
     
-    // Only add keyboard listener when in details view
+    // Add keyboard listener when a game is selected
+    // Works both when opened from game list ($browseView === 'details') 
+    // and from Popular page (showingDetails = true)
     $: {
-        if ($browseView === 'details' && $selectedGame) {
+        if ($selectedGame) {
             window.addEventListener('keydown', handleKeydown);
         } else {
             window.removeEventListener('keydown', handleKeydown);
@@ -254,6 +256,8 @@
         color: var(--color-text);
         margin: 0;
         flex: 1;
+        user-select: text;
+        cursor: text;
     }
     
     .details-content {
@@ -305,6 +309,8 @@
     .info-value {
         font-size: 14px;
         color: var(--color-text);
+        user-select: text;
+        cursor: text;
     }
     
     .magnets-section {
@@ -374,6 +380,7 @@
         color: var(--color-text);
         font-size: 14px;
         font-weight: 500;
+        user-select: text;
     }
     
     .magnet-row.selected .magnet-source {
@@ -413,6 +420,8 @@
         font-weight: 500;
         border: 1px solid var(--color-border);
         white-space: nowrap;
+        user-select: text;
+        cursor: text;
     }
 </style>
 
