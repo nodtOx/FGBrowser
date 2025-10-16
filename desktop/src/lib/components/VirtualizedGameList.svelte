@@ -1,7 +1,7 @@
 <script lang="ts">
     import { ITEM_HEIGHT, OVERSCAN, SEARCH_DEBOUNCE_MS } from '$lib/constants';
     import { formatSize, games, searchGames, searchQuery, selectedIndex, selectGame } from '$lib/stores/games';
-    import { focusedPanel, openGameDetails } from '$lib/stores/navigation';
+    import { focusedPanel, gameListViewMode, openGameDetails, setGameListViewMode } from '$lib/stores/navigation';
     import { onMount, tick } from 'svelte';
     
     let containerHeight: number = 0;
@@ -133,6 +133,31 @@
             placeholder="Search games... (press / to focus, Esc to clear)"
             class="search-input"
         />
+        <div class="view-toggles">
+            <button 
+                class="view-toggle-btn"
+                class:active={$gameListViewMode === 'list'}
+                title="List View"
+                on:click={() => setGameListViewMode('list')}
+            >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M2 3H14M2 8H14M2 13H14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            </button>
+            <button 
+                class="view-toggle-btn"
+                class:active={$gameListViewMode === 'grid'}
+                title="Grid View"
+                on:click={() => setGameListViewMode('grid')}
+            >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="2" y="2" width="5" height="5" stroke="currentColor" stroke-width="1.5"/>
+                    <rect x="9" y="2" width="5" height="5" stroke="currentColor" stroke-width="1.5"/>
+                    <rect x="2" y="9" width="5" height="5" stroke="currentColor" stroke-width="1.5"/>
+                    <rect x="9" y="9" width="5" height="5" stroke="currentColor" stroke-width="1.5"/>
+                </svg>
+            </button>
+        </div>
     </div>
     
     <div 
@@ -187,6 +212,9 @@
         background-color: var(--color-backgroundSecondary);
         border-left: 3px solid transparent;
         transition: all 0.15s ease;
+        display: flex;
+        gap: 8px;
+        align-items: center;
     }
     
     .search-bar.focused {
@@ -195,7 +223,7 @@
     }
     
     .search-input {
-        width: 100%;
+        flex: 1;
         padding: 6px 12px;
         background-color: var(--color-backgroundSecondary);
         border: 1px solid var(--color-border);
@@ -214,6 +242,40 @@
     .search-input::placeholder {
         color: var(--color-textSecondary);
         opacity: 0.6;
+    }
+
+    .view-toggles {
+        display: flex;
+        gap: 4px;
+        flex-shrink: 0;
+    }
+
+    .view-toggle-btn {
+        padding: 6px 8px;
+        background-color: var(--color-backgroundSecondary);
+        border: 1px solid var(--color-border);
+        color: var(--color-textSecondary);
+        cursor: pointer;
+        transition: var(--transition);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .view-toggle-btn:hover {
+        background-color: var(--color-hover);
+        color: var(--color-text);
+        border-color: var(--color-primary);
+    }
+
+    .view-toggle-btn.active {
+        background-color: var(--color-primary);
+        color: var(--color-selectedText);
+        border-color: var(--color-primary);
+    }
+
+    .view-toggle-btn svg {
+        display: block;
     }
     
     .virtualized-list {

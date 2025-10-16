@@ -5,6 +5,7 @@
     import { goBack } from '$lib/stores/navigation';
     import { invoke } from '@tauri-apps/api/core';
     import { onDestroy } from 'svelte';
+    import CachedImage from './CachedImage.svelte';
     
     // Optional callback for custom back behavior (e.g., from Popular page)
     export let onBack: (() => void) | undefined = undefined;
@@ -127,7 +128,11 @@
         <div class="details-content">
             {#if $selectedGame.image_url}
                 <div class="cover-art">
-                    <img src={$selectedGame.image_url} alt={$selectedGame.title} />
+                    <CachedImage 
+                        src={$selectedGame.image_url} 
+                        alt={$selectedGame.title}
+                        className="cover-image"
+                    />
                 </div>
             {/if}
             
@@ -295,7 +300,7 @@
         width: 200px;
     }
     
-    .cover-art img {
+    :global(.cover-art .cover-image) {
         width: 200px;
         height: auto;
         border: 1px solid var(--color-border);
