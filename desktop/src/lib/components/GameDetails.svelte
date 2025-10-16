@@ -111,7 +111,17 @@
             <button class="back-button" on:click={handleBackAction} title="Go back (Esc or Backspace)">
                 ← Back
             </button>
-            <h2 class="game-title">{$selectedGame.title}</h2>
+            <h2 class="game-title">
+                <a 
+                    href={$selectedGame.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    class="game-title-link"
+                    title="Open FitGirl page"
+                >
+                    {$selectedGame.title}
+                </a>
+            </h2>
         </div>
         
         <div class="details-content">
@@ -257,7 +267,19 @@
         margin: 0;
         flex: 1;
         user-select: text;
-        cursor: text;
+    }
+    
+    .game-title-link {
+        color: var(--color-text);
+        text-decoration: none;
+        cursor: pointer;
+        transition: var(--transition);
+        display: inline-block;
+        text-decoration: underline;
+    }
+    
+    .game-title-link:hover {
+        color: var(--color-primary);
     }
     
     .details-content {
