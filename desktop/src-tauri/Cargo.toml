@@ -20,7 +20,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = ["devtools"] }
+tauri = { version = "2", features = ["protocol-asset", "devtools"] }
 tauri-plugin-opener = "2"
 tauri-plugin-fs = "2"
 serde = { version = "1", features = ["derive"] }
@@ -70,3 +70,6 @@ config = "0.14"
 
 # System information (disk space, etc.)
 sysinfo = "0.33"
+
+# Cryptographic hashing (for image cache)
+sha2 = "0.10"

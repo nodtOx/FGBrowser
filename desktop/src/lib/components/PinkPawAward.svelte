@@ -3,6 +3,7 @@
   import { formatSize, isCrawlingPopular, selectedGame } from '$lib/stores/games';
   import { invoke } from '@tauri-apps/api/core';
   import { onDestroy, onMount } from 'svelte';
+  import CachedImage from './CachedImage.svelte';
   import GameDetails from './GameDetails.svelte';
 
   interface Game {
@@ -171,11 +172,10 @@
               >
                 <div class="award-badge">Pink Paw</div>
                 <div class="game-image">
-                  {#if repack.image_url}
-                    <img src={repack.image_url} alt={repack.game?.clean_name || repack.title} loading="lazy" />
-                  {:else}
-                    <div class="no-image">No Image</div>
-                  {/if}
+                  <CachedImage 
+                    src={repack.image_url} 
+                    alt={repack.game?.clean_name || repack.title} 
+                  />
                 </div>
                 <div class="game-info">
                   <div class="game-title-row">
@@ -375,16 +375,6 @@
     background-color: var(--color-backgroundTertiary);
   }
 
-  .game-image img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  .no-image {
-    color: var(--color-textMuted);
-    font-size: 12px;
-  }
 
   .game-info {
     padding: 12px;

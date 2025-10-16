@@ -1,7 +1,7 @@
 <script lang="ts">
   import { games, isCrawlingPopular, loadCategories, loadGames, popularCrawlProgress, totalGamesCount } from '$lib/stores/games';
   import { initKeyboardShortcuts } from '$lib/stores/keyboard';
-  import { browseView, currentPage } from '$lib/stores/navigation';
+  import { browseView, currentPage, gameListViewMode, loadSavedGameListViewMode } from '$lib/stores/navigation';
   import { loadSavedTheme, watchOSThemeChanges } from '$lib/stores/theme';
   import { invoke } from '@tauri-apps/api/core';
   import { onDestroy, onMount } from 'svelte';
@@ -15,6 +15,7 @@
   import Settings from '$lib/components/Settings.svelte';
   import Sidebar from '$lib/components/Sidebar.svelte';
   import StatusBar from '$lib/components/StatusBar.svelte';
+  import VirtualizedGameGrid from '$lib/components/VirtualizedGameGrid.svelte';
   import VirtualizedGameList from '$lib/components/VirtualizedGameList.svelte';
 
   import { LOAD_ALL_GAMES, POLLING_INTERVAL_MS } from '$lib/constants';
@@ -232,6 +233,9 @@
     // Load saved theme (or detect from OS)
     loadSavedTheme();
 
+    // Load saved game list view mode
+    loadSavedGameListViewMode();
+
     // Watch for OS theme changes
     unwatchOSTheme = watchOSThemeChanges((newTheme) => {
       console.log(`OS theme changed, auto-switching to ${newTheme.name}`);
@@ -282,7 +286,11 @@
 
           <div class="main-content-area">
             <div class="view-container" class:hidden={$browseView !== 'list'}>
-              <VirtualizedGameList />
+              {#if $gameListViewMode === 'list'}
+                <VirtualizedGameList />
+              {:else}
+                <VirtualizedGameGrid />
+              {/if}
             </div>
             <div class="view-container" class:hidden={$browseView !== 'details'}>
               <GameDetails />
