@@ -102,24 +102,7 @@
     </div>
   </div>
 
-  <div class="sidebar-section">
-    <div class="section-title">Info</div>
-    
-    <div class="info-item">
-      <span class="info-label">Source:</span>
-      <span class="info-value">FitGirl Repacks</span>
-    </div>
-    
-    <div class="info-item">
-      <span class="info-label">Updated:</span>
-      <span class="info-value">Real-time</span>
-    </div>
-    
-    <div class="info-item">
-      <span class="info-label">Ranking:</span>
-      <span class="info-value">By Downloads</span>
-    </div>
-  </div>
+  
 </SidebarBase>
 
 <style>
