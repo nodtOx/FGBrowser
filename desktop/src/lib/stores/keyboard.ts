@@ -22,9 +22,6 @@ type KeyboardContext = {
   shift: boolean;
 };
 
-// Keyboard handler function type
-type KeyHandler = (e: KeyboardEvent, ctx: KeyboardContext) => boolean;
-
 // Key binding definition
 type KeyBinding = {
   key: string;

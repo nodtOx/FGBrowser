@@ -54,6 +54,7 @@
     }
     
     async function handleCategoryToggle(category: CategoryWithCount) {
+        focusedPanel.set('categories');
         toggleCategorySelection(category);
         // Categories now work with all other filters - no need to clear them
     }
@@ -63,13 +64,25 @@
     }
     
     async function selectRecent(recent: string) {
+        focusedPanel.set('recent');
         console.log('Recent filter selected:', recent);
-        await applyTimeFilter(recent);
+        // Toggle: if already selected, clear it
+        if ($activeTimeFilter === recent) {
+            await applyTimeFilter('');
+        } else {
+            await applyTimeFilter(recent);
+        }
     }
     
     async function selectSize(size: string) {
+        focusedPanel.set('size');
         console.log('Size filter selected:', size);
-        await applySizeFilter(size);
+        // Toggle: if already selected, clear it
+        if ($activeSizeFilter === size) {
+            await applySizeFilter('');
+        } else {
+            await applySizeFilter(size);
+        }
     }
     
     async function selectStatus(status: string) {
@@ -87,6 +100,18 @@
     // Handle keyboard navigation within focused panels
     function handlePanelKeydown(e: KeyboardEvent) {
         const panel = $focusedPanel;
+        
+        // Clear all filters with 'c' key (when not typing)
+        const target = e.target as HTMLElement;
+        const isTyping = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+        
+        if ((e.key === 'c' || e.key === 'C') && !isTyping && !e.ctrlKey && !e.metaKey) {
+            if ($activeFilters.length > 0) {
+                e.preventDefault();
+                handleClearAll();
+                return;
+            }
+        }
         
         if (panel === 'categories') {
             if (e.key === 'ArrowUp') {
