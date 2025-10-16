@@ -324,3 +324,137 @@ pub fn migrate_categories_data(conn: &Connection) -> Result<()> {
     Ok(())
 }
 
+pub fn migrate_cleanup_malformed_categories(conn: &Connection) -> Result<()> {
+    
+    // Get all categories that contain multi-line content (likely malformed)
+    let mut stmt = conn.prepare(
+        "SELECT id, name FROM categories WHERE name LIKE '%\n%' OR name LIKE '%Company%' OR name LIKE '%Languages:%' OR name LIKE '%Size:%'"
+    )?;
+    
+    let malformed_categories = stmt.query_map([], |row| {
+        Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?))
+    })?;
+    
+    let mut cleaned_count = 0;
+    let mut removed_count = 0;
+    
+    for category_row in malformed_categories {
+        let (category_id, malformed_name) = category_row?;
+        
+        // Extract the legitimate genre (first line)
+        let legitimate_genre = if let Some(first_line) = malformed_name.lines().next() {
+            first_line.trim().to_string()
+        } else {
+            continue;
+        };
+        
+        // Skip if the legitimate genre is empty or looks like metadata
+        if legitimate_genre.is_empty() || 
+           legitimate_genre.contains("Company") || 
+           legitimate_genre.contains("Languages:") || 
+           legitimate_genre.contains("Size:") ||
+           legitimate_genre.contains("iMDB") ||
+           legitimate_genre.contains("Director") ||
+           legitimate_genre.contains("Video format") {
+            // This is a pure metadata category, remove it entirely
+            conn.execute("DELETE FROM game_categories WHERE category_id = ?", [&category_id.to_string()])?;
+            conn.execute("DELETE FROM categories WHERE id = ?", [&category_id.to_string()])?;
+            removed_count += 1;
+            continue;
+        }
+        
+        // Check if a clean category with this name already exists
+        let existing_id: Result<i64, _> = conn.query_row(
+            "SELECT id FROM categories WHERE name = ?",
+            [&legitimate_genre],
+            |row| row.get(0),
+        );
+        
+        match existing_id {
+            Ok(existing_category_id) => {
+                // Clean category already exists, migrate all game associations
+                conn.execute(
+                    "UPDATE game_categories SET category_id = ? WHERE category_id = ?",
+                    [&existing_category_id.to_string(), &category_id.to_string()],
+                )?;
+                
+                // Remove the malformed category
+                conn.execute("DELETE FROM categories WHERE id = ?", [&category_id.to_string()])?;
+                cleaned_count += 1;
+            }
+            Err(_) => {
+                // No clean category exists, just rename this one
+                conn.execute(
+                    "UPDATE categories SET name = ? WHERE id = ?",
+                    [&legitimate_genre, &category_id.to_string()],
+                )?;
+                cleaned_count += 1;
+            }
+        }
+    }
+    
+    if cleaned_count > 0 || removed_count > 0 {
+        println!("✅ Cleaned {} malformed categories, removed {} metadata categories", cleaned_count, removed_count);
+    }
+    
+    Ok(())
+}
+
+pub fn migrate_normalize_genre_variations(conn: &Connection) -> Result<()> {
+    
+    // Normalize "Shoot 'Em Up" variations
+    let shoot_em_up_variations = vec![
+        "Shoot 'em Up",
+        "Shoot 'em up", 
+        "Shoot 'em upm Isometric",
+        "Shoot'Em-Up",
+        "Shoot-'Em-Up",
+        "Shoot'Em-Up",
+    ];
+    
+    // Check if standard "Shoot 'Em Up" category exists
+    let standard_name = "Shoot 'Em Up";
+    let standard_exists: Result<i64, _> = conn.query_row(
+        "SELECT id FROM categories WHERE name = ?",
+        [standard_name],
+        |row| row.get(0),
+    );
+    
+    let standard_id = match standard_exists {
+        Ok(id) => id,
+        Err(_) => {
+            // Create the standard category
+            conn.execute("INSERT INTO categories (name) VALUES (?)", [standard_name])?;
+            conn.query_row("SELECT id FROM categories WHERE name = ?", [standard_name], |row| row.get(0))?
+        }
+    };
+    
+    let mut normalized_count = 0;
+    
+    for variation in shoot_em_up_variations {
+        // Check if this variation exists
+        let variation_id: Result<i64, _> = conn.query_row(
+            "SELECT id FROM categories WHERE name = ?",
+            [variation],
+            |row| row.get(0),
+        );
+        
+        if let Ok(vid) = variation_id {
+            // Move all game associations to the standard category
+            conn.execute(
+                "UPDATE game_categories SET category_id = ? WHERE category_id = ?",
+                [&standard_id.to_string(), &vid.to_string()],
+            )?;
+            
+            // Remove the variation
+            conn.execute("DELETE FROM categories WHERE id = ?", [&vid.to_string()])?;
+            normalized_count += 1;
+        }
+    }
+    
+    if normalized_count > 0 {
+        println!("✅ Normalized {} genre variations", normalized_count);
+    }
+    Ok(())
+}
+

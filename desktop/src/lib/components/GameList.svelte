@@ -11,9 +11,9 @@
         if (!date) return 'N/A';
         try {
             const dateObj = new Date(date);
-            return dateObj.toLocaleDateString('en-US', { 
-                month: '2-digit', 
+            return dateObj.toLocaleDateString(undefined, { 
                 day: '2-digit',
+                month: '2-digit', 
                 year: '2-digit'
             });
         } catch {

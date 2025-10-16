@@ -57,6 +57,9 @@ impl FitGirlCrawler {
             vec![
                 "upcoming-repacks".to_string(),
                 "updates-digest".to_string(),
+                "russian movies".to_string(),
+                "movies weekend".to_string(),
+                "movies #".to_string(),
             ]
         }
     }
