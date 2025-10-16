@@ -306,6 +306,19 @@ impl Database {
     pub fn clear_popular_repacks(&self, period: &str) -> Result<()> {
         PopularQueries::clear_popular_repacks(&self.conn, period)
     }
+
+    pub fn get_unseen_popular_count(&self, period: &str, last_viewed: Option<&str>) -> Result<i64> {
+        PopularQueries::get_unseen_count(&self.conn, period, last_viewed)
+    }
+
+    pub fn get_total_unseen_popular_count(
+        &self,
+        month_last_viewed: Option<&str>,
+        year_last_viewed: Option<&str>,
+        award_last_viewed: Option<&str>,
+    ) -> Result<i64> {
+        PopularQueries::get_total_unseen_count(&self.conn, month_last_viewed, year_last_viewed, award_last_viewed)
+    }
     
     pub fn update_popular_repack_links(&self, period: Option<&str>) -> Result<usize> {
         PopularQueries::update_popular_repack_links(&self.conn, period)
