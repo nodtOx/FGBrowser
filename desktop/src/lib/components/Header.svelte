@@ -111,6 +111,13 @@
                         <span class="unseen-badge">{totalUnseenPopular}</span>
                     {/if}
                 </button>
+                <button 
+                    class="nav-tab pink-paw-tab"
+                    class:active={$currentPage === 'pinkpaw'}
+                    on:click={() => handleNavClick('pinkpaw')}
+                >
+                Pink Paw Award <span class="paw-emoji">🐾</span> 
+                </button>
                 {#if featureFlags.torrentClient}
                 <button 
                     class="nav-tab"
@@ -372,6 +379,29 @@
 
     .theme-section-header:not(:first-child) {
         margin-top: 8px;
+    }
+
+    .pink-paw-tab.active {
+        background-color: #ff69b4;
+        color: white;
+    }
+
+    .pink-paw-tab:hover:not(.active) {
+        color: #ff69b4;
+    }
+
+    .paw-emoji {
+        color: transparent;
+        text-shadow: 0 0 0 #ff69b4;
+        font-size: 13px;
+        vertical-align: middle;
+        display: inline-block;
+        margin-right: 3px;
+    }
+
+    .pink-paw-tab.active .paw-emoji {
+        color: transparent;
+        text-shadow: 0 0 0 white;
     }
 </style>
 

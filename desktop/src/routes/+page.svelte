@@ -10,6 +10,7 @@
   import Downloads from '$lib/components/Downloads.svelte';
   import GameDetails from '$lib/components/GameDetails.svelte';
   import Header from '$lib/components/Header.svelte';
+  import PinkPawAward from '$lib/components/PinkPawAward.svelte';
   import Popular from '$lib/components/Popular.svelte';
   import Settings from '$lib/components/Settings.svelte';
   import Sidebar from '$lib/components/Sidebar.svelte';
@@ -291,6 +292,8 @@
       </div>
     {:else if $currentPage === 'popular'}
       <Popular />
+    {:else if $currentPage === 'pinkpaw'}
+      <PinkPawAward />
     {:else if $currentPage === 'downloads'}
       <Downloads />
     {:else if $currentPage === 'settings'}
