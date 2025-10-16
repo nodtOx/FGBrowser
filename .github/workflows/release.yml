@@ -7,7 +7,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  release:
+  # Desktop app builds (Windows, macOS, Linux)
+  desktop-release:
     permissions:
       contents: write
     strategy:
@@ -53,15 +54,89 @@ jobs:
         working-directory: desktop
         run: npm ci
 
-      - name: Build and release
+      - name: Build and release desktop app
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           projectPath: desktop
           tagName: ${{ github.ref_name }}
-          releaseName: 'Fit Boy v__VERSION__'
-          releaseBody: 'See the assets to download this version and install.'
+          releaseName: 'FGBrowser v__VERSION__'
+          releaseBody: |
+            ## FGBrowser v__VERSION__
+
+            ### Desktop Applications
+            - **Windows**: MSI and NSIS installers
+            - **macOS**: Universal binary (Intel + Apple Silicon)
+            - **Linux**: DEB and AppImage packages
+
+            ### Command Line Interface
+            - **Linux CLI**: Standalone binary for headless usage
+
+            ### Installation
+            Download the appropriate installer for your platform from the assets below.
+
+            ### What's Changed
+            See the full changelog for this release.
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
+
+  # Linux CLI build
+  cli-release:
+    needs: desktop-release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libglib2.0-dev
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './desktop/src-tauri -> target'
+
+      - name: Build CLI binary
+        working-directory: desktop/src-tauri
+        run: cargo build --bin cli --release --features cli
+
+      - name: Strip binary
+        working-directory: desktop/src-tauri
+        run: strip target/release/cli
+
+      - name: Rename binary
+        working-directory: desktop/src-tauri
+        run: mv target/release/cli target/release/fgbrowser-cli-linux-x86_64
+
+      - name: Get binary info
+        id: binary_info
+        working-directory: desktop/src-tauri
+        run: |
+          SIZE=$(du -h target/release/fgbrowser-cli-linux-x86_64 | cut -f1)
+          echo "size=$SIZE" >> $GITHUB_OUTPUT
+          echo "Binary size: $SIZE"
+
+      - name: Upload CLI to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: desktop/src-tauri/target/release/fgbrowser-cli-linux-x86_64
+          draft: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

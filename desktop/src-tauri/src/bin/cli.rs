@@ -4,9 +4,9 @@
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-use desktop_lib::commands::save_repacks_to_db_legacy as save_repacks_to_db;
-use desktop_lib::crawler::FitGirlCrawler;
-use desktop_lib::database::Database;
+use fgbrowser_lib::commands::save_repacks_to_db_legacy as save_repacks_to_db;
+use fgbrowser_lib::crawler::FitGirlCrawler;
+use fgbrowser_lib::database::Database;
 use std::path::PathBuf;
 
 fn find_database_path() -> PathBuf {
