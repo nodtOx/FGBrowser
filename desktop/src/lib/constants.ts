@@ -9,7 +9,7 @@ import { invoke } from '@tauri-apps/api/core';
 // These match the values in src-tauri/src/constants.rs
 export const LOAD_ALL_GAMES = 999999;
 export const DEFAULT_OFFSET = 0;
-export const POLLING_INTERVAL_MS = 500;
+export const POLLING_INTERVAL_MS = 2000;
 export const SEARCH_DEBOUNCE_MS = 300;
 export const ITEM_HEIGHT = 30;
 export const OVERSCAN = 5;
