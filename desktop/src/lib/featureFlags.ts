@@ -6,6 +6,7 @@ export interface FeatureFlags {
   popularRepacks: boolean;
   advancedSearch: boolean;
   stats: boolean;
+  settings: boolean;
 }
 
 // Default feature flags
@@ -14,6 +15,7 @@ const defaultFlags: FeatureFlags = {
   popularRepacks: true, // Popular repacks is complete
   advancedSearch: true, // Search feature is complete
   stats: false, // Stats page not yet implemented
+  settings: false, // Settings page not yet implemented
 };
 
 // Load feature flags from localStorage (allows dev override)

@@ -125,6 +125,7 @@
                     Downloads
                 </button>
                 {/if}
+                {#if featureFlags.settings}
                 <button 
                     class="nav-tab"
                     class:active={$currentPage === 'settings'}
@@ -132,6 +133,7 @@
                 >
                     Settings
                 </button>
+                {/if}
                 {#if featureFlags.stats}
                 <button 
                     class="nav-tab"
@@ -150,6 +152,15 @@
                     R
                 </span>
             {/if}
+            <a 
+                href="https://fitgirl-repacks.site/donations/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                class="donate-btn"
+                title="Support FitGirl"
+            >
+                Donate to fitgirl
+            </a>
             <div class="theme-selector-wrapper" bind:this={themeDropdownRef}>
                 <span class="theme-btn" on:click={toggleThemeSelector} title="Change Theme (T)">
                     T
@@ -304,6 +315,27 @@
         background-color: var(--color-error);
         color: var(--color-background);
         border-color: var(--color-error);
+    }
+
+    .donate-btn {
+        color: var(--color-background);
+        background-color: #ff69b4;
+        cursor: pointer;
+        padding: 3px 8px;
+        border: 1px solid #ff1493;
+        font-size: 11px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-block;
+        white-space: nowrap;
+        transition: var(--transition);
+    }
+    
+    .donate-btn:hover {
+        background-color: #ff1493;
+        color: var(--color-background);
+        border-color: #ff1493;
+        transform: translateY(-1px);
     }
 
     .theme-selector-wrapper {
