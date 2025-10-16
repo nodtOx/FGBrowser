@@ -208,6 +208,8 @@ impl Database {
         migrations::migrate_repacks_clean_name(&self.conn)?;
         migrations::populate_clean_names(&self.conn)?;
         migrations::migrate_normalize_popular_repacks(&self.conn)?;
+        migrations::migrate_cleanup_malformed_categories(&self.conn)?;
+        migrations::migrate_normalize_genre_variations(&self.conn)?;
         
         Ok(())
     }
