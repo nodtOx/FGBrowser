@@ -45,7 +45,7 @@ impl PopularRepacks {
             }
         }
         
-        println!("Found {} popular repacks (rank will be set during insertion)", popular_repacks.len());
+        // println!("Found {} popular repacks (rank will be set during insertion)", popular_repacks.len());
         Ok(popular_repacks)
     }
     
@@ -87,7 +87,7 @@ impl PopularRepacks {
             }
         }
         
-        println!("Found {} Pink Paw Award games (rank will be set during insertion)", popular_repacks.len());
+        // println!("Found {} Pink Paw Award games (rank will be set during insertion)", popular_repacks.len());
         Ok(popular_repacks)
     }
     

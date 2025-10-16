@@ -11,11 +11,10 @@
         if (!date) return 'N/A';
         try {
             const dateObj = new Date(date);
-            return dateObj.toLocaleDateString(undefined, { 
-                day: '2-digit',
-                month: '2-digit', 
-                year: '2-digit'
-            });
+            const day = String(dateObj.getDate()).padStart(2, '0');
+            const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const year = String(dateObj.getFullYear()).slice(-2);
+            return `${day}/${month}/${year}`;
         } catch {
             return date.slice(0, 10); // Fallback to first 10 chars
         }
