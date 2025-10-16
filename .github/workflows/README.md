@@ -1,6 +1,6 @@
 # GitHub Actions Workflows
 
-This directory contains GitHub Actions workflows for the Fit Boy desktop application.
+This directory contains GitHub Actions workflows for the FGBrowser desktop application.
 
 ## Workflows
 
@@ -16,24 +16,34 @@ Builds the Tauri desktop application for all three platforms:
 
 The built artifacts are uploaded and can be downloaded from the Actions tab.
 
+### build-cli.yml
+
+**Trigger:** Push to main, Manual dispatch
+
+Builds the CLI binary for Linux (x86_64). The binary is uploaded as an artifact for testing purposes. For official releases, use the release workflow below.
+
 ### release.yml
 
 **Trigger:** Git tags starting with `v*`, Manual dispatch
 
-Creates a GitHub release with installers for all platforms. To create a release:
+Creates a unified GitHub release with all distribution packages. To create a release:
 
 ```bash
 git tag v0.1.0
 git push origin v0.1.0
 ```
 
-This will:
+This will build and release:
 
-1. Build the app for all platforms
-2. Create a draft release on GitHub
-3. Upload all installers to the release
+1. **Desktop Apps:**
+   - Windows: MSI and NSIS installers
+   - macOS: Universal DMG (Intel + Apple Silicon)
+   - Linux: DEB and AppImage packages
 
-The release will be created as a draft, allowing you to review and edit it before publishing.
+2. **CLI Binary:**
+   - Linux: Standalone x86_64 binary
+
+All artifacts are uploaded to a single draft release, allowing you to review and edit before publishing.
 
 ### check.yml
 

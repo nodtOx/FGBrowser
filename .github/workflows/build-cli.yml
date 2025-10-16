@@ -8,9 +8,6 @@ on:
       - '.github/workflows/build-cli.yml'
   workflow_dispatch:  # Allow manual trigger
 
-permissions:
-  contents: write  # Required to create releases
-
 jobs:
   build-linux:
     runs-on: ubuntu-latest
@@ -57,7 +54,7 @@ jobs:
       
       - name: Build CLI
         working-directory: desktop/src-tauri
-        run: cargo build --bin cli --release
+        run: cargo build --bin cli --release --features cli
       
       - name: Strip binary
         working-directory: desktop/src-tauri
@@ -74,33 +71,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: fitboy-cli-linux-x86_64
+          name: fgbrowser-cli-linux-x86_64
           path: desktop/src-tauri/target/release/cli
           retention-days: 90
-      
-      - name: Create Release (on main push)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: cli-${{ github.sha }}
-          name: CLI Build ${{ github.run_number }}
-          body: |
-            Automated CLI build from commit ${{ github.sha }}
-            
-            **Binary Info:**
-            - Platform: Linux x86_64
-            - Size: ${{ steps.binary_info.outputs.size }}
-            - Built: ${{ github.event.head_commit.timestamp }}
-            
-            **Download:**
-            Download `fitboy-cli-linux-x86_64` from assets below.
-            
-            **Usage:**
-            ```bash
-            chmod +x cli
-            ./cli --help
-            ```
-          files: desktop/src-tauri/target/release/cli
-          draft: false
-          prerelease: false
 

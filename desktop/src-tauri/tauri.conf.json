@@ -1,18 +1,19 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "desktop",
+  "productName": "FGBrowser",
   "version": "0.1.0",
-  "identifier": "com.pc.desktop",
+  "identifier": "com.pc.fgbrowser",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:5173",
     "beforeBuildCommand": "npm run build",
-    "frontendDist": "../build"
+    "frontendDist": "../build",
+    "runner": "cargo"
   },
   "app": {
     "windows": [
       {
-        "title": "desktop",
+        "title": "FGBrowser",
         "width": 1230,
         "height": 800,
         "minWidth": 1000,
@@ -24,21 +25,14 @@
       "csp": null,
       "assetProtocol": {
         "enable": true,
-        "scope": [
-          "$APPCACHE/**"
-        ]
+        "scope": ["$APPCACHE/**"]
       }
     }
   },
   "bundle": {
     "active": true,
     "targets": "all",
-    "icon": [
-      "icons/32x32.png",
-      "icons/128x128.png",
-      "icons/128x128@2x.png",
-      "icons/icon.icns",
-      "icons/icon.ico"
-    ]
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"],
+    "externalBin": []
   }
 }
