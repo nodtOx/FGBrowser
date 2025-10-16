@@ -33,22 +33,26 @@
         }
     }
     
-    async function handleGameClick(gameIndex: number) {
+    async function handleGameClick(gameIndex: number, event: MouseEvent) {
         await selectGame(startIndex + gameIndex);
+        // Remove focus from clicked element to prevent residual focus state
+        (event.currentTarget as HTMLElement).blur();
     }
     
-    async function handleGameDoubleClick(gameIndex: number) {
+    async function handleGameDoubleClick(gameIndex: number, event: MouseEvent) {
         await selectGame(startIndex + gameIndex);
         openGameDetails();
+        // Remove focus from clicked element to prevent residual focus state
+        (event.currentTarget as HTMLElement).blur();
     }
     
     function handleKeydown(e: KeyboardEvent, gameIndex: number) {
         if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
-            handleGameClick(gameIndex);
+            handleGameClick(gameIndex, e as any);
         } else if (e.key === 'Enter' && e.shiftKey) {
             e.preventDefault();
-            handleGameDoubleClick(gameIndex);
+            handleGameDoubleClick(gameIndex, e as any);
         }
     }
     
@@ -138,8 +142,8 @@
                 <div 
                     class="game-item"
                     class:selected={globalIndex === $selectedIndex}
-                    on:click={() => handleGameClick(index)}
-                    on:dblclick={() => handleGameDoubleClick(index)}
+                    on:click={(e) => handleGameClick(index, e)}
+                    on:dblclick={(e) => handleGameDoubleClick(index, e)}
                     on:keydown={(e) => handleKeydown(e, index)}
                     role="button"
                     tabindex={globalIndex === $selectedIndex ? 0 : -1}
@@ -226,6 +230,11 @@
         cursor: pointer;
         border-bottom: 1px solid transparent;
         box-sizing: border-box;
+        outline: none; /* Remove browser focus outline */
+    }
+    
+    .game-item:focus {
+        outline: none; /* Ensure no focus outline on click */
     }
     
     .game-item:hover {

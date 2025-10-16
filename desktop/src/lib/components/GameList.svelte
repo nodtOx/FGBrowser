@@ -20,8 +20,10 @@
         }
     }
     
-    async function handleGameClick(index: number) {
+    async function handleGameClick(index: number, event: MouseEvent) {
         await selectGame(index);
+        // Remove focus from clicked element to prevent residual focus state
+        (event.currentTarget as HTMLElement).blur();
     }
     
     function handleSearch() {
@@ -69,8 +71,8 @@
         <div 
             class="game-item"
             class:selected={index === $selectedIndex}
-            on:click={() => handleGameClick(index)}
-            on:keydown={(e) => e.key === 'Enter' && handleGameClick(index)}
+            on:click={(e) => handleGameClick(index, e)}
+            on:keydown={(e) => e.key === 'Enter' && handleGameClick(index, e as any)}
             role="button"
             tabindex={index === $selectedIndex ? 0 : -1}
         >
@@ -141,6 +143,11 @@
         gap: 16px;
         cursor: pointer;
         border-bottom: 1px solid transparent;
+        outline: none; /* Remove browser focus outline */
+    }
+    
+    .game-item:focus {
+        outline: none; /* Ensure no focus outline on click */
     }
     
     .game-item:hover {
