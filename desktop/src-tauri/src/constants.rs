@@ -15,13 +15,15 @@ pub const SEARCH_DEBOUNCE_MS: u64 = 300;
 pub const ITEM_HEIGHT: u32 = 30;
 pub const OVERSCAN: u32 = 5;
 
-// Popular repacks limits
-pub const POPULAR_MONTHLY_LIMIT: i32 = 50;
-pub const POPULAR_YEARLY_LIMIT: i32 = 150;
+// Popular repacks fetch limit (effectively "fetch all")
+pub const POPULAR_FETCH_LIMIT: i32 = 9999;
 
 // Auto-refresh intervals (in milliseconds)
 pub const POPULAR_REFRESH_INTERVAL_MS: u64 = 3000;
 pub const DISK_INFO_REFRESH_INTERVAL_MS: u64 = 30000;
+
+// Database remote URL
+pub const DATABASE_URL: &str = "http://157.230.16.45/repacks.db";
 
 // Struct to export all constants at once to frontend
 #[derive(Debug, Serialize, Deserialize)]
@@ -32,10 +34,10 @@ pub struct AppConstants {
     pub search_debounce_ms: u64,
     pub item_height: u32,
     pub overscan: u32,
-    pub popular_monthly_limit: i32,
-    pub popular_yearly_limit: i32,
+    pub popular_fetch_limit: i32,
     pub popular_refresh_interval_ms: u64,
     pub disk_info_refresh_interval_ms: u64,
+    pub database_url: String,
 }
 
 impl AppConstants {
@@ -47,10 +49,10 @@ impl AppConstants {
             search_debounce_ms: SEARCH_DEBOUNCE_MS,
             item_height: ITEM_HEIGHT,
             overscan: OVERSCAN,
-            popular_monthly_limit: POPULAR_MONTHLY_LIMIT,
-            popular_yearly_limit: POPULAR_YEARLY_LIMIT,
+            popular_fetch_limit: POPULAR_FETCH_LIMIT,
             popular_refresh_interval_ms: POPULAR_REFRESH_INTERVAL_MS,
             disk_info_refresh_interval_ms: DISK_INFO_REFRESH_INTERVAL_MS,
+            database_url: DATABASE_URL.to_string(),
         }
     }
 }

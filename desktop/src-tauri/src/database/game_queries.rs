@@ -32,7 +32,8 @@ impl GameQueries {
         let search_pattern = format!("%{}%", query);
         let mut stmt = conn.prepare(&format!(
             "SELECT {} FROM repacks 
-             WHERE title LIKE ?1 OR clean_name LIKE ?1 
+             WHERE (title LIKE ?1 OR clean_name LIKE ?1)
+             AND EXISTS (SELECT 1 FROM magnet_links WHERE magnet_links.repack_id = repacks.id)
              ORDER BY 
                CASE 
                  WHEN clean_name LIKE ?1 THEN 1 
@@ -52,7 +53,9 @@ impl GameQueries {
 
     pub fn get_all_games(conn: &rusqlite::Connection, limit: i32, offset: i32) -> Result<Vec<Game>> {
         let mut stmt = conn.prepare(&format!(
-            "SELECT {} FROM repacks ORDER BY date DESC LIMIT ?1 OFFSET ?2",
+            "SELECT {} FROM repacks 
+             WHERE EXISTS (SELECT 1 FROM magnet_links WHERE magnet_links.repack_id = repacks.id)
+             ORDER BY date DESC LIMIT ?1 OFFSET ?2",
             GAME_SELECT_FIELDS
         ))?;
 
@@ -109,7 +112,7 @@ impl GameQueries {
 
     pub fn get_stats(conn: &rusqlite::Connection) -> Result<DatabaseStats> {
         let total_games: i64 = conn
-            .query_row("SELECT COUNT(*) FROM repacks", [], |row| row.get(0))?;
+            .query_row("SELECT COUNT(*) FROM repacks WHERE EXISTS (SELECT 1 FROM magnet_links WHERE magnet_links.repack_id = repacks.id)", [], |row| row.get(0))?;
 
         let total_magnets: i64 =
             conn
@@ -123,7 +126,9 @@ impl GameQueries {
     
     pub fn get_latest_game_date(conn: &rusqlite::Connection) -> Result<Option<String>> {
         match conn.query_row(
-            "SELECT date FROM repacks WHERE date IS NOT NULL ORDER BY date DESC LIMIT 1",
+            "SELECT date FROM repacks WHERE date IS NOT NULL 
+             AND EXISTS (SELECT 1 FROM magnet_links WHERE magnet_links.repack_id = repacks.id)
+             ORDER BY date DESC LIMIT 1",
             [],
             |row| row.get(0),
         ) {
@@ -138,6 +143,7 @@ impl GameQueries {
         let mut stmt = conn.prepare(&format!(
             "SELECT {} FROM repacks 
              WHERE date >= date('now', '-' || ? || ' days')
+             AND EXISTS (SELECT 1 FROM magnet_links WHERE magnet_links.repack_id = repacks.id)
              ORDER BY date DESC LIMIT ? OFFSET ?",
             GAME_SELECT_FIELDS
         ))?;
@@ -150,7 +156,7 @@ impl GameQueries {
     
     // Get games filtered by size range (in MB)
     pub fn get_games_by_size_range(conn: &rusqlite::Connection, min_size: Option<i64>, max_size: Option<i64>, limit: i32, offset: i32) -> Result<Vec<Game>> {
-        let mut query = format!("SELECT {} FROM repacks WHERE 1=1", GAME_SELECT_FIELDS);
+        let mut query = format!("SELECT {} FROM repacks WHERE EXISTS (SELECT 1 FROM magnet_links WHERE magnet_links.repack_id = repacks.id)", GAME_SELECT_FIELDS);
         let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
         
         if let Some(min) = min_size {
@@ -192,7 +198,8 @@ impl GameQueries {
                  WHERE gc.category_id IN ({})
                  GROUP BY gc.repack_id 
                  HAVING COUNT(DISTINCT gc.category_id) = ?
-             )",
+             )
+             AND EXISTS (SELECT 1 FROM magnet_links WHERE magnet_links.repack_id = r.id)",
             GAME_SELECT_FIELDS_PREFIXED, placeholders
         );
         
@@ -244,7 +251,8 @@ impl GameQueries {
                  WHERE gc.category_id IN ({})
                  GROUP BY gc.repack_id 
                  HAVING COUNT(DISTINCT gc.category_id) = ?
-             )",
+             )
+             AND EXISTS (SELECT 1 FROM magnet_links WHERE magnet_links.repack_id = r.id)",
             GAME_SELECT_FIELDS_PREFIXED, placeholders
         );
         
@@ -286,7 +294,7 @@ impl GameQueries {
     
     // Get games by size AND time (dual combination)
     pub fn get_games_by_size_and_time(conn: &rusqlite::Connection, min_size: Option<i64>, max_size: Option<i64>, days_ago: i32, limit: i32, offset: i32) -> Result<Vec<Game>> {
-        let mut query = format!("SELECT {} FROM repacks WHERE 1=1", GAME_SELECT_FIELDS);
+        let mut query = format!("SELECT {} FROM repacks WHERE EXISTS (SELECT 1 FROM magnet_links WHERE magnet_links.repack_id = repacks.id)", GAME_SELECT_FIELDS);
         let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
         
         if let Some(min) = min_size {
@@ -331,6 +339,7 @@ impl GameQueries {
                  GROUP BY gc.repack_id 
                  HAVING COUNT(DISTINCT gc.category_id) = ?
              )
+             AND EXISTS (SELECT 1 FROM magnet_links WHERE magnet_links.repack_id = r.id)
              AND r.date >= date('now', '-' || ? || ' days')
              ORDER BY r.date DESC
              LIMIT ? OFFSET ?",
@@ -361,6 +370,7 @@ impl GameQueries {
             "SELECT {} FROM repacks r
              JOIN game_categories gc ON r.id = gc.repack_id
              WHERE gc.category_id = ?1
+             AND EXISTS (SELECT 1 FROM magnet_links WHERE magnet_links.repack_id = r.id)
              ORDER BY r.date DESC
              LIMIT ?2 OFFSET ?3",
             GAME_SELECT_FIELDS_PREFIXED
@@ -408,6 +418,7 @@ impl GameQueries {
                  GROUP BY gc.repack_id 
                  HAVING COUNT(DISTINCT gc.category_id) = ?
              )
+             AND EXISTS (SELECT 1 FROM magnet_links WHERE magnet_links.repack_id = r.id)
              ORDER BY r.date DESC
              LIMIT ? OFFSET ?",
             GAME_SELECT_FIELDS_PREFIXED, placeholders

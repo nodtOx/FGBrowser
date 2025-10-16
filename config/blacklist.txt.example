@@ -1,9 +1,0 @@
-# Blacklist for pages to skip during crawling
-# Copy this file to blacklist.txt and add your patterns
-# Add one URL pattern or title per line
-# Lines starting with # are comments
-
-# Example patterns:
-upcoming-repacks
-updates-digest
-

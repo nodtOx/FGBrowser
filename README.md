@@ -1,8 +1,20 @@
-# FitGirl Repacks Crawler
+# FitGirl Repacks Browser
 
-A web crawler for extracting game repack information from fitgirl-repacks.site and storing it in a SQLite database.
+A desktop application and web crawler for browsing game repack information from fitgirl-repacks.site.
 
 ## Features
+
+### Desktop App
+
+- **Pre-populated Database**: Downloads a ready-to-use database on first run
+- **Fast Browsing**: Search and filter thousands of games instantly
+- **Auto-Updates**: Automatically fetches new games in the background
+- **Beautiful UI**: Modern, responsive interface with dark/light themes
+- **Popular Games**: View trending repacks by month and year
+- **Download Management**: Track and manage your downloads (coming soon)
+- **Offline Ready**: Browse games without internet after initial setup
+
+### Web Crawler (Python)
 
 - Crawls multiple pages of repacks
 - Extracts comprehensive game information:
@@ -18,7 +30,54 @@ A web crawler for extracting game repack information from fitgirl-repacks.site a
 - Command-line query interface
 - Rate limiting to be respectful to the server
 
-## Installation
+## Desktop App
+
+The desktop application is built with Tauri (Rust) and Svelte.
+
+### Quick Start
+
+1. Navigate to desktop folder:
+
+```bash
+cd desktop
+```
+
+2. Install dependencies:
+
+```bash
+npm install
+```
+
+3. Run the app:
+
+```bash
+npm run tauri dev
+```
+
+On first run, the app will automatically download a pre-populated database from the server, so you can start browsing games immediately.
+
+### How It Works
+
+1. **First Run**: Downloads database from `http://157.230.16.45/repacks.db`
+2. **Error Handling**: If download fails, shows error with retry button
+3. **Auto-Update**: Checks for new games and updates database in background
+4. **Browse**: Search, filter, and view game details
+5. **Download**: Copy magnet links or open in your torrent client
+
+### Build Desktop App
+
+```bash
+cd desktop
+npm run tauri build
+```
+
+See [docs/DESKTOP_APP.md](docs/DESKTOP_APP.md) for detailed documentation.
+
+## Python Crawler
+
+The Python crawler is used to populate the database that the desktop app uses.
+
+### Installation
 
 1. Create a virtual environment:
 
@@ -169,22 +228,33 @@ The SQLite database contains two tables:
 
 ```
 fit-boy/
-├── crawler/                # Core crawler package
-│   ├── __init__.py        # Package initialization
-│   ├── crawler.py         # Main crawler logic
-│   ├── database.py        # Database operations
-│   ├── query_db.py        # Query utilities
-│   ├── query.py           # CLI query tool
+├── desktop/               # Desktop application (Tauri + Svelte)
+│   ├── src/              # Frontend source code
+│   │   ├── lib/          # Components, stores, utilities
+│   │   └── routes/       # SvelteKit routes
+│   ├── src-tauri/        # Rust backend
+│   │   └── src/          # Rust source code
+│   └── package.json      # Node dependencies
+├── crawler/              # Python crawler package
+│   ├── __init__.py       # Package initialization
+│   ├── crawler.py        # Main crawler logic
+│   ├── database.py       # Database operations
+│   ├── query_db.py       # Query utilities
+│   ├── query.py          # CLI query tool
 │   ├── manage_blacklist.py # CLI blacklist tool
 │   └── blacklist_manager.py # Blacklist management
-├── config/                 # Configuration files
-│   ├── blacklist.txt      # Patterns to skip during crawl
+├── docs/                 # Documentation
+│   ├── DESKTOP_APP.md    # Desktop app documentation
+│   ├── DATABASE_DOWNLOAD.md # Database download feature
+│   └── ...
+├── config/               # Configuration files
+│   ├── blacklist.txt     # Patterns to skip during crawl
 │   └── blacklist.txt.example # Example configuration
-├── run_crawler.py         # Main entry point
-├── requirements.txt       # Python dependencies
-├── README.md             # This file
-├── .gitignore            # Git ignore rules
-└── repacks.db            # SQLite database (created after first crawl)
+├── server/               # Server deployment scripts
+├── run_crawler.py        # Python crawler entry point
+├── requirements.txt      # Python dependencies
+├── README.md            # This file
+└── repacks.db           # SQLite database
 ```
 
 ## Blacklist System

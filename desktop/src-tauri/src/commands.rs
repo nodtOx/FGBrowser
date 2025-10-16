@@ -1,4 +1,4 @@
-use crate::constants::AppConstants;
+use crate::constants::{AppConstants, DATABASE_URL};
 use crate::crawler::{FitGirlCrawler, GameRepack, clean_game_title};
 use crate::database::{AppSettings, Database, Download, Game, GameDetails, DatabaseStats, CategoryWithCount};
 use std::path::PathBuf;
@@ -6,6 +6,7 @@ use std::sync::Mutex;
 use tauri::State;
 use arboard::Clipboard;
 use std::fs;
+use std::io::Write;
 
 /// Parse size string to MB (integer)
 /// Handles patterns like:
@@ -409,53 +410,50 @@ pub struct DiskInfo {
 }
 
 #[tauri::command]
-pub async fn get_disk_info() -> Result<DiskInfo, String> {
-    #[cfg(target_os = "windows")]
-    {
-        use std::process::Command;
-        
-        // Get disk info using wmic command
-        let output = Command::new("wmic")
-            .args(&["logicaldisk", "where", "size>0", "get", "size,freespace", "/format:csv"])
-            .output()
-            .map_err(|e| e.to_string())?;
-            
-        let output_str = String::from_utf8_lossy(&output.stdout);
-        let lines: Vec<&str> = output_str.lines().collect();
-        
-        let mut total = 0u64;
-        let mut free = 0u64;
-        
-        for line in lines.iter().skip(1) { // Skip header
-            if line.trim().is_empty() {
-                continue;
-            }
-            
-            let parts: Vec<&str> = line.split(',').collect();
-            if parts.len() >= 4 {
-                if let (Ok(size), Ok(freespace)) = (parts[2].parse::<u64>(), parts[3].parse::<u64>()) {
-                    total += size;
-                    free += freespace;
+pub async fn get_disk_info(state: State<'_, AppState>) -> Result<DiskInfo, String> {
+    use sysinfo::Disks;
+    use std::path::Path;
+    
+    let disks = Disks::new_with_refreshed_list();
+    let db_path = state.db_path.lock().unwrap().clone();
+    
+    // Get the absolute path of the database directory
+    let db_dir = db_path.parent()
+        .and_then(|p| p.canonicalize().ok())
+        .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
+    
+    // Find the disk that contains the database directory
+    let mut target_disk = None;
+    for disk in disks.list() {
+        let mount_point = disk.mount_point();
+        // Check if the database path is on this disk
+        if db_dir.starts_with(mount_point) {
+            // Keep the most specific mount point (longest path)
+            if let Some((_, current_mount)) = target_disk {
+                if mount_point.as_os_str().len() > Path::new(current_mount).as_os_str().len() {
+                    target_disk = Some((disk, mount_point));
                 }
+            } else {
+                target_disk = Some((disk, mount_point));
             }
         }
-        
-        Ok(DiskInfo {
-            total,
-            free,
-            used: total - free,
-        })
     }
     
-    #[cfg(not(target_os = "windows"))]
-    {
-        // Fallback for non-Windows systems
-        Ok(DiskInfo {
-            total: 0,
-            free: 0,
-            used: 0,
-        })
-    }
+    // If we found a matching disk, use it; otherwise fall back to the first disk
+    let disk = target_disk
+        .map(|(d, _)| d)
+        .or_else(|| disks.list().first())
+        .ok_or("No disks found")?;
+    
+    let total = disk.total_space();
+    let available = disk.available_space();
+    let used = total.saturating_sub(available);
+    
+    Ok(DiskInfo {
+        total,
+        free: available,
+        used,
+    })
 }
 
 // Crawler commands
@@ -1014,6 +1012,120 @@ pub async fn crawl_single_popular_game(
 #[tauri::command]
 pub fn get_app_constants() -> AppConstants {
     AppConstants::new()
+}
+
+// Database download command
+
+#[derive(Debug, serde::Serialize, Clone)]
+pub struct DownloadProgress {
+    pub downloaded_bytes: u64,
+    pub total_bytes: Option<u64>,
+    pub status: String,
+}
+
+#[tauri::command]
+pub async fn download_database(
+    state: State<'_, AppState>,
+) -> Result<bool, String> {
+    use std::time::Instant;
+    
+    let start_time = Instant::now();
+    let db_path = state.db_path.lock().unwrap().clone();
+    
+    println!("\n{}", "=".repeat(80));
+    println!("DATABASE DOWNLOAD STARTED");
+    println!("Source: {}", DATABASE_URL);
+    println!("Target: {:?}", db_path);
+    println!("{}", "=".repeat(80));
+    
+    // Check if database already exists
+    if db_path.exists() {
+        // Check if it has data
+        match Database::new(db_path.clone()) {
+            Ok(db) => {
+                if let Ok(stats) = db.get_stats() {
+                    if stats.total_games > 0 {
+                        println!("Database already exists with {} games, skipping download", stats.total_games);
+                        return Ok(false);
+                    }
+                }
+            }
+            Err(_) => {
+                // Database file exists but is corrupted, delete it
+                println!("Existing database file is corrupted, removing...");
+                let _ = fs::remove_file(&db_path);
+            }
+        }
+    }
+    
+    // Create parent directory if it doesn't exist
+    if let Some(parent) = db_path.parent() {
+        fs::create_dir_all(parent).map_err(|e| format!("Failed to create directory: {}", e))?;
+    }
+    
+    // Download the database
+    println!("Downloading database from server...");
+    
+    let response = reqwest::get(DATABASE_URL)
+        .await
+        .map_err(|e| format!("Failed to download database: {}", e))?;
+    
+    if !response.status().is_success() {
+        return Err(format!("Server returned error: {}", response.status()));
+    }
+    
+    let total_size = response.content_length();
+    if let Some(size) = total_size {
+        println!("Database size: {:.2} MB", size as f64 / 1024.0 / 1024.0);
+    }
+    
+    let bytes = response.bytes()
+        .await
+        .map_err(|e| format!("Failed to read response: {}", e))?;
+    
+    // Write to file
+    let mut file = fs::File::create(&db_path)
+        .map_err(|e| format!("Failed to create database file: {}", e))?;
+    
+    file.write_all(&bytes)
+        .map_err(|e| format!("Failed to write database file: {}", e))?;
+    
+    let duration = start_time.elapsed();
+    
+    // Verify the downloaded database
+    match Database::new(db_path.clone()) {
+        Ok(db) => {
+            match db.get_stats() {
+                Ok(stats) => {
+                    println!("\n{}", "=".repeat(80));
+                    println!("DATABASE DOWNLOAD COMPLETED");
+                    println!("Total Games: {}", stats.total_games);
+                    println!("Size: {:.2} MB", bytes.len() as f64 / 1024.0 / 1024.0);
+                    println!("Time Taken: {:.2}s", duration.as_secs_f64());
+                    println!("{}", "=".repeat(80));
+                    Ok(true)
+                }
+                Err(e) => {
+                    // Database downloaded but can't read stats - might be empty but valid
+                    println!("Warning: Downloaded database but couldn't read stats: {}", e);
+                    Ok(true)
+                }
+            }
+        }
+        Err(e) => {
+            // Delete corrupted file
+            let _ = fs::remove_file(&db_path);
+            Err(format!("Downloaded database is invalid: {}", e))
+        }
+    }
+}
+
+#[tauri::command]
+pub async fn check_database_exists(
+    state: State<'_, AppState>,
+) -> Result<bool, String> {
+    let db_path = state.db_path.lock().unwrap().clone();
+    Ok(db_path.exists())
 }
 
 // Download Management Commands

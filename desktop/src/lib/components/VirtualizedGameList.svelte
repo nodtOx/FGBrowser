@@ -1,7 +1,7 @@
 <script lang="ts">
     import { ITEM_HEIGHT, OVERSCAN, SEARCH_DEBOUNCE_MS } from '$lib/constants';
     import { formatSize, games, searchGames, searchQuery, selectedIndex, selectGame } from '$lib/stores/games';
-    import { openGameDetails } from '$lib/stores/navigation';
+    import { focusedPanel, openGameDetails } from '$lib/stores/navigation';
     import { onMount, tick } from 'svelte';
     
     let containerHeight: number = 0;
@@ -33,23 +33,24 @@
         }
     }
     
-    async function handleGameClick(gameIndex: number) {
+    async function handleGameClick(gameIndex: number, event: MouseEvent) {
+        focusedPanel.set('gamelist');
         await selectGame(startIndex + gameIndex);
+        // Remove focus from clicked element to prevent residual focus state
+        (event.currentTarget as HTMLElement).blur();
     }
     
-    async function handleGameDoubleClick(gameIndex: number) {
+    async function handleGameDoubleClick(gameIndex: number, event: MouseEvent) {
         await selectGame(startIndex + gameIndex);
         openGameDetails();
+        // Remove focus from clicked element to prevent residual focus state
+        (event.currentTarget as HTMLElement).blur();
     }
     
     function handleKeydown(e: KeyboardEvent, gameIndex: number) {
-        if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            handleGameClick(gameIndex);
-        } else if (e.key === 'Enter' && e.shiftKey) {
-            e.preventDefault();
-            handleGameDoubleClick(gameIndex);
-        }
+        // Keyboard shortcuts are now handled globally in keyboard.ts
+        // This handler is kept for accessibility but doesn't preventDefault
+        // to allow global handlers to work
     }
     
     // Scroll to selected item when selection changes externally
@@ -104,6 +105,15 @@
         }
     }
     
+    // Auto-focus/blur search input based on focused panel
+    $: if (searchInput) {
+        if ($focusedPanel === 'search') {
+            searchInput.focus();
+        } else {
+            searchInput.blur();
+        }
+    }
+    
     onMount(() => {
         // Scroll to selected item on mount
         if ($selectedIndex >= 0) {
@@ -113,12 +123,13 @@
 </script>
 
 <div class="list-container">
-    <div class="search-bar">
+    <div class="search-bar" class:focused={$focusedPanel === 'search'}>
         <input
             bind:this={searchInput}
             bind:value={$searchQuery}
             on:input={handleSearch}
             on:keydown={handleSearchKeydown}
+            on:focus={() => focusedPanel.set('search')}
             type="search"
             placeholder="Search games... (press / to focus, Esc to clear)"
             class="search-input"
@@ -126,7 +137,8 @@
     </div>
     
     <div 
-        class="virtualized-list" 
+        class="virtualized-list"
+        class:focused={$focusedPanel === 'gamelist'}
         bind:this={containerElement}
         bind:clientHeight={containerHeight}
         on:scroll={handleScroll}
@@ -138,8 +150,9 @@
                 <div 
                     class="game-item"
                     class:selected={globalIndex === $selectedIndex}
-                    on:click={() => handleGameClick(index)}
-                    on:dblclick={() => handleGameDoubleClick(index)}
+                    class:focused-panel={$focusedPanel === 'gamelist'}
+                    on:click={(e) => handleGameClick(index, e)}
+                    on:dblclick={(e) => handleGameDoubleClick(index, e)}
                     on:keydown={(e) => handleKeydown(e, index)}
                     role="button"
                     tabindex={globalIndex === $selectedIndex ? 0 : -1}
@@ -173,6 +186,13 @@
         padding: 8px 12px;
         border-bottom: 1px solid var(--color-border);
         background-color: var(--color-backgroundSecondary);
+        border-left: 3px solid transparent;
+        transition: all 0.15s ease;
+    }
+    
+    .search-bar.focused {
+        border-left-color: var(--color-primary);
+        background-color: rgba(var(--color-primary-rgb, 136, 192, 208), 0.05);
     }
     
     .search-input {
@@ -204,6 +224,13 @@
         font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
         font-size: calc(var(--base-font-size) * 1);
         position: relative;
+        border-left: 3px solid transparent;
+        transition: all 0.15s ease;
+    }
+    
+    .virtualized-list.focused {
+        border-left-color: var(--color-primary);
+        background-color: rgba(var(--color-primary-rgb, 136, 192, 208), 0.02);
     }
     
     .scroll-area {
@@ -226,6 +253,11 @@
         cursor: pointer;
         border-bottom: 1px solid transparent;
         box-sizing: border-box;
+        outline: none; /* Remove browser focus outline */
+    }
+    
+    .game-item:focus {
+        outline: none; /* Ensure no focus outline on click */
     }
     
     .game-item:hover {
@@ -235,6 +267,11 @@
     .game-item.selected {
         background-color: var(--color-primary);
         color: var(--color-selectedText);
+        opacity: 0.4;
+    }
+    
+    .game-item.selected.focused-panel {
+        opacity: 1;
     }
     
     .game-date {
@@ -246,7 +283,7 @@
         padding-right: 8px;
     }
     
-    .game-item.selected .game-date {
+    .game-item.selected.focused-panel .game-date {
         color: var(--color-selectedText);
     }
     
@@ -268,7 +305,7 @@
         padding-left: 8px;
     }
     
-    .game-item.selected .game-size {
+    .game-item.selected.focused-panel .game-size {
         color: var(--color-selectedText);
     }
 </style>

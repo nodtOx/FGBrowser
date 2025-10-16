@@ -1,6 +1,7 @@
 <script lang="ts">
     import { SEARCH_DEBOUNCE_MS } from '$lib/constants';
     import { formatSize, games, searchGames, searchQuery, selectedIndex, selectGame } from '$lib/stores/games';
+    import { focusedPanel } from '$lib/stores/navigation';
     
     let searchInput: HTMLInputElement;
     let searchTimeout: any;
@@ -20,8 +21,11 @@
         }
     }
     
-    async function handleGameClick(index: number) {
+    async function handleGameClick(index: number, event: MouseEvent) {
+        focusedPanel.set('gamelist');
         await selectGame(index);
+        // Remove focus from clicked element to prevent residual focus state
+        (event.currentTarget as HTMLElement).blur();
     }
     
     function handleSearch() {
@@ -69,8 +73,11 @@
         <div 
             class="game-item"
             class:selected={index === $selectedIndex}
-            on:click={() => handleGameClick(index)}
-            on:keydown={(e) => e.key === 'Enter' && handleGameClick(index)}
+            class:focused-panel={$focusedPanel === 'gamelist'}
+            on:click={(e) => handleGameClick(index, e)}
+            on:keydown={(e) => {
+                // Keyboard shortcuts are now handled globally in keyboard.ts
+            }}
             role="button"
             tabindex={index === $selectedIndex ? 0 : -1}
         >
@@ -141,6 +148,11 @@
         gap: 16px;
         cursor: pointer;
         border-bottom: 1px solid transparent;
+        outline: none; /* Remove browser focus outline */
+    }
+    
+    .game-item:focus {
+        outline: none; /* Ensure no focus outline on click */
     }
     
     .game-item:hover {
@@ -150,6 +162,11 @@
     .game-item.selected {
         background-color: var(--color-primary);
         color: var(--color-selectedText);
+        opacity: 0.4;
+    }
+    
+    .game-item.selected.focused-panel {
+        opacity: 1;
     }
     
     .game-date {
@@ -161,7 +178,7 @@
         padding-right: 8px;
     }
     
-    .game-item.selected .game-date {
+    .game-item.selected.focused-panel .game-date {
         color: var(--color-selectedText);
     }
     
@@ -183,7 +200,7 @@
         padding-left: 8px;
     }
     
-    .game-item.selected .game-size {
+    .game-item.selected.focused-panel .game-size {
         color: var(--color-selectedText);
     }
 </style>
