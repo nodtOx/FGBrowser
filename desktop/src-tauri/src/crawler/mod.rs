@@ -327,10 +327,13 @@ impl FitGirlCrawler {
     }
     
     pub async fn fetch_popular_repacks(&self, period: &str) -> Result<Vec<PopularRepackEntry>> {
+        // For "week" and "today", we fetch from homepage (or any page) to get sidebar sections
+        // For "month", "year", "award", we fetch from dedicated pages
         let url = match period {
             "year" => format!("{}/popular-repacks-of-the-year/", self.base_url),
             "award" => format!("{}/games-with-my-personal-pink-paw-award/", self.base_url),
-            _ => format!("{}/popular-repacks/", self.base_url),
+            "week" | "today" => self.base_url.clone(), // Fetch homepage for sidebar sections
+            _ => format!("{}/popular-repacks/", self.base_url), // month
         };
         
         // println!("Fetching popular repacks ({})...", period);
@@ -338,21 +341,26 @@ impl FitGirlCrawler {
         let response = self.client.get(&url).send().await?;
         let html = response.text().await?;
         
-        // Use special parser for award page
-        if period == "award" {
-            PopularRepacks::parse_pink_paw_award_html(&html)
+        // Use appropriate parser based on period
+        let mut entries = if period == "award" {
+            // Award list is curated and doesn't need filtering
+            PopularRepacks::parse_pink_paw_award_html(&html)?
+        } else if period == "week" {
+            PopularRepacks::parse_week_popular_repacks(&html)?
+        } else if period == "today" {
+            PopularRepacks::parse_today_popular_repacks(&html)?
         } else {
-            // For month/year, apply blacklist filtering
-            let mut entries = PopularRepacks::parse_popular_repacks_html(&html)?;
-            
-            // Filter out blacklisted games for month/year periods
+            // month/year
+            PopularRepacks::parse_popular_repacks_html(&html)?
+        };
+        
+        // Apply blacklist filtering for all periods except award
+        if period != "award" {
             entries.retain(|entry| !is_popular_blacklisted(&entry.url));
-            
-            // println!("  Filtered out {} blacklisted games", 
-            //     PopularRepacks::parse_popular_repacks_html(&html)?.len() - entries.len());
-            
-            Ok(entries)
+            // println!("  Filtered out blacklisted games for period: {}", period);
         }
+        
+        Ok(entries)
     }
     
     pub fn parse_popular_repacks_from_file(&self, file_path: &str) -> Result<Vec<PopularRepackEntry>> {

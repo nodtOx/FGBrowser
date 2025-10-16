@@ -213,18 +213,32 @@ impl SiteCrawler for FitGirlCrawler {
     }
 
     async fn fetch_popular_repacks(&self, period: &str) -> Result<Vec<PopularRepackEntry>> {
+        // For "week" and "today", we fetch from homepage to get sidebar sections
+        // For "month", "year", "award", we fetch from dedicated pages
         let url = match period {
             "month" => format!("{}/popular-repacks/", self.base_url),
             "year" => format!("{}/popular-repacks-of-the-year/", self.base_url),
             "award" => format!("{}/games-with-my-personal-pink-paw-award/", self.base_url),
+            "week" | "today" => self.base_url.clone(), // Fetch homepage for sidebar sections
             _ => return Ok(Vec::new()),
         };
 
         let html = self.fetch_page(&url).await?;
         
-        // For Pink Paw Award page, use special parser
+        // Use appropriate parser based on period
         if period == "award" {
+            // Award list is curated and doesn't need filtering
             return super::popular::PopularRepacks::parse_pink_paw_award_html(&html);
+        } else if period == "week" {
+            let mut entries = super::popular::PopularRepacks::parse_week_popular_repacks(&html)?;
+            // Apply blacklist filtering
+            entries.retain(|entry| !is_popular_blacklisted(&entry.url));
+            return Ok(entries);
+        } else if period == "today" {
+            let mut entries = super::popular::PopularRepacks::parse_today_popular_repacks(&html)?;
+            // Apply blacklist filtering
+            entries.retain(|entry| !is_popular_blacklisted(&entry.url));
+            return Ok(entries);
         }
         
         // For month/year, use the grid-based parser

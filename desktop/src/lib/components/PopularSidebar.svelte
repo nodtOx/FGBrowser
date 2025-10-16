@@ -3,11 +3,15 @@
   import { onMount } from 'svelte';
   import SidebarBase from './SidebarBase.svelte';
 
-  export let selectedPeriod: 'month' | 'year' | 'award' = 'month';
+  export let selectedPeriod: 'week' | 'today' | 'month' | 'year' | 'award' = 'week';
+  export let weeklyCount: number = 0;
+  export let todayCount: number = 0;
   export let monthlyCount: number = 0;
   export let yearlyCount: number = 0;
   export let awardCount: number = 0;
 
+  let weekUnseen: number = 0;
+  let todayUnseen: number = 0;
   let monthUnseen: number = 0;
   let yearUnseen: number = 0;
   let awardUnseen: number = 0;
@@ -18,6 +22,8 @@
 
   async function loadUnseenCounts() {
     try {
+      weekUnseen = await invoke<number>('get_unseen_popular_count', { period: 'week' });
+      todayUnseen = await invoke<number>('get_unseen_popular_count', { period: 'today' });
       monthUnseen = await invoke<number>('get_unseen_popular_count', { period: 'month' });
       yearUnseen = await invoke<number>('get_unseen_popular_count', { period: 'year' });
       awardUnseen = await invoke<number>('get_unseen_popular_count', { period: 'award' });
@@ -26,7 +32,7 @@
     }
   }
 
-  async function selectPeriod(period: 'month' | 'year' | 'award') {
+  async function selectPeriod(period: 'week' | 'today' | 'month' | 'year' | 'award') {
     selectedPeriod = period;
     // Reload counts after selection (will update after mark_as_viewed is called)
     setTimeout(() => loadUnseenCounts(), 500);
@@ -48,6 +54,40 @@
 <SidebarBase>
   <div class="sidebar-section">
     <div class="section-title">Period</div>
+
+    <div
+      class="sidebar-item"
+      class:selected={selectedPeriod === 'today'}
+      on:click={() => selectPeriod('today')}
+      on:keydown={(e) => handleKeydown(e, () => selectPeriod('today'))}
+      role="button"
+      tabindex="0"
+    >
+      <span class="filter-name">
+        Today
+        {#if todayUnseen > 0}
+          <span class="unseen-badge">{todayUnseen}</span>
+        {/if}
+      </span>
+      <span class="filter-count">{todayCount}</span>
+    </div>
+  
+    <div
+    class="sidebar-item"
+    class:selected={selectedPeriod === 'week'}
+    on:click={() => selectPeriod('week')}
+    on:keydown={(e) => handleKeydown(e, () => selectPeriod('week'))}
+    role="button"
+    tabindex="0"
+  >
+    <span class="filter-name">
+      This Week
+      {#if weekUnseen > 0}
+        <span class="unseen-badge">{weekUnseen}</span>
+      {/if}
+    </span>
+    <span class="filter-count">{weeklyCount}</span>
+  </div>
 
     <div
       class="sidebar-item"
