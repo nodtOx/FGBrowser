@@ -1,15 +1,15 @@
 use crate::constants::DATABASE_URL;
 use crate::database::{AppSettings, Database};
 use super::utils::AppState;
+use super::database_service::DatabaseService;
 use std::fs;
 use std::io::Write;
+use std::path::PathBuf;
 use tauri::State;
 
 #[tauri::command]
 pub async fn get_settings(state: State<'_, AppState>) -> Result<AppSettings, String> {
-    let db_path = state.db_path.lock().unwrap().clone();
-    let db = Database::new(db_path).map_err(|e| e.to_string())?;
-    db.get_settings().map_err(|e| e.to_string())
+    state.db_service.get_settings().map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -17,15 +17,12 @@ pub async fn save_settings(
     settings: AppSettings,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
-    let db_path = state.db_path.lock().unwrap().clone();
-    let db = Database::new(db_path).map_err(|e| e.to_string())?;
-    db.save_settings(&settings).map_err(|e| e.to_string())
+    state.db_service.save_settings(&settings).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub async fn reset_database(state: State<'_, AppState>) -> Result<(), String> {
-    let db_path = state.db_path.lock().unwrap().clone();
-    
+pub async fn reset_database(db_path: State<'_, PathBuf>) -> Result<(), String> {
+    let db_path = db_path.inner().clone();
     if db_path.exists() {
         fs::remove_file(&db_path).map_err(|e| format!("Failed to delete database: {}", e))?;
         println!("Database deleted: {:?}", db_path);
@@ -47,12 +44,12 @@ pub struct DownloadProgress {
 
 #[tauri::command]
 pub async fn download_database(
-    state: State<'_, AppState>,
+    db_path: State<'_, PathBuf>,
 ) -> Result<bool, String> {
+    let db_path = db_path.inner().clone();
     use std::time::Instant;
     
     let start_time = Instant::now();
-    let db_path = state.db_path.lock().unwrap().clone();
     
     println!("\n{}", "=".repeat(80));
     println!("DATABASE DOWNLOAD STARTED");
@@ -144,9 +141,7 @@ pub async fn download_database(
 
 #[tauri::command]
 pub async fn check_database_exists(
-    state: State<'_, AppState>,
+    db_path: State<'_, PathBuf>,
 ) -> Result<bool, String> {
-    let db_path = state.db_path.lock().unwrap().clone();
-    Ok(db_path.exists())
+    Ok(db_path.inner().exists())
 }
-

@@ -31,8 +31,9 @@ use commands::{
     // AppState
     AppState,
 };
+use commands::database_service::SqliteDatabaseService;
 use std::path::PathBuf;
-use std::sync::Mutex;
+use std::sync::Arc;
 
 fn find_database() -> PathBuf {
     // Try multiple locations to find the database
@@ -68,13 +69,30 @@ fn find_database() -> PathBuf {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let db_path = find_database();
+    
+    // Initialize the DatabaseService with shared connection
+    // This follows Dependency Inversion Principle and improves performance
+    let db_service = match SqliteDatabaseService::new(db_path.clone()) {
+        Ok(service) => Arc::new(service),
+        Err(e) => {
+            eprintln!("Failed to initialize database service: {}", e);
+            eprintln!("Database path: {:?}", db_path);
+            std::process::exit(1);
+        }
+    };
+
+    println!("✅ Database service initialized successfully");
+
+    // Clone db_path for commands that need it directly (reset/download/check)
+    let db_path_for_commands = db_path.clone();
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_fs::init())
         .manage(AppState {
-            db_path: Mutex::new(db_path),
+            db_service,
         })
+        .manage(db_path_for_commands)
         .invoke_handler(tauri::generate_handler![
             get_app_constants,
             search_games,

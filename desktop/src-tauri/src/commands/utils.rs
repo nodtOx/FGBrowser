@@ -1,9 +1,10 @@
-use std::path::PathBuf;
-use std::sync::Mutex;
+use super::database_service::SqliteDatabaseService;
+use std::sync::Arc;
 
-/// Shared application state containing database path
+/// Shared application state with injected database service
+/// Using concrete type for simplicity while maintaining SOLID architecture
 pub struct AppState {
-    pub db_path: Mutex<PathBuf>,
+    pub db_service: Arc<SqliteDatabaseService>,
 }
 
 /// Parse size string to MB (integer)
