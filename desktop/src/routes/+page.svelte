@@ -22,31 +22,94 @@
   let showCrawlerModal = false;
   let pollingInterval: any;
   let isUpdating = false;
+  let isDownloadingDatabase = false;
+  let downloadError = '';
 
   async function checkAndInitializeDatabase() {
     try {
-      const isEmpty = await invoke('is_database_empty');
+      // First, check if database file exists
+      const dbExists = await invoke<boolean>('check_database_exists');
       
-      if (isEmpty) {
-        // Database is empty, show modal and initialize
-        showCrawlerModal = true;
+      if (!dbExists) {
+        // Database doesn't exist, download it from server
+        console.log('Database not found locally, downloading from server...');
+        isDownloadingDatabase = true;
+        downloadError = '';
+        
+        try {
+          const downloaded = await invoke<boolean>('download_database');
+          
+          if (downloaded) {
+            console.log('Database downloaded successfully!');
+            // Database downloaded, load games
+            await loadGames(LOAD_ALL_GAMES);
+            await loadCategories();
+            
+            // Load popular repacks in the background
+            loadPopularRepacks().catch(err => 
+              console.warn('Failed to load popular repacks:', err)
+            );
+            
+            // Check for updates after downloading
+            checkForUpdates();
+          } else {
+            console.log('Database already exists, skipped download');
+          }
+        } catch (error) {
+          console.error('Failed to download database:', error);
+          downloadError = `Failed to download database: ${error}`;
+        } finally {
+          isDownloadingDatabase = false;
+        }
       } else {
-        // Database has data, check for updates
-        await loadGames(LOAD_ALL_GAMES);
-        await loadCategories();
+        // Database exists, check if it's empty
+        const isEmpty = await invoke<boolean>('is_database_empty');
         
-        // Load popular repacks in the background (non-blocking)
-        loadPopularRepacks().catch(err => 
-          console.warn('Failed to load popular repacks:', err)
-        );
-        
-        checkForUpdates();
+        if (isEmpty) {
+          // Database file exists but is empty, download fresh copy
+          console.log('Database is empty, downloading fresh copy...');
+          isDownloadingDatabase = true;
+          downloadError = '';
+          
+          try {
+            await invoke<boolean>('download_database');
+            console.log('Database downloaded successfully!');
+            await loadGames(LOAD_ALL_GAMES);
+            await loadCategories();
+            
+            loadPopularRepacks().catch(err => 
+              console.warn('Failed to load popular repacks:', err)
+            );
+            
+            checkForUpdates();
+          } catch (error) {
+            console.error('Failed to download database:', error);
+            downloadError = `Failed to download database: ${error}`;
+          } finally {
+            isDownloadingDatabase = false;
+          }
+        } else {
+          // Database has data, check for updates
+          await loadGames(LOAD_ALL_GAMES);
+          await loadCategories();
+          
+          // Load popular repacks in the background (non-blocking)
+          loadPopularRepacks().catch(err => 
+            console.warn('Failed to load popular repacks:', err)
+          );
+          
+          checkForUpdates();
+        }
       }
     } catch (error) {
       console.error('Error checking database:', error);
-      // Try to load games anyway
-      await loadGames(LOAD_ALL_GAMES);
+      downloadError = `Error initializing database: ${error}`;
     }
+  }
+  
+  function retryDownload() {
+    downloadError = '';
+    checkAndInitializeDatabase();
   }
   
   async function loadPopularRepacks() {
@@ -169,7 +232,26 @@
   <Header />
 
   <main class="main-content">
-    {#if $currentPage === 'browse'}
+    {#if downloadError}
+      <div class="page-placeholder">
+        <div class="error-icon">✕</div>
+        <h2>Database Download Failed</h2>
+        <p class="error-message">{downloadError}</p>
+        <div class="error-actions">
+          <button class="retry-button" on:click={retryDownload}>
+            Retry Download
+          </button>
+        </div>
+        <p class="text-muted">Please check your internet connection and try again</p>
+      </div>
+    {:else if isDownloadingDatabase}
+      <div class="page-placeholder">
+        <div class="loading-spinner"></div>
+        <h2>Downloading Database</h2>
+        <p>Please wait while we download the game database from the server...</p>
+        <p class="text-muted">This only happens once on first run</p>
+      </div>
+    {:else if $currentPage === 'browse'}
       <div class="browse-page">
         <div class="browse-layout">
           <Sidebar totalGames={$totalGamesCount} />
@@ -259,5 +341,70 @@
 
   .page-placeholder p {
     font-size: 16px;
+  }
+
+  .text-muted {
+    color: var(--color-textMuted);
+    font-size: 14px;
+  }
+
+  .loading-spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid var(--color-border);
+    border-top-color: var(--color-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .error-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: rgba(239, 68, 68, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    color: #ef4444;
+    margin-bottom: 8px;
+  }
+
+  .error-message {
+    color: #ef4444;
+    font-size: 14px;
+    margin: 16px 0;
+    max-width: 500px;
+  }
+
+  .error-actions {
+    margin: 24px 0 16px 0;
+  }
+
+  .retry-button {
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .retry-button:hover {
+    background: var(--color-primaryHover);
+    transform: translateY(-1px);
+  }
+
+  .retry-button:active {
+    transform: translateY(0);
   }
 </style>
