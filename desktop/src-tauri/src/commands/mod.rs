@@ -1,6 +1,11 @@
 // Command modules organized by responsibility
 pub mod utils;
+pub mod database_service;
 pub mod game_commands;
+
+// Test modules
+#[cfg(test)]
+mod tests;
 pub mod crawler_commands;
 pub mod popular_commands;
 pub mod download_commands;
@@ -42,7 +47,8 @@ pub use game_commands::{
 pub use crawler_commands::{
     start_crawler,
     update_database,
-    save_repacks_to_db,  // Also exported for CLI use
+    save_repacks_to_db,  // Service-based version
+    save_repacks_to_db_legacy,  // Legacy version for CLI
     CrawlProgress,
 };
 

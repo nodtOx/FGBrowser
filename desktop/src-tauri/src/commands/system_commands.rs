@@ -1,6 +1,6 @@
 use crate::constants::AppConstants;
-use super::utils::AppState;
 use arboard::Clipboard;
+use std::path::PathBuf;
 use tauri::State;
 
 #[tauri::command]
@@ -52,12 +52,12 @@ pub struct DiskInfo {
 }
 
 #[tauri::command]
-pub async fn get_disk_info(state: State<'_, AppState>) -> Result<DiskInfo, String> {
+pub async fn get_disk_info(db_path: State<'_, PathBuf>) -> Result<DiskInfo, String> {
     use sysinfo::Disks;
     use std::path::Path;
     
     let disks = Disks::new_with_refreshed_list();
-    let db_path = state.db_path.lock().unwrap().clone();
+    let db_path = db_path.inner().clone();
     
     // Get the absolute path of the database directory
     let db_dir = db_path.parent()
