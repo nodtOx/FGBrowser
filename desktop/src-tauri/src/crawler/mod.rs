@@ -333,7 +333,7 @@ impl FitGirlCrawler {
             _ => format!("{}/popular-repacks/", self.base_url),
         };
         
-        println!("Fetching popular repacks ({})...", period);
+        // println!("Fetching popular repacks ({})...", period);
         
         let response = self.client.get(&url).send().await?;
         let html = response.text().await?;
@@ -348,8 +348,8 @@ impl FitGirlCrawler {
             // Filter out blacklisted games for month/year periods
             entries.retain(|entry| !is_popular_blacklisted(&entry.url));
             
-            println!("  Filtered out {} blacklisted games", 
-                PopularRepacks::parse_popular_repacks_html(&html)?.len() - entries.len());
+            // println!("  Filtered out {} blacklisted games", 
+            //     PopularRepacks::parse_popular_repacks_html(&html)?.len() - entries.len());
             
             Ok(entries)
         }

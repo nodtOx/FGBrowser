@@ -93,12 +93,7 @@
 
 <header class="header">
     <div class="header-content">
-        <div class="header-left">
-            <span class="app-title">FG Browser v1.0</span>
-        </div>
-        
-        <div class="header-center">
-            <nav class="nav-tabs">
+        <nav class="nav-tabs">
                 <button 
                     class="nav-tab"
                     class:active={$currentPage === 'browse'}
@@ -144,13 +139,12 @@
                 </button>
                 {/if}
             </nav>
-        </div>
         
         <div class="header-right">
             {#if isDev}
-                <span class="reset-btn" on:click={handleReset} title="Reset Database & Restart (Dev Only)">
+                <button class="reset-btn" on:click={handleReset} title="Reset Database & Restart (Dev Only)">
                     R
-                </span>
+                </button>
             {/if}
             <a 
                 href="https://fitgirl-repacks.site/donations/" 
@@ -162,9 +156,9 @@
                 Donate to fitgirl
             </a>
             <div class="theme-selector-wrapper" bind:this={themeDropdownRef}>
-                <span class="theme-btn" on:click={toggleThemeSelector} title="Change Theme (T)">
+                <button class="theme-btn" on:click={toggleThemeSelector} title="Change Theme (T)">
                     T
-                </span>
+                </button>
                 {#if showThemeSelector}
                     <div class="theme-dropdown">
                         <div class="theme-section-header">Dark Themes</div>
@@ -207,41 +201,17 @@
     }
     
     .header-content {
-        display: grid;
-        grid-template-columns: var(--sidebar-width) 1fr var(--sidebar-width);
+        display: flex;
         align-items: center;
+        justify-content: space-between;
         width: 100%;
         height: 100%;
-    }
-    
-    .header-left {
-        display: flex;
-        align-items: center;
         padding: 0 12px;
-        border-right: 1px solid var(--color-border);
-        height: 100%;
-    }
-    
-    .app-title {
-        color: var(--color-text);
-        font-weight: 600;
-        margin: 0;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    
-    .header-center {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0 12px;
-        height: 100%;
     }
     
     .nav-tabs {
         display: flex;
-        gap: 0px;
+        gap: 0;
         align-items: center;
         height: 100%;
     }
@@ -294,11 +264,8 @@
     .header-right {
         display: flex;
         align-items: center;
-        justify-content: flex-end;
-        padding: 0 12px;
         gap: 8px;
         position: relative;
-        height: 100%;
     }
     
     .reset-btn {
