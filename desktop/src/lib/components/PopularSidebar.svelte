@@ -92,8 +92,8 @@
       tabindex="0"
     >
       <span class="filter-name">
-        <span class="pink-paw-icon">🐾</span>
         Pink Paw Award
+        <span class="pink-paw-icon">🐾</span>
         {#if awardUnseen > 0}
           <span class="unseen-badge">{awardUnseen}</span>
         {/if}
