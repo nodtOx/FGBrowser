@@ -4,24 +4,22 @@
 
 DEPLOY_DIR="/opt/fitboy"
 WEB_DIR="/var/www/fitboy"
+DB_PATH="$DEPLOY_DIR/repacks.db"
 
 cd "$DEPLOY_DIR"
 
 echo "[$(date)] Starting update..."
 
 # Crawl latest pages
-./cli crawl -p 5 2>&1 | tail -5
+./cli -d "$DB_PATH" crawl -p 5 2>&1 | tail -5
 
 # Update popular repacks
-./cli popular 2>&1 | tail -3
+./cli -d "$DB_PATH" popular 2>&1 | tail -3
 
 # Get stats
-STATS=$(./cli stats 2>/dev/null)
+STATS=$(./cli -d "$DB_PATH" stats 2>/dev/null)
 GAMES=$(echo "$STATS" | grep "Total Games:" | awk '{print $3}')
 MAGNETS=$(echo "$STATS" | grep "Total Magnet" | awk '{print $4}')
-
-# Find database path
-DB_PATH=$(./cli stats 2>&1 | grep "Database:" | cut -d'"' -f2)
 
 if [ -f "$DB_PATH" ]; then
     # Get size

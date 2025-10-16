@@ -23,24 +23,25 @@ if ! ssh -o ConnectTimeout=5 $SERVER_USER@$SERVER "echo 'OK'" &>/dev/null; then
 fi
 echo "✅ Connected"
 
-# Get latest CLI from GitHub releases
+# Use pre-built Linux binary from GitHub Actions artifact
 echo ""
-echo "📥 Downloading latest CLI from GitHub..."
-LATEST_RELEASE=$(curl -s https://api.github.com/repos/yourusername/fit-boy/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+CLI_LINUX_PATH="../desktop/src-tauri/target/release/cli-linux"
 
-if [ -z "$LATEST_RELEASE" ]; then
-    echo "⚠️  No GitHub release found. Building locally instead..."
+if [ -f "$CLI_LINUX_PATH" ]; then
+    echo "✅ Using pre-built Linux binary from GitHub Actions"
+    CLI_PATH="$CLI_LINUX_PATH"
+else
+    echo "⚠️  Pre-built binary not found at: $CLI_LINUX_PATH"
     echo ""
-    echo "🔨 Building CLI locally..."
+    echo "💡 Download it from GitHub Actions:"
+    echo "   https://github.com/ekinertac/fit-boy/actions"
+    echo "   → Latest workflow → Artifacts → fitboy-cli-linux-x86_64"
+    echo "   → Extract to: desktop/src-tauri/target/release/cli-linux"
+    echo ""
+    echo "🔨 Building locally as fallback..."
     cd ../desktop/src-tauri
     cargo build --bin cli --release
     CLI_PATH="target/release/cli"
-else
-    echo "✅ Found release: $LATEST_RELEASE"
-    DOWNLOAD_URL="https://github.com/yourusername/fit-boy/releases/download/$LATEST_RELEASE/cli"
-    curl -L -o /tmp/fitboy-cli "$DOWNLOAD_URL"
-    chmod +x /tmp/fitboy-cli
-    CLI_PATH="/tmp/fitboy-cli"
 fi
 
 # Deploy
