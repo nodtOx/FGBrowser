@@ -73,10 +73,7 @@
             class:selected={index === $selectedIndex}
             on:click={(e) => handleGameClick(index, e)}
             on:keydown={(e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleGameClick(index, e as any);
-                }
+                // Keyboard shortcuts are now handled globally in keyboard.ts
             }}
             role="button"
             tabindex={index === $selectedIndex ? 0 : -1}
