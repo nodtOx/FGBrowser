@@ -180,10 +180,11 @@ impl Database {
             [],
         )?;
         
-        self.conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_popular_repacks_url_period ON popular_repacks(url, period)",
-            [],
-        )?;
+        // Note: url_period index will be created by migration after normalization
+        // self.conn.execute(
+        //     "CREATE INDEX IF NOT EXISTS idx_popular_repacks_url_period ON popular_repacks(url, period)",
+        //     [],
+        // )?;
         
         self.conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_downloads_status ON downloads(status)",
@@ -206,6 +207,7 @@ impl Database {
         migrations::migrate_repacks_image_url(&self.conn)?;
         migrations::migrate_repacks_clean_name(&self.conn)?;
         migrations::populate_clean_names(&self.conn)?;
+        migrations::migrate_normalize_popular_repacks(&self.conn)?;
         
         Ok(())
     }
