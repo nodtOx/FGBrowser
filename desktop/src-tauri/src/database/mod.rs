@@ -26,9 +26,44 @@ pub struct Database {
 impl Database {
     pub fn new(db_path: PathBuf) -> Result<Self> {
         let conn = Connection::open(db_path)?;
+        
+        // Apply performance optimizations
+        Self::apply_pragmas(&conn)?;
+        
         let db = Self { conn };
         db.init_tables()?;
         Ok(db)
+    }
+    
+    /// Apply SQLite performance optimizations via PRAGMAs
+    fn apply_pragmas(conn: &Connection) -> Result<()> {
+        // WAL mode: 10-100x faster writes, allows concurrent reads
+        // This is crucial for desktop apps with multiple read operations
+        conn.execute("PRAGMA journal_mode = WAL", [])?;
+        
+        // Keep more data in memory (64MB cache)
+        // Negative value means KB, positive means pages
+        conn.execute("PRAGMA cache_size = -64000", [])?;
+        
+        // Balance between speed and durability
+        // NORMAL is safe and fast (syncs at critical moments)
+        conn.execute("PRAGMA synchronous = NORMAL", [])?;
+        
+        // Memory-mapped I/O for faster reads (256MB)
+        conn.execute("PRAGMA mmap_size = 268435456", [])?;
+        
+        // Temp tables and indices in memory
+        conn.execute("PRAGMA temp_store = MEMORY", [])?;
+        
+        // Optimize page size (4KB is standard for most systems)
+        // This pragma only affects new databases, so we check first
+        let page_size: i64 = conn.query_row("PRAGMA page_size", [], |row| row.get(0))?;
+        if page_size != 4096 {
+            // Page size can only be changed before any tables exist or via VACUUM
+            conn.execute("PRAGMA page_size = 4096", [])?;
+        }
+        
+        Ok(())
     }
     
     pub fn init_tables(&self) -> Result<()> {
@@ -389,6 +424,39 @@ impl Database {
     // Cache management - delegate to cache module
     pub fn clear_category_cache() {
         cache::clear_category_cache();
+    }
+
+    // Database maintenance methods
+    
+    /// Optimize database by rebuilding internal structures
+    /// Run this periodically (e.g., after bulk updates) to maintain performance
+    pub fn optimize(&self) -> Result<()> {
+        println!("🔧 Optimizing database...");
+        
+        // ANALYZE updates query planner statistics for better query optimization
+        self.conn.execute("ANALYZE", [])?;
+        
+        println!("✅ Database optimized!");
+        Ok(())
+    }
+    
+    /// Compact database and reclaim unused space
+    /// This can take a while on large databases
+    pub fn vacuum(&self) -> Result<()> {
+        println!("🧹 Compacting database...");
+        
+        // VACUUM rebuilds the database file, reclaiming unused space
+        // and defragmenting the database
+        self.conn.execute("VACUUM", [])?;
+        
+        println!("✅ Database compacted!");
+        Ok(())
+    }
+    
+    /// Get database integrity check results
+    pub fn check_integrity(&self) -> Result<String> {
+        let result: String = self.conn.query_row("PRAGMA integrity_check", [], |row| row.get(0))?;
+        Ok(result)
     }
 }
 

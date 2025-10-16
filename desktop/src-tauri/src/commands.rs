@@ -543,10 +543,41 @@ pub async fn start_crawler(
 pub fn save_repacks_to_db(repacks: &[GameRepack], db_path: &PathBuf) -> anyhow::Result<()> {
     let db = Database::new(db_path.clone())?;
     
-    // Process each repack individually with error handling
+    // Process all repacks in a single transaction for 100-1000x speedup
     let mut saved_count = 0;
     
-    for repack in repacks {
+    // Use transaction for bulk operations
+    let tx = db.conn.unchecked_transaction()?;
+    {
+        // Prepare statements once, reuse many times
+        let mut insert_repack_stmt = tx.prepare(
+            "INSERT INTO repacks (title, clean_name, genres_tags, company, languages, original_size, repack_size, size, url, date, image_url, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, CURRENT_TIMESTAMP)
+             ON CONFLICT(url) DO UPDATE SET
+                title = excluded.title,
+                clean_name = excluded.clean_name,
+                genres_tags = excluded.genres_tags,
+                company = excluded.company,
+                languages = excluded.languages,
+                original_size = excluded.original_size,
+                repack_size = excluded.repack_size,
+                size = excluded.size,
+                date = excluded.date,
+                image_url = excluded.image_url,
+                updated_at = CURRENT_TIMESTAMP"
+        )?;
+        
+        let mut get_repack_id_stmt = tx.prepare("SELECT id FROM repacks WHERE url = ?1")?;
+        let mut insert_magnet_stmt = tx.prepare(
+            "INSERT INTO magnet_links (repack_id, source, magnet)
+             VALUES (?1, ?2, ?3)
+             ON CONFLICT(repack_id, source) DO UPDATE SET magnet = excluded.magnet"
+        )?;
+        let mut insert_category_stmt = tx.prepare("INSERT OR IGNORE INTO categories (name) VALUES (?1)")?;
+        let mut get_category_id_stmt = tx.prepare("SELECT id FROM categories WHERE name = ?1")?;
+        let mut insert_game_category_stmt = tx.prepare("INSERT OR IGNORE INTO game_categories (repack_id, category_id) VALUES (?1, ?2)")?;
+        
+        for repack in repacks {
         // Use a closure to handle individual game saves
         let save_result = (|| -> anyhow::Result<()> {
             // Parse size from repack_size for the integer column
@@ -556,40 +587,17 @@ pub fn save_repacks_to_db(repacks: &[GameRepack], db_path: &PathBuf) -> anyhow::
             let clean_name = clean_game_title(&repack.title);
             
             // Insert or update repack
-            db.conn.execute(
-                "INSERT INTO repacks (title, clean_name, genres_tags, company, languages, original_size, repack_size, size, url, date, image_url, updated_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, CURRENT_TIMESTAMP)
-                 ON CONFLICT(url) DO UPDATE SET
-                    title = excluded.title,
-                    clean_name = excluded.clean_name,
-                    genres_tags = excluded.genres_tags,
-                    company = excluded.company,
-                    languages = excluded.languages,
-                    original_size = excluded.original_size,
-                    repack_size = excluded.repack_size,
-                    size = excluded.size,
-                    date = excluded.date,
-                    image_url = excluded.image_url,
-                    updated_at = CURRENT_TIMESTAMP",
+            insert_repack_stmt.execute(
                 (&repack.title, &clean_name, &repack.genres_tags, &repack.company, &repack.languages, 
                  &repack.original_size, &repack.repack_size, &parsed_size, &repack.url, &repack.date, &repack.image_url),
             )?;
             
             // Get repack_id
-            let repack_id: i64 = db.conn.query_row(
-                "SELECT id FROM repacks WHERE url = ?1",
-                [&repack.url],
-                |row| row.get(0),
-            )?;
+            let repack_id: i64 = get_repack_id_stmt.query_row([&repack.url], |row| row.get(0))?;
             
             // Insert magnet links
             for magnet in &repack.magnet_links {
-                db.conn.execute(
-                    "INSERT INTO magnet_links (repack_id, source, magnet)
-                     VALUES (?1, ?2, ?3)
-                     ON CONFLICT(repack_id, source) DO UPDATE SET magnet = excluded.magnet",
-                    (repack_id, &magnet.source, &magnet.magnet),
-                )?;
+                insert_magnet_stmt.execute((repack_id, &magnet.source, &magnet.magnet))?;
             }
             
             // Insert categories if genres_tags is present
@@ -603,23 +611,13 @@ pub fn save_repacks_to_db(repacks: &[GameRepack], db_path: &PathBuf) -> anyhow::
                     
                     for category_name in categories {
                         // Insert category if not exists
-                        db.conn.execute(
-                            "INSERT OR IGNORE INTO categories (name) VALUES (?1)",
-                            [&category_name],
-                        )?;
+                        insert_category_stmt.execute([&category_name])?;
                         
                         // Get category ID
-                        let category_id: i64 = db.conn.query_row(
-                            "SELECT id FROM categories WHERE name = ?1",
-                            [&category_name],
-                            |row| row.get(0),
-                        )?;
+                        let category_id: i64 = get_category_id_stmt.query_row([&category_name], |row| row.get(0))?;
                         
                         // Insert game-category relationship
-                        db.conn.execute(
-                            "INSERT OR IGNORE INTO game_categories (repack_id, category_id) VALUES (?1, ?2)",
-                            [repack_id, category_id],
-                        )?;
+                        insert_game_category_stmt.execute([repack_id, category_id])?;
                     }
                 }
             }
@@ -635,6 +633,9 @@ pub fn save_repacks_to_db(repacks: &[GameRepack], db_path: &PathBuf) -> anyhow::
             }
         }
     }
+    
+    }
+    tx.commit()?;
     
     if saved_count > 0 {
         println!("Saved {}/{} repacks to database", saved_count, repacks.len());
