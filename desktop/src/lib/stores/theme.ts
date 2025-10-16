@@ -2,6 +2,7 @@ import { writable } from 'svelte/store';
 
 export interface Theme {
   name: string;
+  type: 'dark' | 'light';
   author?: string;
   version?: string;
   colors: {
@@ -26,6 +27,7 @@ export interface Theme {
 
 export const nord: Theme = {
   name: 'Nord',
+  type: 'dark',
   colors: {
     background: '#2e3440',
     backgroundSecondary: '#3b4252',
@@ -48,6 +50,7 @@ export const nord: Theme = {
 
 export const dracula: Theme = {
   name: 'Dracula',
+  type: 'dark',
   colors: {
     background: '#282a36',
     backgroundSecondary: '#44475a',
@@ -70,6 +73,7 @@ export const dracula: Theme = {
 
 export const tokyoNight: Theme = {
   name: 'Tokyo Night',
+  type: 'dark',
   colors: {
     background: '#1a1b26',
     backgroundSecondary: '#24283b',
@@ -92,6 +96,7 @@ export const tokyoNight: Theme = {
 
 export const gruvboxDark: Theme = {
   name: 'Gruvbox Dark',
+  type: 'dark',
   colors: {
     background: '#282828',
     backgroundSecondary: '#3c3836',
@@ -114,6 +119,7 @@ export const gruvboxDark: Theme = {
 
 export const gruvboxLight: Theme = {
   name: 'Gruvbox Light',
+  type: 'light',
   colors: {
     background: '#fbf1c7',
     backgroundSecondary: '#ebdbb2',
@@ -136,6 +142,7 @@ export const gruvboxLight: Theme = {
 
 export const solarizedLight: Theme = {
   name: 'Solarized Light',
+  type: 'light',
   colors: {
     background: '#fdf6e3',
     backgroundSecondary: '#eee8d5',
@@ -156,7 +163,33 @@ export const solarizedLight: Theme = {
   },
 };
 
-export const availableThemes = [nord, dracula, tokyoNight, gruvboxDark, gruvboxLight, solarizedLight];
+export const catppuccinLatte: Theme = {
+  name: 'Catppuccin Latte',
+  type: 'light',
+  colors: {
+    background: '#eff1f5',
+    backgroundSecondary: '#e6e9ef',
+    backgroundTertiary: '#ccd0da',
+    primary: '#1e66f5',
+    secondary: '#8839ef',
+    text: '#4c4f69',
+    textSecondary: '#5c5f77',
+    textMuted: '#9ca0b0',
+    border: '#dce0e8',
+    hover: '#dce0e8',
+    selected: '#1e66f5',
+    selectedText: '#eff1f5',
+    success: '#40a02b',
+    warning: '#df8e1d',
+    error: '#d20f39',
+    info: '#209fb5',
+  },
+};
+
+export const availableThemes = [nord, dracula, tokyoNight, gruvboxDark, gruvboxLight, solarizedLight, catppuccinLatte];
+
+export const darkThemes = availableThemes.filter((t) => t.type === 'dark');
+export const lightThemes = availableThemes.filter((t) => t.type === 'light');
 
 export const currentTheme = writable<Theme>(nord);
 
@@ -175,6 +208,28 @@ export function applyTheme(theme: Theme) {
   }
 }
 
+export function detectOSTheme(): 'dark' | 'light' {
+  if (typeof window !== 'undefined' && window.matchMedia) {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  return 'dark'; // Default to dark
+}
+
+export function getThemeForOSPreference(): Theme {
+  const osTheme = detectOSTheme();
+
+  // Get all themes matching the OS preference
+  const matchingThemes = availableThemes.filter((t) => t.type === osTheme);
+
+  // Return the first matching theme (Nord for dark, Gruvbox Light for light)
+  if (matchingThemes.length > 0) {
+    return matchingThemes[0];
+  }
+
+  // Fallback to Nord
+  return nord;
+}
+
 export function loadSavedTheme() {
   if (typeof localStorage !== 'undefined') {
     const savedTheme = localStorage.getItem('theme');
@@ -182,7 +237,40 @@ export function loadSavedTheme() {
       const theme = availableThemes.find((t) => t.name === savedTheme);
       if (theme) {
         applyTheme(theme);
+        return;
       }
     }
   }
+
+  // If no saved theme, use OS preference
+  const osTheme = getThemeForOSPreference();
+  applyTheme(osTheme);
+}
+
+// Optional: Listen for OS theme changes
+export function watchOSThemeChanges(callback?: (theme: Theme) => void) {
+  if (typeof window !== 'undefined' && window.matchMedia) {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+    const handler = (e: MediaQueryListEvent) => {
+      // Only auto-switch if user hasn't manually selected a theme
+      if (typeof localStorage !== 'undefined') {
+        const savedTheme = localStorage.getItem('theme');
+        if (!savedTheme) {
+          const newTheme = getThemeForOSPreference();
+          applyTheme(newTheme);
+          if (callback) {
+            callback(newTheme);
+          }
+        }
+      }
+    };
+
+    mediaQuery.addEventListener('change', handler);
+
+    // Return cleanup function
+    return () => mediaQuery.removeEventListener('change', handler);
+  }
+
+  return () => {}; // No-op cleanup
 }

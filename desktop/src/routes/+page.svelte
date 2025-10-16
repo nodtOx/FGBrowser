@@ -2,9 +2,9 @@
   import { games, isCrawlingPopular, loadCategories, loadGames, popularCrawlProgress, totalGamesCount } from '$lib/stores/games';
   import { initKeyboardShortcuts } from '$lib/stores/keyboard';
   import { browseView, currentPage } from '$lib/stores/navigation';
-  import { loadSavedTheme } from '$lib/stores/theme';
+  import { loadSavedTheme, watchOSThemeChanges } from '$lib/stores/theme';
   import { invoke } from '@tauri-apps/api/core';
-  import { onMount } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
 
   import CrawlerModal from '$lib/components/CrawlerModal.svelte';
   import Downloads from '$lib/components/Downloads.svelte';
@@ -225,15 +225,29 @@
     }
   }
 
+  let unwatchOSTheme: (() => void) | null = null;
+
   onMount(async () => {
-    // Load saved theme
+    // Load saved theme (or detect from OS)
     loadSavedTheme();
+
+    // Watch for OS theme changes
+    unwatchOSTheme = watchOSThemeChanges((newTheme) => {
+      console.log(`OS theme changed, auto-switching to ${newTheme.name}`);
+    });
 
     // Initialize keyboard shortcuts
     initKeyboardShortcuts();
 
     // Check if database needs initialization and load games
     await checkAndInitializeDatabase();
+  });
+
+  onDestroy(() => {
+    // Cleanup OS theme watcher
+    if (unwatchOSTheme) {
+      unwatchOSTheme();
+    }
   });
 </script>
 

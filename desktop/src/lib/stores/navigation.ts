@@ -8,7 +8,7 @@ const panelOrder: BrowsePanel[] = ['search', 'gamelist', 'categories', 'recent',
 
 export const currentPage = writable<Page>('browse');
 export const browseView = writable<BrowseView>('list');
-export const focusedPanel = writable<BrowsePanel>('search');
+export const focusedPanel = writable<BrowsePanel>('gamelist');
 export const showGameDetails = writable<boolean>(false); // Keep for backward compatibility
 
 export function navigateTo(page: Page) {
@@ -16,7 +16,7 @@ export function navigateTo(page: Page) {
   // Reset browse view when navigating away from browse
   if (page !== 'browse') {
     browseView.set('list');
-    focusedPanel.set('search');
+    focusedPanel.set('gamelist');
   }
 }
 
