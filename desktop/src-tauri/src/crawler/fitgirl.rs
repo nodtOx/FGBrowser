@@ -216,10 +216,18 @@ impl SiteCrawler for FitGirlCrawler {
         let url = match period {
             "month" => format!("{}/popular-repacks/", self.base_url),
             "year" => format!("{}/popular-repacks-of-the-year/", self.base_url),
+            "award" => format!("{}/games-with-my-personal-pink-paw-award/", self.base_url),
             _ => return Ok(Vec::new()),
         };
 
         let html = self.fetch_page(&url).await?;
+        
+        // For Pink Paw Award page, use special parser
+        if period == "award" {
+            return super::popular::PopularRepacks::parse_pink_paw_award_html(&html);
+        }
+        
+        // For month/year, use the grid-based parser
         let document = Html::parse_document(&html);
 
         // Select only the main content area to avoid sidebar items

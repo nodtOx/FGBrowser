@@ -72,7 +72,7 @@ enum Commands {
 
     /// Update popular repacks
     Popular {
-        /// Period: "month" or "year" or "both"
+        /// Period: "month", "year", "award", "both" (month+year), or "all" (month+year+award)
         #[arg(short, long, default_value = "both")]
         period: String,
     },
@@ -169,10 +169,10 @@ async fn crawl_pages(db_path: &PathBuf, pages: u32, max_pages: u32, verbose: boo
 async fn update_popular(db: &Database, db_path: &PathBuf, period: &str, verbose: bool) -> Result<()> {
     let crawler = FitGirlCrawler::new()?;
     
-    let periods: Vec<&str> = if period == "both" {
-        vec!["month", "year"]
-    } else {
-        vec![period]
+    let periods: Vec<&str> = match period {
+        "both" => vec!["month", "year"],
+        "all" => vec!["month", "year", "award"],
+        _ => vec![period],
     };
 
     for p in periods {
