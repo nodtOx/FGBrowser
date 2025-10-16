@@ -36,11 +36,13 @@
   let isLoading = true;
   let error = '';
   let refreshInterval: any;
-  let selectedPeriod: 'month' | 'year' | 'award' = 'month';
+  let selectedPeriod: 'week' | 'today' | 'month' | 'year' | 'award' = 'month';
   let mounted = false;
   let showingDetails = false;
   
   // Track counts for each period
+  let weekCount = 0;
+  let todayCount = 0;
   let monthCount = 0;
   let yearCount = 0;
   let awardCount = 0;
@@ -57,7 +59,9 @@
       console.log(`Loaded ${popularRepacks.length} popular repacks (${selectedPeriod}) with game data`);
       
       // Update the count for the current period
-      if (selectedPeriod === 'month') monthCount = popularRepacks.length;
+      if (selectedPeriod === 'week') weekCount = popularRepacks.length;
+      else if (selectedPeriod === 'today') todayCount = popularRepacks.length;
+      else if (selectedPeriod === 'month') monthCount = popularRepacks.length;
       else if (selectedPeriod === 'year') yearCount = popularRepacks.length;
       else if (selectedPeriod === 'award') awardCount = popularRepacks.length;
     } catch (err) {
@@ -128,6 +132,18 @@
   onMount(async () => {
     // Load all counts on mount (fetch all games for each period)
     try {
+      const weeklyRepacks = await invoke<PopularRepackWithGame[]>('get_popular_repacks_with_games', { 
+        period: 'week', 
+        limit: POPULAR_FETCH_LIMIT 
+      });
+      weekCount = weeklyRepacks.length;
+      
+      const todayRepacks = await invoke<PopularRepackWithGame[]>('get_popular_repacks_with_games', { 
+        period: 'today', 
+        limit: POPULAR_FETCH_LIMIT 
+      });
+      todayCount = todayRepacks.length;
+      
       const monthlyRepacks = await invoke<PopularRepackWithGame[]>('get_popular_repacks_with_games', { 
         period: 'month', 
         limit: POPULAR_FETCH_LIMIT 
@@ -146,7 +162,7 @@
       });
       awardCount = awardRepacks.length;
       
-      console.log(`Loaded counts: month=${monthCount}, year=${yearCount}, award=${awardCount}`);
+      console.log(`Loaded counts: week=${weekCount}, today=${todayCount}, month=${monthCount}, year=${yearCount}, award=${awardCount}`);
     } catch (err) {
       console.warn('Failed to load all counts:', err);
     }
@@ -167,6 +183,8 @@
   <div class="popular-layout">
     <PopularSidebar 
       bind:selectedPeriod 
+      weeklyCount={weekCount}
+      todayCount={todayCount}
       monthlyCount={monthCount}
       yearlyCount={yearCount}
       awardCount={awardCount}
@@ -177,7 +195,9 @@
         <div class="popular-main">
       <div class="popular-header">
         <h1>
-          {selectedPeriod === 'month' ? 'Most Popular Repacks of the Month' : 
+          {selectedPeriod === 'week' ? 'Most Popular Repacks of the Week' : 
+           selectedPeriod === 'today' ? "Today's Most Popular Repacks" :
+           selectedPeriod === 'month' ? 'Most Popular Repacks of the Month' : 
            selectedPeriod === 'year' ? 'Most Popular Repacks of the Year' : 
            'Games with Pink Paw Award'}
         </h1>

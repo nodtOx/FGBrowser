@@ -162,14 +162,18 @@ impl PopularQueries {
     // Get total unseen count across all periods
     pub fn get_total_unseen_count(
         conn: &rusqlite::Connection,
+        week_last_viewed: Option<&str>,
+        today_last_viewed: Option<&str>,
         month_last_viewed: Option<&str>,
         year_last_viewed: Option<&str>,
         award_last_viewed: Option<&str>,
     ) -> Result<i64> {
+        let week_count = Self::get_unseen_count(conn, "week", week_last_viewed)?;
+        let today_count = Self::get_unseen_count(conn, "today", today_last_viewed)?;
         let month_count = Self::get_unseen_count(conn, "month", month_last_viewed)?;
         let year_count = Self::get_unseen_count(conn, "year", year_last_viewed)?;
         let award_count = Self::get_unseen_count(conn, "award", award_last_viewed)?;
-        Ok(month_count + year_count + award_count)
+        Ok(week_count + today_count + month_count + year_count + award_count)
     }
 }
 

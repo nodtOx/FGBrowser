@@ -886,7 +886,14 @@ pub async fn get_popular_repacks(
 ) -> Result<Vec<crate::database::PopularRepack>, String> {
     let db_path = state.db_path.lock().unwrap().clone();
     let db = Database::new(db_path).map_err(|e| e.to_string())?;
-    db.get_popular_repacks(&period, limit).map_err(|e| e.to_string())
+    let mut repacks = db.get_popular_repacks(&period, limit).map_err(|e| e.to_string())?;
+    
+    // Apply blacklist filtering for all periods except award (which is curated)
+    if period != "award" {
+        repacks.retain(|repack| !is_popular_blacklisted(&repack.url));
+    }
+    
+    Ok(repacks)
 }
 
 #[tauri::command]
@@ -897,7 +904,14 @@ pub async fn get_popular_repacks_with_games(
 ) -> Result<Vec<crate::database::PopularRepackWithGame>, String> {
     let db_path = state.db_path.lock().unwrap().clone();
     let db = Database::new(db_path).map_err(|e| e.to_string())?;
-    db.get_popular_repacks_with_games(&period, limit).map_err(|e| e.to_string())
+    let mut repacks = db.get_popular_repacks_with_games(&period, limit).map_err(|e| e.to_string())?;
+    
+    // Apply blacklist filtering for all periods except award (which is curated)
+    if period != "award" {
+        repacks.retain(|repack| !is_popular_blacklisted(&repack.url));
+    }
+    
+    Ok(repacks)
 }
 
 #[tauri::command]
@@ -907,16 +921,40 @@ pub async fn get_unseen_popular_count(
 ) -> Result<i64, String> {
     let db_path = state.db_path.lock().unwrap().clone();
     let db = Database::new(db_path).map_err(|e| e.to_string())?;
-    let settings = db.get_settings().map_err(|e| e.to_string())?;
     
+    // Get all popular repacks for the period (with a high limit to get all)
+    let mut repacks = db.get_popular_repacks(&period, 500).map_err(|e| e.to_string())?;
+    
+    // Apply blacklist filtering for all periods except award
+    if period != "award" {
+        repacks.retain(|repack| !is_popular_blacklisted(&repack.url));
+    }
+    
+    // Now count unseen ones
+    let settings = db.get_settings().map_err(|e| e.to_string())?;
     let last_viewed = match period.as_str() {
+        "week" => settings.popular_week_last_viewed.as_deref(),
+        "today" => settings.popular_today_last_viewed.as_deref(),
         "month" => settings.popular_month_last_viewed.as_deref(),
         "year" => settings.popular_year_last_viewed.as_deref(),
         "award" => settings.popular_award_last_viewed.as_deref(),
         _ => None,
     };
     
-    db.get_unseen_popular_count(&period, last_viewed).map_err(|e| e.to_string())
+    let unseen_count = match last_viewed {
+        Some(timestamp) => {
+            repacks.iter().filter(|repack| {
+                if let Some(created_at) = &repack.created_at {
+                    created_at.as_str() > timestamp
+                } else {
+                    false
+                }
+            }).count()
+        }
+        None => repacks.len(),
+    };
+    
+    Ok(unseen_count as i64)
 }
 
 #[tauri::command]
@@ -927,11 +965,43 @@ pub async fn get_total_unseen_popular_count(
     let db = Database::new(db_path).map_err(|e| e.to_string())?;
     let settings = db.get_settings().map_err(|e| e.to_string())?;
     
-    db.get_total_unseen_popular_count(
-        settings.popular_month_last_viewed.as_deref(),
-        settings.popular_year_last_viewed.as_deref(),
-        settings.popular_award_last_viewed.as_deref(),
-    ).map_err(|e| e.to_string())
+    // Calculate unseen count for each period with blacklist filtering
+    let periods = vec![
+        ("week", settings.popular_week_last_viewed.as_deref()),
+        ("today", settings.popular_today_last_viewed.as_deref()),
+        ("month", settings.popular_month_last_viewed.as_deref()),
+        ("year", settings.popular_year_last_viewed.as_deref()),
+        ("award", settings.popular_award_last_viewed.as_deref()),
+    ];
+    
+    let mut total_unseen = 0i64;
+    
+    for (period, last_viewed) in periods {
+        let mut repacks = db.get_popular_repacks(period, 500).map_err(|e| e.to_string())?;
+        
+        // Apply blacklist filtering for all periods except award
+        if period != "award" {
+            repacks.retain(|repack| !is_popular_blacklisted(&repack.url));
+        }
+        
+        // Count unseen ones
+        let unseen_count = match last_viewed {
+            Some(timestamp) => {
+                repacks.iter().filter(|repack| {
+                    if let Some(created_at) = &repack.created_at {
+                        created_at.as_str() > timestamp
+                    } else {
+                        false
+                    }
+                }).count()
+            }
+            None => repacks.len(),
+        };
+        
+        total_unseen += unseen_count as i64;
+    }
+    
+    Ok(total_unseen)
 }
 
 #[tauri::command]
@@ -948,6 +1018,8 @@ pub async fn mark_popular_as_viewed(
     
     // Update the appropriate timestamp
     match period.as_str() {
+        "week" => settings.popular_week_last_viewed = Some(now),
+        "today" => settings.popular_today_last_viewed = Some(now),
         "month" => settings.popular_month_last_viewed = Some(now),
         "year" => settings.popular_year_last_viewed = Some(now),
         "award" => settings.popular_award_last_viewed = Some(now),
@@ -1355,5 +1427,37 @@ fn extract_info_hash(magnet: &str) -> Option<String> {
     }
     
     None
+}
+
+// Helper functions for popular games blacklist
+fn is_popular_blacklisted(url: &str) -> bool {
+    let url_lower = url.to_lowercase();
+    let popular_blacklist = load_popular_blacklist();
+    
+    popular_blacklist.iter().any(|blacklisted| {
+        url_lower.contains(blacklisted)
+    })
+}
+
+fn load_popular_blacklist() -> Vec<String> {
+    // Hardcoded blacklist for popular games (NSFW/adult content)
+    vec![
+        "the-genesis-order".to_string(),
+        "one-more-night".to_string(),
+        "honeycome-come-come-party".to_string(),
+        "honey-select-2-libido".to_string(),
+        "gym-manager".to_string(),
+        "nymphomaniac-sex-addict".to_string(),
+        "lust-n-dead".to_string(),
+        "violet".to_string(),
+        "roomgirl-paradise".to_string(),
+        "house-party".to_string(),
+        "venus-vacation-prism-dead-or-alive-xtreme".to_string(),
+        "under-the-witch-heros-journey".to_string(),
+        "taboo-trial".to_string(),
+        "lost-chapter".to_string(),
+        "koikatsu".to_string(),
+        "av-director".to_string(),
+    ]
 }
 
