@@ -1,6 +1,6 @@
 import { writable } from 'svelte/store';
 
-export type Page = 'browse' | 'popular' | 'downloads' | 'settings' | 'stats' | 'about';
+export type Page = 'browse' | 'popular' | 'pinkpaw' | 'downloads' | 'settings' | 'stats' | 'about';
 export type BrowseView = 'list' | 'details';
 export type BrowsePanel = 'categories' | 'recent' | 'size' | 'search' | 'gamelist';
 
