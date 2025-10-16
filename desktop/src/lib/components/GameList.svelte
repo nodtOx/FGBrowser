@@ -22,6 +22,7 @@
     }
     
     async function handleGameClick(index: number, event: MouseEvent) {
+        focusedPanel.set('gamelist');
         await selectGame(index);
         // Remove focus from clicked element to prevent residual focus state
         (event.currentTarget as HTMLElement).blur();
