@@ -324,6 +324,7 @@ impl FitGirlCrawler {
     pub async fn fetch_popular_repacks(&self, period: &str) -> Result<Vec<PopularRepackEntry>> {
         let url = match period {
             "year" => format!("{}/popular-repacks-of-the-year/", self.base_url),
+            "award" => format!("{}/games-with-my-personal-pink-paw-award/", self.base_url),
             _ => format!("{}/popular-repacks/", self.base_url),
         };
         
@@ -332,7 +333,12 @@ impl FitGirlCrawler {
         let response = self.client.get(&url).send().await?;
         let html = response.text().await?;
         
-        PopularRepacks::parse_popular_repacks_html(&html)
+        // Use special parser for award page
+        if period == "award" {
+            PopularRepacks::parse_pink_paw_award_html(&html)
+        } else {
+            PopularRepacks::parse_popular_repacks_html(&html)
+        }
     }
     
     pub fn parse_popular_repacks_from_file(&self, file_path: &str) -> Result<Vec<PopularRepackEntry>> {

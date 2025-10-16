@@ -9,12 +9,12 @@ import { invoke } from '@tauri-apps/api/core';
 // These match the values in src-tauri/src/constants.rs
 export const LOAD_ALL_GAMES = 999999;
 export const DEFAULT_OFFSET = 0;
-export const POLLING_INTERVAL_MS = 2000;
+export const POLLING_INTERVAL_MS = 500;
 export const SEARCH_DEBOUNCE_MS = 300;
 export const ITEM_HEIGHT = 30;
 export const OVERSCAN = 5;
-export const POPULAR_MONTHLY_LIMIT = 50;
-export const POPULAR_YEARLY_LIMIT = 150;
+// Use high limits to effectively fetch all games (no artificial restrictions)
+export const POPULAR_FETCH_LIMIT = 9999;
 export const POPULAR_REFRESH_INTERVAL_MS = 3000;
 export const DISK_INFO_REFRESH_INTERVAL_MS = 30000;
 
@@ -26,10 +26,10 @@ export interface AppConstants {
   search_debounce_ms: number;
   item_height: number;
   overscan: number;
-  popular_monthly_limit: number;
-  popular_yearly_limit: number;
+  popular_fetch_limit: number;
   popular_refresh_interval_ms: number;
   disk_info_refresh_interval_ms: number;
+  database_url: string;
 }
 
 // Load constants from backend (optional - use for runtime updates)
