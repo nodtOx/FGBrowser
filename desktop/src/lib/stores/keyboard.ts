@@ -1,7 +1,7 @@
 import { featureFlags } from '$lib/featureFlags';
 import { get, writable } from 'svelte/store';
 import { moveSelection } from './games';
-import { currentPage, navigateTo, type Page } from './navigation';
+import { currentPage, navigateTo, openGameDetails, type Page } from './navigation';
 
 export const keyboardEnabled = writable<boolean>(true);
 
@@ -78,6 +78,15 @@ function handleKeyPress(e: KeyboardEvent): boolean {
   if (key === 'ArrowDown' && !ctrl) {
     moveSelection('down');
     return true;
+  }
+
+  // Open game details with Space (only on browse page, not when typing)
+  if (key === ' ' && !ctrl && !shift && !isTyping) {
+    const current = get(currentPage);
+    if (current === 'browse') {
+      openGameDetails();
+      return true;
+    }
   }
 
   // Skip other shortcuts if user is typing
