@@ -1,8 +1,10 @@
 use crate::crawler::FitGirlCrawler;
-use crate::database::{Database, PopularRepack, PopularRepackWithGame};
+use crate::database::{PopularRepack, PopularRepackWithGame};
 use super::utils::{AppState, is_popular_blacklisted};
 use super::crawler_commands::save_repacks_to_db;
+use super::database_service::DatabaseService;
 use tauri::State;
+use std::sync::Arc;
 
 #[tauri::command]
 pub async fn fetch_popular_repacks(
@@ -12,17 +14,14 @@ pub async fn fetch_popular_repacks(
     let crawler = FitGirlCrawler::new().map_err(|e| e.to_string())?;
     let popular_entries = crawler.fetch_popular_repacks(&period).await.map_err(|e| e.to_string())?;
     
-    let db_path = state.db_path.lock().unwrap().clone();
-    let db = Database::new(db_path).map_err(|e| e.to_string())?;
-    
     // Clear existing popular repacks for this period
-    db.clear_popular_repacks(&period).map_err(|e| e.to_string())?;
+    state.db_service.clear_popular_repacks(&period).map_err(|e| e.to_string())?;
     
     // Save new popular repacks with rank based on order (1, 2, 3...)
     let mut saved_count = 0;
     for (index, entry) in popular_entries.iter().enumerate() {
         let rank = (index + 1) as i32;
-        match db.save_popular_repack(
+        match state.db_service.save_popular_repack(
             &entry.url, 
             &entry.title, 
             entry.image_url.as_deref(), 
@@ -35,7 +34,7 @@ pub async fn fetch_popular_repacks(
     }
     
     // Update links to existing games for this period
-    let _linked_count = db.update_popular_repack_links(Some(&period)).map_err(|e| e.to_string())?;
+    let _linked_count = state.db_service.update_popular_repack_links(Some(&period)).map_err(|e| e.to_string())?;
     
     Ok(saved_count)
 }
@@ -51,17 +50,14 @@ pub async fn parse_popular_repacks_from_file(
     let crawler = FitGirlCrawler::new().map_err(|e| e.to_string())?;
     let popular_entries = crawler.parse_popular_repacks_from_file(&file_path).map_err(|e| e.to_string())?;
     
-    let db_path = state.db_path.lock().unwrap().clone();
-    let db = Database::new(db_path).map_err(|e| e.to_string())?;
-    
     // Clear existing popular repacks for this period
-    db.clear_popular_repacks(&period).map_err(|e| e.to_string())?;
+    state.db_service.clear_popular_repacks(&period).map_err(|e| e.to_string())?;
     
     // Save new popular repacks with rank based on order (1, 2, 3...)
     let mut saved_count = 0;
     for (index, entry) in popular_entries.iter().enumerate() {
         let rank = (index + 1) as i32;
-        match db.save_popular_repack(
+        match state.db_service.save_popular_repack(
             &entry.url, 
             &entry.title, 
             entry.image_url.as_deref(), 
@@ -74,7 +70,7 @@ pub async fn parse_popular_repacks_from_file(
     }
     
     // Update links to existing games for this period
-    let _linked_count = db.update_popular_repack_links(Some(&period)).map_err(|e| e.to_string())?;
+    let _linked_count = state.db_service.update_popular_repack_links(Some(&period)).map_err(|e| e.to_string())?;
     
     Ok(saved_count)
 }
@@ -85,9 +81,7 @@ pub async fn get_popular_repacks(
     limit: i32,
     state: State<'_, AppState>,
 ) -> Result<Vec<PopularRepack>, String> {
-    let db_path = state.db_path.lock().unwrap().clone();
-    let db = Database::new(db_path).map_err(|e| e.to_string())?;
-    let mut repacks = db.get_popular_repacks(&period, limit).map_err(|e| e.to_string())?;
+    let mut repacks = state.db_service.get_popular_repacks(&period, limit).map_err(|e| e.to_string())?;
     
     // Apply blacklist filtering for all periods except award (which is curated)
     if period != "award" {
@@ -103,9 +97,7 @@ pub async fn get_popular_repacks_with_games(
     limit: i32,
     state: State<'_, AppState>,
 ) -> Result<Vec<PopularRepackWithGame>, String> {
-    let db_path = state.db_path.lock().unwrap().clone();
-    let db = Database::new(db_path).map_err(|e| e.to_string())?;
-    let mut repacks = db.get_popular_repacks_with_games(&period, limit).map_err(|e| e.to_string())?;
+    let mut repacks = state.db_service.get_popular_repacks_with_games(&period, limit).map_err(|e| e.to_string())?;
     
     // Apply blacklist filtering for all periods except award (which is curated)
     if period != "award" {
@@ -120,11 +112,8 @@ pub async fn get_unseen_popular_count(
     period: String,
     state: State<'_, AppState>,
 ) -> Result<i64, String> {
-    let db_path = state.db_path.lock().unwrap().clone();
-    let db = Database::new(db_path).map_err(|e| e.to_string())?;
-    
     // Get all popular repacks for the period (with a high limit to get all)
-    let mut repacks = db.get_popular_repacks(&period, 500).map_err(|e| e.to_string())?;
+    let mut repacks = state.db_service.get_popular_repacks(&period, 500).map_err(|e| e.to_string())?;
     
     // Apply blacklist filtering for all periods except award
     if period != "award" {
@@ -132,7 +121,7 @@ pub async fn get_unseen_popular_count(
     }
     
     // Now count unseen ones
-    let settings = db.get_settings().map_err(|e| e.to_string())?;
+    let settings = state.db_service.get_settings().map_err(|e| e.to_string())?;
     let last_viewed = match period.as_str() {
         "week" => settings.popular_week_last_viewed.as_deref(),
         "today" => settings.popular_today_last_viewed.as_deref(),
@@ -162,9 +151,7 @@ pub async fn get_unseen_popular_count(
 pub async fn get_total_unseen_popular_count(
     state: State<'_, AppState>,
 ) -> Result<i64, String> {
-    let db_path = state.db_path.lock().unwrap().clone();
-    let db = Database::new(db_path).map_err(|e| e.to_string())?;
-    let settings = db.get_settings().map_err(|e| e.to_string())?;
+    let settings = state.db_service.get_settings().map_err(|e| e.to_string())?;
     
     // Calculate unseen count for each period with blacklist filtering
     let periods = vec![
@@ -178,7 +165,7 @@ pub async fn get_total_unseen_popular_count(
     let mut total_unseen = 0i64;
     
     for (period, last_viewed) in periods {
-        let mut repacks = db.get_popular_repacks(period, 500).map_err(|e| e.to_string())?;
+        let mut repacks = state.db_service.get_popular_repacks(period, 500).map_err(|e| e.to_string())?;
         
         // Apply blacklist filtering for all periods except award
         if period != "award" {
@@ -210,9 +197,7 @@ pub async fn mark_popular_as_viewed(
     period: String,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
-    let db_path = state.db_path.lock().unwrap().clone();
-    let db = Database::new(db_path).map_err(|e| e.to_string())?;
-    let mut settings = db.get_settings().map_err(|e| e.to_string())?;
+    let mut settings = state.db_service.get_settings().map_err(|e| e.to_string())?;
     
     // Get current timestamp in ISO 8601 format
     let now = chrono::Utc::now().to_rfc3339();
@@ -227,7 +212,7 @@ pub async fn mark_popular_as_viewed(
         _ => return Err("Invalid period".to_string()),
     }
     
-    db.save_settings(&settings).map_err(|e| e.to_string())
+    state.db_service.save_settings(&settings).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -235,9 +220,7 @@ pub async fn update_popular_repack_links(
     period: Option<String>,
     state: State<'_, AppState>,
 ) -> Result<usize, String> {
-    let db_path = state.db_path.lock().unwrap().clone();
-    let db = Database::new(db_path).map_err(|e| e.to_string())?;
-    let count = db.update_popular_repack_links(period.as_deref()).map_err(|e| e.to_string())?;
+    let count = state.db_service.update_popular_repack_links(period.as_deref()).map_err(|e| e.to_string())?;
     println!("🔗 Updated links for {} popular repacks", count);
     Ok(count)
 }
@@ -247,17 +230,15 @@ pub async fn crawl_popular_games(
     period: String,
     state: State<'_, AppState>,
 ) -> Result<usize, String> {
-    let db_path = state.db_path.lock().unwrap().clone();
-    let db = Database::new(db_path.clone()).map_err(|e| e.to_string())?;
-    
     // Get popular repacks for the specified period
-    let popular_repacks = db.get_popular_repacks(&period, 200).map_err(|e| e.to_string())?;
+    let popular_repacks = state.db_service.get_popular_repacks(&period, 200).map_err(|e| e.to_string())?;
     
     if popular_repacks.is_empty() {
         return Err(format!("No popular repacks ({}) found. Fetch popular repacks first.", period));
     }
     
     let crawler = FitGirlCrawler::new().map_err(|e| e.to_string())?;
+    let db_service = Arc::clone(&state.db_service);
     let mut crawled_count = 0;
     let mut _skipped_count = 0;
     
@@ -272,7 +253,7 @@ pub async fn crawl_popular_games(
         match crawler.crawl_single_game(&popular.url).await {
             Ok(Some(game_repack)) => {
                 // Save to database
-                if let Err(e) = save_repacks_to_db(&[game_repack], &db_path) {
+                if let Err(e) = save_repacks_to_db(&[game_repack], &*db_service) {
                     eprintln!("    ❌ Failed to save: {}", e);
                 } else {
                     crawled_count += 1;
@@ -288,7 +269,7 @@ pub async fn crawl_popular_games(
     }
     
     // Update links after crawling for this period
-    let _linked = db.update_popular_repack_links(Some(&period)).map_err(|e| e.to_string())?;
+    let _linked = state.db_service.update_popular_repack_links(Some(&period)).map_err(|e| e.to_string())?;
     
     Ok(crawled_count)
 }
@@ -301,16 +282,15 @@ pub async fn crawl_single_popular_game(
     println!("🎮 Crawling single game: {}", url);
     
     let crawler = FitGirlCrawler::new().map_err(|e| e.to_string())?;
-    let db_path = state.db_path.lock().unwrap().clone();
+    let db_service = Arc::clone(&state.db_service);
     
     match crawler.crawl_single_game(&url).await {
         Ok(Some(game_repack)) => {
             // Save to database
-            save_repacks_to_db(&[game_repack], &db_path).map_err(|e| e.to_string())?;
+            save_repacks_to_db(&[game_repack], &*db_service).map_err(|e| e.to_string())?;
             
             // Update links for all periods
-            let db = Database::new(db_path).map_err(|e| e.to_string())?;
-            db.update_popular_repack_links(None).map_err(|e| e.to_string())?;
+            state.db_service.update_popular_repack_links(None).map_err(|e| e.to_string())?;
             
             println!("✅ Game crawled and saved");
             Ok(true)
@@ -325,4 +305,3 @@ pub async fn crawl_single_popular_game(
         }
     }
 }
-
