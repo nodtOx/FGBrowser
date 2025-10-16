@@ -79,17 +79,21 @@ pub fn populate_clean_names(conn: &Connection) -> Result<()> {
             Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?))
         })?;
         
-        let mut updated_count = 0;
-        for row in rows {
-            if let Ok((id, title)) = row {
+        // Collect all rows first to avoid borrowing issues with the transaction
+        let games: Vec<(i64, String)> = rows.collect::<Result<Vec<_>>>()?;
+        
+        // Use a transaction for bulk updates (100-1000x faster!)
+        let tx = conn.unchecked_transaction()?;
+        {
+            let mut update_stmt = tx.prepare("UPDATE repacks SET clean_name = ?1 WHERE id = ?2")?;
+            
+            let mut updated_count = 0;
+            for (id, title) in games {
                 // Generate clean name using the crawler function
                 let clean_name = crate::crawler::clean_game_title(&title);
                 
                 // Update the record
-                conn.execute(
-                    "UPDATE repacks SET clean_name = ?1 WHERE id = ?2",
-                    (&clean_name, id),
-                )?;
+                update_stmt.execute((&clean_name, id))?;
                 
                 updated_count += 1;
                 
@@ -98,9 +102,10 @@ pub fn populate_clean_names(conn: &Connection) -> Result<()> {
                     println!("  ✓ Processed {} games...", updated_count);
                 }
             }
+            
+            println!("✅ Clean names populated for {} games", updated_count);
         }
-        
-        println!("✅ Clean names populated for {} games", updated_count);
+        tx.commit()?;
     }
     
     Ok(())
@@ -272,53 +277,50 @@ pub fn migrate_categories_data(conn: &Connection) -> Result<()> {
             "SELECT id, genres_tags FROM repacks WHERE genres_tags IS NOT NULL AND genres_tags != ''"
         )?;
         
-        let mut category_map = std::collections::HashMap::<String, i64>::new();
-        
-        let repack_rows = stmt.query_map([], |row| {
+        let repack_rows: Vec<(i64, String)> = stmt.query_map([], |row| {
             Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?))
-        })?;
+        })?.collect::<Result<Vec<_>>>()?;
         
-        for repack_row in repack_rows {
-            let (repack_id, genres_tags) = repack_row?;
+        // Use transaction for bulk operations
+        let tx = conn.unchecked_transaction()?;
+        {
+            let mut category_map = std::collections::HashMap::<String, i64>::new();
             
-            // Split by comma and clean up
-            let categories: Vec<String> = genres_tags
-                .split(',')
-                .map(|s| s.trim().to_string())
-                .filter(|s| !s.is_empty())
-                .collect();
+            let mut insert_category_stmt = tx.prepare("INSERT OR IGNORE INTO categories (name) VALUES (?1)")?;
+            let mut get_category_stmt = tx.prepare("SELECT id FROM categories WHERE name = ?1")?;
+            let mut insert_game_category_stmt = tx.prepare("INSERT OR IGNORE INTO game_categories (repack_id, category_id) VALUES (?1, ?2)")?;
             
-            for category_name in categories {
-                // Insert category if not exists and get ID
-                let category_id = if let Some(&existing_id) = category_map.get(&category_name) {
-                    existing_id
-                } else {
-                    // Insert new category
-                    conn.execute(
-                        "INSERT OR IGNORE INTO categories (name) VALUES (?1)",
-                        [&category_name],
-                    )?;
-                    
-                    // Get the category ID
-                    let category_id: i64 = conn.query_row(
-                        "SELECT id FROM categories WHERE name = ?1",
-                        [&category_name],
-                        |row| row.get(0),
-                    )?;
-                    
-                    category_map.insert(category_name.clone(), category_id);
-                    category_id
-                };
+            for (repack_id, genres_tags) in repack_rows {
+                // Split by comma and clean up
+                let categories: Vec<String> = genres_tags
+                    .split(',')
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty())
+                    .collect();
                 
-                // Insert game-category relationship
-                conn.execute(
-                    "INSERT OR IGNORE INTO game_categories (repack_id, category_id) VALUES (?1, ?2)",
-                    [repack_id, category_id],
-                )?;
+                for category_name in categories {
+                    // Insert category if not exists and get ID
+                    let category_id = if let Some(&existing_id) = category_map.get(&category_name) {
+                        existing_id
+                    } else {
+                        // Insert new category
+                        insert_category_stmt.execute([&category_name])?;
+                        
+                        // Get the category ID
+                        let category_id: i64 = get_category_stmt.query_row([&category_name], |row| row.get(0))?;
+                        
+                        category_map.insert(category_name.clone(), category_id);
+                        category_id
+                    };
+                    
+                    // Insert game-category relationship
+                    insert_game_category_stmt.execute([repack_id, category_id])?;
+                }
             }
+            
+            println!("✅ Migration completed! Created {} categories", category_map.len());
         }
-        
-        println!("✅ Migration completed! Created {} categories", category_map.len());
+        tx.commit()?;
     }
     
     Ok(())
