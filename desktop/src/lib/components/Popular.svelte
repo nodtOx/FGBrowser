@@ -28,6 +28,8 @@
     image_url: string | null;
     rank: number;
     game: Game | null;
+    created_at: string | null;
+    is_new: boolean;
   }
 
   let popularRepacks: PopularRepackWithGame[] = [];
@@ -69,6 +71,17 @@
   // Reactive statement: reload when period changes (but not on initial mount)
   $: if (mounted && selectedPeriod) {
     loadPopularRepacks();
+    // Mark as viewed when switching periods
+    markAsViewed();
+  }
+
+  async function markAsViewed() {
+    try {
+      await invoke('mark_popular_as_viewed', { period: selectedPeriod });
+      console.log(`Marked ${selectedPeriod} as viewed`);
+    } catch (err) {
+      console.error('Failed to mark as viewed:', err);
+    }
   }
 
   async function handleGameClick(repack: PopularRepackWithGame) {
@@ -215,7 +228,12 @@
             {/if}
           </div>
           <div class="game-info">
-            <h3 class="game-title">{repack.game?.clean_name || repack.title}</h3>
+            <div class="game-title-row">
+              <h3 class="game-title">{repack.game?.clean_name || repack.title}</h3>
+              {#if repack.is_new}
+                <span class="new-badge">NEW</span>
+              {/if}
+            </div>
             {#if repack.game === null}
               <span class="not-in-catalog">Not in catalog</span>
             {:else if repack.game.size}
@@ -348,6 +366,18 @@
     z-index: 1;
   }
 
+  .new-badge {
+    background-color: #10b981;
+    color: white;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 5px;
+    border-radius: 2px;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
   .game-image {
     width: 150px;
     height: 200px;
@@ -376,6 +406,13 @@
     gap: 4px;
   }
 
+  .game-title-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    width: 100%;
+  }
+
   .game-title {
     margin: 0;
     font-size: 12px;
@@ -388,6 +425,8 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
     text-overflow: ellipsis;
+    flex: 1;
+    min-width: 0;
   }
 
   .not-in-catalog {

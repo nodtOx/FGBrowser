@@ -60,6 +60,7 @@ pub struct PopularRepack {
     pub rank: i32,
     pub period: String, // 'month' or 'year'
     pub repack_id: Option<i64>,
+    pub created_at: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -71,6 +72,8 @@ pub struct PopularRepackWithGame {
     pub rank: i32,
     pub period: String, // 'month' or 'year'
     pub game: Option<Game>,
+    pub created_at: Option<String>,
+    pub is_new: bool, // true if added in last 7 days
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -128,5 +131,10 @@ pub struct AppSettings {
     pub db_path: String,
     pub auto_refresh: bool,
     pub refresh_interval: i32,
+
+    // Popular last viewed timestamps (ISO 8601 strings)
+    pub popular_month_last_viewed: Option<String>,
+    pub popular_year_last_viewed: Option<String>,
+    pub popular_award_last_viewed: Option<String>,
 }
 
