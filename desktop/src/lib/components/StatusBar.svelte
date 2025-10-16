@@ -1,8 +1,7 @@
 <script lang="ts">
     import { DISK_INFO_REFRESH_INTERVAL_MS } from '$lib/constants';
-    import { formatSpeed, totalDownloadSpeed, totalUploadSpeed } from '$lib/stores/downloads';
     import { totalGamesCount } from '$lib/stores/games';
-    import { browseView, currentPage } from '$lib/stores/navigation';
+    import { browseView, currentPage, focusedPanel } from '$lib/stores/navigation';
     import { invoke } from '@tauri-apps/api/core';
     import { onMount } from 'svelte';
     import Kbd from './Kbd.svelte';
@@ -46,7 +45,7 @@
             <span>{$totalGamesCount.toLocaleString()} games</span>
         </div>
         
-        <div class="status-item">
+        <!-- <div class="status-item">
             <i class="fas fa-download"></i>
             <span>{formatSpeed($totalDownloadSpeed)}</span>
         </div>
@@ -54,7 +53,7 @@
         <div class="status-item">
             <i class="fas fa-upload"></i>
             <span>{formatSpeed($totalUploadSpeed)}</span>
-        </div>
+        </div> -->
     </div>
     
     <div class="status-center">
@@ -75,20 +74,38 @@
                 </div>
             {:else if $currentPage === 'browse'}
                 <div class="shortcut-item">
-                    <span class="shortcut-label">Search</span>
-                    <Kbd keys="/" />
-                    <span class="shortcut-divider">or</span>
-                    <Kbd keys={['Mod', 'F']} />
-                </div>
-                <div class="shortcut-item">
                     <span class="shortcut-label">Navigate</span>
                     <Kbd keys="Up" />
                     <Kbd keys="Down" />
                 </div>
+                {#if $focusedPanel === 'gamelist' || $focusedPanel === 'categories'}
+                <div class="shortcut-item">
+                    <span class="shortcut-label">Jump</span>
+                    <Kbd keys="PgUp" />
+                    <Kbd keys="PgDn" />
+                </div>
+                {/if}
+                <div class="shortcut-item">
+                    <span class="shortcut-label">Switch Panel</span>
+                    <Kbd keys="Tab" />
+                </div>
+                {#if $focusedPanel === 'categories'}
+                <div class="shortcut-item">
+                    <span class="shortcut-label">Toggle All</span>
+                    <Kbd keys="M" />
+                </div>
+                {/if}
+                {#if $focusedPanel === 'gamelist'}
                 <div class="shortcut-item">
                     <span class="shortcut-label">Open</span>
                     <Kbd keys="Enter" />
                 </div>
+                {:else if $focusedPanel !== 'search'}
+                <div class="shortcut-item">
+                    <span class="shortcut-label">Select</span>
+                    <Kbd keys="Enter" />
+                </div>
+                {/if}
             {/if}
         
             <div class="shortcut-item">
@@ -101,7 +118,7 @@
     </div>
     
     <div class="status-right">
-        <div class="status-item">
+        <div class="status-item free-disk-space">
             <i class="fas fa-hdd"></i>
             <span>Free: {formatBytes(diskInfo.free)}</span>
         </div>
@@ -170,12 +187,6 @@
         color: var(--color-textSecondary);
         /* font-size: calc(var(--base-font-size) * 0.8); */
         font-weight: 500;
-    }
-    
-    .shortcut-divider {
-        color: var(--color-textSecondary);
-        /* font-size: calc(var(--base-font-size) * 0.75); */
-        margin: 0 2px;
     }
 </style>
 

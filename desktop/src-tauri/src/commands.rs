@@ -410,53 +410,50 @@ pub struct DiskInfo {
 }
 
 #[tauri::command]
-pub async fn get_disk_info() -> Result<DiskInfo, String> {
-    #[cfg(target_os = "windows")]
-    {
-        use std::process::Command;
-        
-        // Get disk info using wmic command
-        let output = Command::new("wmic")
-            .args(&["logicaldisk", "where", "size>0", "get", "size,freespace", "/format:csv"])
-            .output()
-            .map_err(|e| e.to_string())?;
-            
-        let output_str = String::from_utf8_lossy(&output.stdout);
-        let lines: Vec<&str> = output_str.lines().collect();
-        
-        let mut total = 0u64;
-        let mut free = 0u64;
-        
-        for line in lines.iter().skip(1) { // Skip header
-            if line.trim().is_empty() {
-                continue;
-            }
-            
-            let parts: Vec<&str> = line.split(',').collect();
-            if parts.len() >= 4 {
-                if let (Ok(size), Ok(freespace)) = (parts[2].parse::<u64>(), parts[3].parse::<u64>()) {
-                    total += size;
-                    free += freespace;
+pub async fn get_disk_info(state: State<'_, AppState>) -> Result<DiskInfo, String> {
+    use sysinfo::Disks;
+    use std::path::Path;
+    
+    let disks = Disks::new_with_refreshed_list();
+    let db_path = state.db_path.lock().unwrap().clone();
+    
+    // Get the absolute path of the database directory
+    let db_dir = db_path.parent()
+        .and_then(|p| p.canonicalize().ok())
+        .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
+    
+    // Find the disk that contains the database directory
+    let mut target_disk = None;
+    for disk in disks.list() {
+        let mount_point = disk.mount_point();
+        // Check if the database path is on this disk
+        if db_dir.starts_with(mount_point) {
+            // Keep the most specific mount point (longest path)
+            if let Some((_, current_mount)) = target_disk {
+                if mount_point.as_os_str().len() > Path::new(current_mount).as_os_str().len() {
+                    target_disk = Some((disk, mount_point));
                 }
+            } else {
+                target_disk = Some((disk, mount_point));
             }
         }
-        
-        Ok(DiskInfo {
-            total,
-            free,
-            used: total - free,
-        })
     }
     
-    #[cfg(not(target_os = "windows"))]
-    {
-        // Fallback for non-Windows systems
-        Ok(DiskInfo {
-            total: 0,
-            free: 0,
-            used: 0,
-        })
-    }
+    // If we found a matching disk, use it; otherwise fall back to the first disk
+    let disk = target_disk
+        .map(|(d, _)| d)
+        .or_else(|| disks.list().first())
+        .ok_or("No disks found")?;
+    
+    let total = disk.total_space();
+    let available = disk.available_space();
+    let used = total.saturating_sub(available);
+    
+    Ok(DiskInfo {
+        total,
+        free: available,
+        used,
+    })
 }
 
 // Crawler commands

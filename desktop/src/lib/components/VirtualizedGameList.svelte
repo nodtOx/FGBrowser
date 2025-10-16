@@ -1,7 +1,7 @@
 <script lang="ts">
     import { ITEM_HEIGHT, OVERSCAN, SEARCH_DEBOUNCE_MS } from '$lib/constants';
     import { formatSize, games, searchGames, searchQuery, selectedIndex, selectGame } from '$lib/stores/games';
-    import { openGameDetails } from '$lib/stores/navigation';
+    import { focusedPanel, openGameDetails } from '$lib/stores/navigation';
     import { onMount, tick } from 'svelte';
     
     let containerHeight: number = 0;
@@ -104,6 +104,15 @@
         }
     }
     
+    // Auto-focus/blur search input based on focused panel
+    $: if (searchInput) {
+        if ($focusedPanel === 'search') {
+            searchInput.focus();
+        } else {
+            searchInput.blur();
+        }
+    }
+    
     onMount(() => {
         // Scroll to selected item on mount
         if ($selectedIndex >= 0) {
@@ -113,7 +122,7 @@
 </script>
 
 <div class="list-container">
-    <div class="search-bar">
+    <div class="search-bar" class:focused={$focusedPanel === 'search'}>
         <input
             bind:this={searchInput}
             bind:value={$searchQuery}
@@ -126,7 +135,8 @@
     </div>
     
     <div 
-        class="virtualized-list" 
+        class="virtualized-list"
+        class:focused={$focusedPanel === 'gamelist'}
         bind:this={containerElement}
         bind:clientHeight={containerHeight}
         on:scroll={handleScroll}
@@ -138,6 +148,7 @@
                 <div 
                     class="game-item"
                     class:selected={globalIndex === $selectedIndex}
+                    class:focused-panel={$focusedPanel === 'gamelist'}
                     on:click={(e) => handleGameClick(index, e)}
                     on:dblclick={(e) => handleGameDoubleClick(index, e)}
                     on:keydown={(e) => handleKeydown(e, index)}
@@ -173,6 +184,13 @@
         padding: 8px 12px;
         border-bottom: 1px solid var(--color-border);
         background-color: var(--color-backgroundSecondary);
+        border-left: 3px solid transparent;
+        transition: all 0.15s ease;
+    }
+    
+    .search-bar.focused {
+        border-left-color: var(--color-primary);
+        background-color: rgba(var(--color-primary-rgb, 136, 192, 208), 0.05);
     }
     
     .search-input {
@@ -204,6 +222,13 @@
         font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
         font-size: calc(var(--base-font-size) * 1);
         position: relative;
+        border-left: 3px solid transparent;
+        transition: all 0.15s ease;
+    }
+    
+    .virtualized-list.focused {
+        border-left-color: var(--color-primary);
+        background-color: rgba(var(--color-primary-rgb, 136, 192, 208), 0.02);
     }
     
     .scroll-area {
@@ -240,6 +265,11 @@
     .game-item.selected {
         background-color: var(--color-primary);
         color: var(--color-selectedText);
+        opacity: 0.4;
+    }
+    
+    .game-item.selected.focused-panel {
+        opacity: 1;
     }
     
     .game-date {
@@ -251,7 +281,7 @@
         padding-right: 8px;
     }
     
-    .game-item.selected .game-date {
+    .game-item.selected.focused-panel .game-date {
         color: var(--color-selectedText);
     }
     
@@ -273,7 +303,7 @@
         padding-left: 8px;
     }
     
-    .game-item.selected .game-size {
+    .game-item.selected.focused-panel .game-size {
         color: var(--color-selectedText);
     }
 </style>

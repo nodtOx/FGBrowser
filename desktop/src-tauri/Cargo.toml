@@ -67,3 +67,6 @@ chrono = { version = "0.4", features = ["serde"] }
 
 # Configuration management
 config = "0.14"
+
+# System information (disk space, etc.)
+sysinfo = "0.33"
