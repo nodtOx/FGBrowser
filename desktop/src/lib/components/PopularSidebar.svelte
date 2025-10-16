@@ -106,27 +106,6 @@
 </SidebarBase>
 
 <style>
-  .info-item {
-    padding: 6px 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .info-label {
-    font-size: calc(var(--base-font-size) * 0.75);
-    color: var(--color-textSecondary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    font-weight: 600;
-  }
-
-  .info-value {
-    font-size: calc(var(--base-font-size) * 0.85);
-    color: var(--color-text);
-    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-  }
-
   .unseen-badge {
     display: inline-block;
     background-color: var(--color-primary);

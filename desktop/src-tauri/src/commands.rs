@@ -703,10 +703,10 @@ pub async fn update_database(
         });
     }
     
-    println!("\n{}", "=".repeat(80));
-    println!("DATABASE UPDATE STARTED");
-    println!("Latest game date: {:?}", latest_date);
-    println!("{}", "=".repeat(80));
+    // println!("\n{}", "=".repeat(80));
+    // println!("DATABASE UPDATE STARTED");
+    // println!("Latest game date: {:?}", latest_date);
+    // println!("{}", "=".repeat(80));
     
     // Create crawler
     let crawler = FitGirlCrawler::new().map_err(|e| e.to_string())?;
@@ -742,7 +742,7 @@ pub async fn update_database(
                     .collect();
                 
                 if new_repacks.is_empty() {
-                    println!("No new games found on page {}, stopping update", current_page);
+                    // println!("No new games found on page {}, stopping update", current_page);
                     break;
                 }
                 
@@ -753,10 +753,10 @@ pub async fn update_database(
                     eprintln!("Error saving page {}: {}", current_page, e);
                 } else {
                     total_new_games += count;
-                    println!(
-                        "[UPDATE] Page {}: Found {} new games (Total new: {})",
-                        current_page, count, total_new_games
-                    );
+                    // println!(
+                    //     "[UPDATE] Page {}: Found {} new games (Total new: {})",
+                    //     current_page, count, total_new_games
+                    // );
                 }
             }
             Err(e) => {
@@ -769,18 +769,18 @@ pub async fn update_database(
         
         // Safety limit - don't update more than 10 pages
         if current_page > 10 {
-            println!("Reached 10 page limit for update");
+            // println!("Reached 10 page limit for update");
             break;
         }
     }
     
-    let duration = start_time.elapsed();
+    let _duration = start_time.elapsed();
     
-    println!("\n{}", "=".repeat(80));
-    println!("DATABASE UPDATE COMPLETED");
-    println!("New Games: {}", total_new_games);
-    println!("Time Taken: {:.2}s", duration.as_secs_f64());
-    println!("{}", "=".repeat(80));
+    // println!("\n{}", "=".repeat(80));
+    // println!("DATABASE UPDATE COMPLETED");
+    // println!("New Games: {}", total_new_games);
+    // println!("Time Taken: {:.2}s", duration.as_secs_f64());
+    // println!("{}", "=".repeat(80));
     
     Ok(CrawlProgress {
         current_page: current_page - 1,
@@ -799,7 +799,7 @@ pub async fn fetch_popular_repacks(
     use crate::crawler::FitGirlCrawler;
     use crate::database::Database;
     
-    println!("🌟 Fetching popular repacks ({}) from website...", period);
+    // println!("🌟 Fetching popular repacks ({}) from website...", period);
     
     let crawler = FitGirlCrawler::new().map_err(|e| e.to_string())?;
     let popular_entries = crawler.fetch_popular_repacks(&period).await.map_err(|e| e.to_string())?;
@@ -827,9 +827,9 @@ pub async fn fetch_popular_repacks(
     }
     
     // Update links to existing games for this period
-    let linked_count = db.update_popular_repack_links(Some(&period)).map_err(|e| e.to_string())?;
+    let _linked_count = db.update_popular_repack_links(Some(&period)).map_err(|e| e.to_string())?;
     
-    println!("✅ Saved {} popular repacks ({}) ({} linked to existing games)", saved_count, period, linked_count);
+    // println!("✅ Saved {} popular repacks ({}) ({} linked to existing games)", saved_count, period, linked_count);
     
     Ok(saved_count)
 }
@@ -871,9 +871,9 @@ pub async fn parse_popular_repacks_from_file(
     }
     
     // Update links to existing games for this period
-    let linked_count = db.update_popular_repack_links(Some(&period)).map_err(|e| e.to_string())?;
+    let _linked_count = db.update_popular_repack_links(Some(&period)).map_err(|e| e.to_string())?;
     
-    println!("✅ Saved {} popular repacks ({}) ({} linked to existing games)", saved_count, period, linked_count);
+    // println!("✅ Saved {} popular repacks ({}) ({} linked to existing games)", saved_count, period, linked_count);
     
     Ok(saved_count)
 }
@@ -977,7 +977,7 @@ pub async fn crawl_popular_games(
     use crate::crawler::FitGirlCrawler;
     use crate::database::Database;
     
-    println!("🎮 Crawling popular games data ({})...", period);
+    // println!("🎮 Crawling popular games data ({})...", period);
     
     let db_path = state.db_path.lock().unwrap().clone();
     let db = Database::new(db_path.clone()).map_err(|e| e.to_string())?;
@@ -991,16 +991,16 @@ pub async fn crawl_popular_games(
     
     let crawler = FitGirlCrawler::new().map_err(|e| e.to_string())?;
     let mut crawled_count = 0;
-    let mut skipped_count = 0;
+    let mut _skipped_count = 0;
     
     for popular in &popular_repacks {
         // Skip if already linked to a game in database
         if popular.repack_id.is_some() {
-            skipped_count += 1;
+            _skipped_count += 1;
             continue;
         }
         
-        println!("  Crawling: {}", popular.title);
+        // println!("  Crawling: {}", popular.title);
         
         // Crawl the game page
         match crawler.crawl_single_game(&popular.url).await {
@@ -1010,7 +1010,7 @@ pub async fn crawl_popular_games(
                     eprintln!("    ❌ Failed to save: {}", e);
                 } else {
                     crawled_count += 1;
-                    println!("    ✓ Saved");
+                    // println!("    ✓ Saved");
                 }
             }
             Ok(None) => {
@@ -1023,10 +1023,10 @@ pub async fn crawl_popular_games(
     }
     
     // Update links after crawling for this period
-    let linked = db.update_popular_repack_links(Some(&period)).map_err(|e| e.to_string())?;
+    let _linked = db.update_popular_repack_links(Some(&period)).map_err(|e| e.to_string())?;
     
-    println!("\n✅ Crawled {} new games ({}), skipped {} existing, linked {}", 
-             crawled_count, period, skipped_count, linked);
+    // println!("\n✅ Crawled {} new games ({}), skipped {} existing, linked {}", 
+    //          crawled_count, period, skipped_count, linked);
     
     Ok(crawled_count)
 }

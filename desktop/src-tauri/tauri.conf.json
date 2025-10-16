@@ -14,7 +14,8 @@
       {
         "title": "desktop",
         "width": 1230,
-        "height": 800
+        "height": 800,
+        "zoomHotkeysEnabled": true
       }
     ],
     "security": {

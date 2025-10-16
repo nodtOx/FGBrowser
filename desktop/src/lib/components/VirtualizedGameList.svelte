@@ -23,11 +23,10 @@
         if (!date) return 'N/A';
         try {
             const dateObj = new Date(date);
-            return dateObj.toLocaleDateString('en-US', { 
-                month: '2-digit', 
-                day: '2-digit',
-                year: '2-digit'
-            });
+            const day = String(dateObj.getDate()).padStart(2, '0');
+            const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const year = String(dateObj.getFullYear()).slice(-2);
+            return `${day}/${month}/${year}`;
         } catch {
             return date.slice(0, 10); // Fallback to first 10 chars
         }
@@ -162,7 +161,7 @@
                         {formatDate(game.date)}
                     </div>
                     <div class="game-title">
-                        {game.title}
+                        {game.clean_name || game.title}
                     </div>
                     <div class="game-size">
                         {formatSize(game.size)}

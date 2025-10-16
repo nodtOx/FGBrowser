@@ -28,7 +28,7 @@ pub struct PopularRepackEntry {
 }
 
 #[derive(Default)]
-pub(crate) struct GameDetails {
+pub struct GameDetails {
     pub genres_tags: Option<String>,
     pub company: Option<String>,
     pub languages: Option<String>,

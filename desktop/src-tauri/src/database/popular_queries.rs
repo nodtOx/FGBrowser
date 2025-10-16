@@ -129,7 +129,7 @@ impl PopularQueries {
         Ok(())
     }
     
-    pub fn update_popular_repack_links(conn: &rusqlite::Connection, _period: Option<&str>) -> Result<usize> {
+    pub fn update_popular_repack_links(_conn: &rusqlite::Connection, _period: Option<&str>) -> Result<usize> {
         // This function is no longer needed with the normalized schema
         // All popular repacks are now inserted with a valid repack_id
         // Keeping for backward compatibility but returning 0

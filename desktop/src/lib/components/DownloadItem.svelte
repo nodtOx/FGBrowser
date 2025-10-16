@@ -94,7 +94,7 @@
       </div>
     </div>
 
-      <div class="download-actions" on:click|stopPropagation on:keydown|stopPropagation role="group">
+      <div class="download-actions" on:click|stopPropagation on:keydown|stopPropagation role="group" tabindex="-1">
       {#if download.status === 'downloading' || download.status === 'seeding'}
         <button class="action-btn pause-btn" on:click={handlePause} title="Pause">⏸</button>
       {:else if download.status === 'paused' || download.status === 'error'}
