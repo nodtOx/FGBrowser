@@ -60,7 +60,13 @@
 </script>
 
 <div class="download-item">
-  <div class="download-header" on:click={toggleDetails} on:keydown={(e) => e.key === 'Enter' && toggleDetails()} role="button" tabindex="0">
+  <div
+    class="download-header"
+    on:click={toggleDetails}
+    on:keydown={(e) => e.key === 'Enter' && toggleDetails()}
+    role="button"
+    tabindex="0"
+  >
     <div class="download-info">
       <div class="download-title-row">
         <span class="status-badge" style="background-color: {statusColor}">
@@ -87,39 +93,57 @@
         {:else if download.status === 'error'}
           <span class="stat error-text">{download.error_message || 'Unknown error'}</span>
         {:else if download.status === 'paused'}
-          <span class="stat">{formatProgress(download.progress)} - {formatBytes(download.downloaded_bytes)} / {formatBytes(download.total_size)}</span>
+          <span class="stat"
+            >{formatProgress(download.progress)} - {formatBytes(download.downloaded_bytes)} / {formatBytes(
+              download.total_size,
+            )}</span
+          >
         {:else if download.status === 'queued'}
           <span class="stat">Waiting to start...</span>
         {/if}
       </div>
     </div>
 
-      <div class="download-actions" on:click|stopPropagation on:keydown|stopPropagation role="group" tabindex="-1">
+    <div class="download-actions">
       {#if download.status === 'downloading' || download.status === 'seeding'}
-        <button class="action-btn pause-btn" on:click={handlePause} title="Pause">⏸</button>
+        <button class="action-btn pause-btn" on:click|stopPropagation={handlePause} title="Pause">⏸</button>
       {:else if download.status === 'paused' || download.status === 'error'}
-        <button class="action-btn resume-btn" on:click={handleResume} title="Resume">▶</button>
+        <button class="action-btn resume-btn" on:click|stopPropagation={handleResume} title="Resume">▶</button>
       {/if}
 
       {#if download.status === 'completed' || download.status === 'seeding'}
-        <button class="action-btn folder-btn" on:click={handleOpenFolder} title="Open Folder">
+        <button class="action-btn folder-btn" on:click|stopPropagation={handleOpenFolder} title="Open Folder">
           📁
         </button>
       {/if}
 
       {#if !showRemoveConfirm}
-        <button class="action-btn remove-btn" on:click={() => (showRemoveConfirm = true)} title="Remove">
+        <button
+          class="action-btn remove-btn"
+          on:click|stopPropagation={() => (showRemoveConfirm = true)}
+          title="Remove"
+        >
           🗑
         </button>
       {:else}
         <div class="remove-confirm">
-          <button class="action-btn confirm-btn" on:click={() => handleRemove(false)} title="Remove from list">
+          <button
+            class="action-btn confirm-btn"
+            on:click|stopPropagation={() => handleRemove(false)}
+            title="Remove from list"
+          >
             Keep Files
           </button>
-          <button class="action-btn danger-btn" on:click={() => handleRemove(true)} title="Delete files">
+          <button
+            class="action-btn danger-btn"
+            on:click|stopPropagation={() => handleRemove(true)}
+            title="Delete files"
+          >
             Delete Files
           </button>
-          <button class="action-btn" on:click={() => (showRemoveConfirm = false)} title="Cancel">✕</button>
+          <button class="action-btn" on:click|stopPropagation={() => (showRemoveConfirm = false)} title="Cancel"
+            >✕</button
+          >
         </div>
       {/if}
     </div>
@@ -351,4 +375,3 @@
     word-break: break-all;
   }
 </style>
-

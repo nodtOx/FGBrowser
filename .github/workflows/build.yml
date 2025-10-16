@@ -74,7 +74,6 @@ jobs:
         with:
           name: windows-build
           path: |
-            desktop/src-tauri/target/release/bundle/msi/*.msi
             desktop/src-tauri/target/release/bundle/nsis/*.exe
           if-no-files-found: warn
 

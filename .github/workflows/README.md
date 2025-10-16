@@ -10,7 +10,7 @@ This directory contains GitHub Actions workflows for the FGBrowser desktop appli
 
 Builds the Tauri desktop application for all three platforms:
 
-- Windows (MSI and NSIS installers)
+- Windows (NSIS installer)
 - macOS (Universal binary for Intel and Apple Silicon)
 - Linux (DEB and AppImage)
 
@@ -35,10 +35,10 @@ git push origin v0.1.0
 
 This will build and release:
 
-1. **Desktop Apps:**
-   - Windows: MSI and NSIS installers
-   - macOS: Universal DMG (Intel + Apple Silicon)
-   - Linux: DEB and AppImage packages
+    1. **Desktop Apps:**
+       - Windows: NSIS installer
+       - macOS: Universal DMG (Intel + Apple Silicon)
+       - Linux: DEB and AppImage packages
 
 2. **CLI Binary:**
    - Linux: Standalone x86_64 binary
@@ -68,5 +68,5 @@ No special setup is required. The workflows will:
 
 - macOS builds create universal binaries that work on both Intel and Apple Silicon Macs
 - Linux builds require GTK and WebKit dependencies (installed automatically in CI)
-- Windows builds create both MSI and NSIS installers
+- Windows builds create NSIS installer (more reliable than MSI on CI)
 - Builds only trigger when files in the `desktop/` directory change
