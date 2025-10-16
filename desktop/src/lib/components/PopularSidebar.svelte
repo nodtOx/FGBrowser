@@ -92,6 +92,7 @@
       tabindex="0"
     >
       <span class="filter-name">
+        <span class="pink-paw-icon">🐾</span>
         Pink Paw Award
         {#if awardUnseen > 0}
           <span class="unseen-badge">{awardUnseen}</span>
@@ -153,6 +154,10 @@
     border-radius: 10px;
     margin-left: 6px;
     vertical-align: middle;
+  }
+  .pink-paw-icon {
+    color: transparent;
+    text-shadow: 0 0 0 #ff69b4;
   }
 </style>
 
