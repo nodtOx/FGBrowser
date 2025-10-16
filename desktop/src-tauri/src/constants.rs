@@ -23,6 +23,9 @@ pub const POPULAR_YEARLY_LIMIT: i32 = 150;
 pub const POPULAR_REFRESH_INTERVAL_MS: u64 = 3000;
 pub const DISK_INFO_REFRESH_INTERVAL_MS: u64 = 30000;
 
+// Database remote URL
+pub const DATABASE_URL: &str = "http://157.230.16.45/repacks.db";
+
 // Struct to export all constants at once to frontend
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AppConstants {
@@ -36,6 +39,7 @@ pub struct AppConstants {
     pub popular_yearly_limit: i32,
     pub popular_refresh_interval_ms: u64,
     pub disk_info_refresh_interval_ms: u64,
+    pub database_url: String,
 }
 
 impl AppConstants {
@@ -51,6 +55,7 @@ impl AppConstants {
             popular_yearly_limit: POPULAR_YEARLY_LIMIT,
             popular_refresh_interval_ms: POPULAR_REFRESH_INTERVAL_MS,
             disk_info_refresh_interval_ms: DISK_INFO_REFRESH_INTERVAL_MS,
+            database_url: DATABASE_URL.to_string(),
         }
     }
 }
