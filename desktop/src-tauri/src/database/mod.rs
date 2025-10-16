@@ -37,31 +37,26 @@ impl Database {
     
     /// Apply SQLite performance optimizations via PRAGMAs
     fn apply_pragmas(conn: &Connection) -> Result<()> {
+        // Apply PRAGMAs with error handling - some may fail on new databases
+        // Use execute_batch which is simpler and doesn't require handling return values
+        
         // WAL mode: 10-100x faster writes, allows concurrent reads
-        // This is crucial for desktop apps with multiple read operations
-        conn.execute("PRAGMA journal_mode = WAL", [])?;
+        let _ = conn.execute_batch("PRAGMA journal_mode = WAL;");
         
         // Keep more data in memory (64MB cache)
-        // Negative value means KB, positive means pages
-        conn.execute("PRAGMA cache_size = -64000", [])?;
+        let _ = conn.execute_batch("PRAGMA cache_size = -64000;");
         
         // Balance between speed and durability
-        // NORMAL is safe and fast (syncs at critical moments)
-        conn.execute("PRAGMA synchronous = NORMAL", [])?;
+        let _ = conn.execute_batch("PRAGMA synchronous = NORMAL;");
         
         // Memory-mapped I/O for faster reads (256MB)
-        conn.execute("PRAGMA mmap_size = 268435456", [])?;
+        let _ = conn.execute_batch("PRAGMA mmap_size = 268435456;");
         
         // Temp tables and indices in memory
-        conn.execute("PRAGMA temp_store = MEMORY", [])?;
+        let _ = conn.execute_batch("PRAGMA temp_store = MEMORY;");
         
-        // Optimize page size (4KB is standard for most systems)
-        // This pragma only affects new databases, so we check first
-        let page_size: i64 = conn.query_row("PRAGMA page_size", [], |row| row.get(0))?;
-        if page_size != 4096 {
-            // Page size can only be changed before any tables exist or via VACUUM
-            conn.execute("PRAGMA page_size = 4096", [])?;
-        }
+        // Page size optimization (best effort - may not work on existing databases)
+        let _ = conn.execute_batch("PRAGMA page_size = 4096;");
         
         Ok(())
     }

@@ -5,9 +5,31 @@ pub mod database;
 pub mod image_cache;
 
 use commands::{
-    add_download, cache_image_background, check_database_exists, check_image_cached, clear_category_cache, clear_image_cache, copy_to_clipboard, crawl_popular_games, crawl_single_popular_game, download_database, fetch_popular_repacks, get_all_games, get_app_constants, get_cached_image, get_categories_with_counts, get_categories_for_filtered_games, get_categories_for_search, get_categories_for_size_and_time_filtered_games, get_categories_for_size_filtered_games, get_categories_for_time_filtered_games, get_database_stats, get_disk_info, get_downloads, get_game_details,
-    get_games_by_categories_and_size, get_games_by_categories_and_time, get_games_by_categories_size_and_time, get_games_by_category, get_games_by_date_range, get_games_by_multiple_categories, get_games_by_size_and_time, get_games_by_size_range, get_image_cache_size, get_popular_repacks, get_popular_repacks_with_games, get_settings, get_total_unseen_popular_count, get_unseen_popular_count, is_database_empty, mark_popular_as_viewed, open_download_folder, open_magnet_link, parse_popular_repacks_from_file, pause_download, remove_download, reset_database, resume_download, save_settings, 
-    search_games, select_download_folder, set_speed_limits, start_crawler, update_database, update_popular_repack_links, AppState,
+    // Game commands
+    search_games, get_all_games, get_game_details, get_database_stats,
+    get_categories_with_counts, get_categories_for_filtered_games, get_categories_for_search,
+    get_categories_for_size_and_time_filtered_games, get_categories_for_size_filtered_games,
+    get_categories_for_time_filtered_games, get_games_by_categories_and_size,
+    get_games_by_categories_and_time, get_games_by_categories_size_and_time,
+    get_games_by_category, get_games_by_date_range, get_games_by_multiple_categories,
+    get_games_by_size_and_time, get_games_by_size_range, clear_category_cache, is_database_empty,
+    // Crawler commands
+    start_crawler, update_database,
+    // Popular repacks commands
+    fetch_popular_repacks, parse_popular_repacks_from_file, get_popular_repacks,
+    get_popular_repacks_with_games, get_unseen_popular_count, get_total_unseen_popular_count,
+    mark_popular_as_viewed, update_popular_repack_links, crawl_popular_games, crawl_single_popular_game,
+    // Download commands
+    get_downloads, add_download, pause_download, resume_download, remove_download, set_speed_limits,
+    // Settings commands
+    get_settings, save_settings, reset_database, download_database, check_database_exists,
+    // Image commands
+    get_cached_image, check_image_cached, cache_image_background, clear_image_cache, get_image_cache_size,
+    // System commands
+    get_app_constants, open_magnet_link, copy_to_clipboard, get_disk_info,
+    select_download_folder, open_download_folder,
+    // AppState
+    AppState,
 };
 use std::path::PathBuf;
 use std::sync::Mutex;

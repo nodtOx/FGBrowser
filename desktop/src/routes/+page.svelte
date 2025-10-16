@@ -178,27 +178,41 @@
       console.log('🌟 POPULAR REPACKS UPDATE STARTED');
       console.log('='.repeat(60));
       
-      // Fetch all three periods: monthly, yearly, and award
-      console.log('Step 1/6: Fetching monthly popular repacks from website...');
+      // Fetch all five periods: week, today, month, year, and award
+      console.log('Step 1/8: Fetching weekly popular repacks from website...');
+      const weekCount = await invoke<number>('fetch_popular_repacks', { period: 'week' });
+      console.log(`  ✅ Saved ${weekCount} weekly popular repacks`);
+      
+      console.log('Step 2/8: Fetching today popular repacks from website...');
+      const todayCount = await invoke<number>('fetch_popular_repacks', { period: 'today' });
+      console.log(`  ✅ Saved ${todayCount} today popular repacks`);
+      
+      console.log('Step 3/8: Fetching monthly popular repacks from website...');
       const monthCount = await invoke<number>('fetch_popular_repacks', { period: 'month' });
       console.log(`  ✅ Saved ${monthCount} monthly popular repacks`);
       
-      console.log('Step 2/6: Fetching yearly popular repacks from website...');
+      console.log('Step 4/8: Fetching yearly popular repacks from website...');
       const yearCount = await invoke<number>('fetch_popular_repacks', { period: 'year' });
       console.log(`  ✅ Saved ${yearCount} yearly popular repacks`);
       
-      console.log('Step 3/6: Fetching Pink Paw Award games from website...');
+      console.log('Step 5/8: Fetching Pink Paw Award games from website...');
       const awardCount = await invoke<number>('fetch_popular_repacks', { period: 'award' });
       console.log(`  ✅ Saved ${awardCount} Pink Paw Award games`);
       
-      console.log('Step 4/6: Crawling full game data for popular games...');
+      console.log('Step 6/8: Crawling full game data for popular games...');
       
       // Set crawling state
       isCrawlingPopular.set(true);
-      const totalCount = monthCount + yearCount + awardCount;
+      const totalCount = weekCount + todayCount + monthCount + yearCount + awardCount;
       popularCrawlProgress.set({ crawled: 0, total: totalCount });
       
-      // Crawl all three periods (this may take a while)
+      // Crawl all five periods (this may take a while)
+      const weekCrawled = await invoke<number>('crawl_popular_games', { period: 'week' });
+      console.log(`  ✅ Crawled ${weekCrawled} new weekly popular games`);
+      
+      const todayCrawled = await invoke<number>('crawl_popular_games', { period: 'today' });
+      console.log(`  ✅ Crawled ${todayCrawled} new today popular games`);
+      
       const monthCrawled = await invoke<number>('crawl_popular_games', { period: 'month' });
       console.log(`  ✅ Crawled ${monthCrawled} new monthly popular games`);
       
@@ -211,14 +225,14 @@
       // Clear crawling state
       isCrawlingPopular.set(false);
       
-      console.log('Step 5/6: Reloading popular repacks into UI...');
+      console.log('Step 7/8: Reloading popular repacks into UI...');
       await loadPopularRepacks();
       console.log('  ✅ UI updated');
       
-      console.log('Step 6/6: Complete');
+      console.log('Step 8/8: Complete');
       console.log('='.repeat(60));
       console.log('🎉 POPULAR REPACKS UPDATE COMPLETED');
-      console.log(`   Total: ${monthCrawled + yearCrawled + awardCrawled} games crawled`);
+      console.log(`   Total: ${weekCrawled + todayCrawled + monthCrawled + yearCrawled + awardCrawled} games crawled`);
       console.log('='.repeat(60) + '\n');
     } catch (error) {
       console.error('❌ Failed to fetch popular repacks:', error);
@@ -384,6 +398,7 @@
     height: 100%;
     color: var(--color-textMuted);
     gap: 16px;
+    user-select: text;
   }
 
   .page-placeholder h2 {
