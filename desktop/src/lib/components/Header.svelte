@@ -1,13 +1,14 @@
 <script lang="ts">
     import { featureFlags } from '$lib/featureFlags';
     import { currentPage, navigateTo, type Page } from '$lib/stores/navigation';
-    import { applyTheme, availableThemes, currentTheme } from '$lib/stores/theme';
+    import { applyTheme, currentTheme, darkThemes, lightThemes } from '$lib/stores/theme';
     import { invoke } from '@tauri-apps/api/core';
-    import { onMount } from 'svelte';
+    import { onDestroy, onMount } from 'svelte';
     
     let isDev = false;
     let totalUnseenPopular = 0;
     let unseenCheckInterval: any;
+    let themeDropdownRef: HTMLElement | null = null;
     
     onMount(() => {
         // Check if we're in development mode
@@ -25,6 +26,12 @@
             }
         };
     });
+
+    onDestroy(() => {
+        if (typeof document !== 'undefined') {
+            document.removeEventListener('click', handleClickOutside);
+        }
+    });
     
     async function loadUnseenPopularCount() {
         try {
@@ -40,13 +47,32 @@
     
     let showThemeSelector = false;
     
-    function toggleThemeSelector() {
+    function toggleThemeSelector(event: MouseEvent) {
+        event.stopPropagation();
         showThemeSelector = !showThemeSelector;
+        
+        if (showThemeSelector) {
+            // Add click outside listener when opening
+            setTimeout(() => {
+                document.addEventListener('click', handleClickOutside);
+            }, 0);
+        } else {
+            // Remove listener when closing
+            document.removeEventListener('click', handleClickOutside);
+        }
+    }
+    
+    function handleClickOutside(event: MouseEvent) {
+        if (themeDropdownRef && !themeDropdownRef.contains(event.target as Node)) {
+            showThemeSelector = false;
+            document.removeEventListener('click', handleClickOutside);
+        }
     }
     
     function selectTheme(theme: any) {
         applyTheme(theme);
         showThemeSelector = false;
+        document.removeEventListener('click', handleClickOutside);
     }
     
     async function handleReset() {
@@ -124,22 +150,35 @@
                     R
                 </span>
             {/if}
-            <span class="theme-btn" on:click={toggleThemeSelector} title="Change Theme (T)">
-                T
-            </span>
-            {#if showThemeSelector}
-                <div class="theme-dropdown">
-                    {#each availableThemes as theme}
-                        <button 
-                            class="theme-option"
-                            class:active={$currentTheme.name === theme.name}
-                            on:click={() => selectTheme(theme)}
-                        >
-                            {theme.name}
-                        </button>
-                    {/each}
-                </div>
-            {/if}
+            <div class="theme-selector-wrapper" bind:this={themeDropdownRef}>
+                <span class="theme-btn" on:click={toggleThemeSelector} title="Change Theme (T)">
+                    T
+                </span>
+                {#if showThemeSelector}
+                    <div class="theme-dropdown">
+                        <div class="theme-section-header">Dark Themes</div>
+                        {#each darkThemes as theme}
+                            <button 
+                                class="theme-option"
+                                class:active={$currentTheme.name === theme.name}
+                                on:click={() => selectTheme(theme)}
+                            >
+                                {theme.name}
+                            </button>
+                        {/each}
+                        <div class="theme-section-header">Light Themes</div>
+                        {#each lightThemes as theme}
+                            <button 
+                                class="theme-option"
+                                class:active={$currentTheme.name === theme.name}
+                                on:click={() => selectTheme(theme)}
+                            >
+                                {theme.name}
+                            </button>
+                        {/each}
+                    </div>
+                {/if}
+            </div>
         </div>
     </div>
 </header>
@@ -266,6 +305,10 @@
         color: var(--color-background);
         border-color: var(--color-error);
     }
+
+    .theme-selector-wrapper {
+        position: relative;
+    }
     
     .theme-btn {
         color: var(--color-textSecondary);
@@ -288,9 +331,10 @@
         right: 0;
         margin-top: 2px;
         background-color: var(--color-backgroundSecondary);
-        border: 1px solid var(--color-border);
+        border: 1px solid var(--color-textMuted);
         z-index: 100;
-        min-width: 120px;
+        min-width: 150px;
+
     }
     
     .theme-option {
@@ -315,6 +359,20 @@
         background-color: var(--color-primary);
         color: var(--color-selectedText);
         font-weight: 600;
+    }
+
+    .theme-section-header {
+        padding: 8px 12px 4px 12px;
+        font-size: 10px;
+        font-weight: 700;
+        color: var(--color-textMuted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        user-select: none;
+    }
+
+    .theme-section-header:not(:first-child) {
+        margin-top: 8px;
     }
 </style>
 
