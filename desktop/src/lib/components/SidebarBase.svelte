@@ -25,6 +25,15 @@
   :global(.sidebar-section) {
     display: flex;
     flex-direction: column;
+    padding: 4px 0;
+    margin: -4px 0;
+    border-left: 3px solid transparent;
+    transition: all 0.15s ease;
+  }
+  
+  :global(.sidebar-section.focused) {
+    border-left-color: var(--color-primary);
+    background-color: rgba(var(--color-primary-rgb, 136, 192, 208), 0.05);
   }
 
   :global(.section-title) {
@@ -51,6 +60,13 @@
   :global(.sidebar-item:hover) {
     background-color: var(--color-hover);
     color: var(--color-text);
+  }
+  
+  :global(.sidebar-item.keyboard-focused) {
+    background-color: var(--color-hover);
+    color: var(--color-text);
+    outline: 2px solid var(--color-primary);
+    outline-offset: -2px;
   }
 
   :global(.sidebar-item.selected),

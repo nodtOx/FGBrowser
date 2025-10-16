@@ -4,31 +4,38 @@ use super::models::{PopularRepack, PopularRepackWithGame, Game};
 pub struct PopularQueries;
 
 impl PopularQueries {
-    pub fn save_popular_repack(conn: &rusqlite::Connection, url: &str, title: &str, image_url: Option<&str>, rank: i32, period: &str) -> Result<i64> {
-        // First, try to find the repack_id by URL
+    pub fn save_popular_repack(conn: &rusqlite::Connection, url: &str, _title: &str, _image_url: Option<&str>, rank: i32, period: &str) -> Result<i64> {
+        // Find the repack_id by URL - this is now REQUIRED
         let repack_id: Option<i64> = conn.query_row(
             "SELECT id FROM repacks WHERE url = ?1",
             [url],
             |row| row.get(0),
         ).ok();
         
-        // Insert or update popular repack
+        // If we don't have a repack_id, we can't save it (normalized schema requires it)
+        let repack_id = match repack_id {
+            Some(id) => id,
+            None => {
+                // Game not yet in repacks table, skip for now
+                // It will be added when the game is crawled
+                return Ok(0); // Return 0 to indicate not saved
+            }
+        };
+        
+        // Insert or update popular repack (only storing repack_id, rank, period)
         conn.execute(
-            "INSERT INTO popular_repacks (url, title, image_url, rank, period, repack_id, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, CURRENT_TIMESTAMP)
-             ON CONFLICT(url, period) DO UPDATE SET
-                title = excluded.title,
-                image_url = excluded.image_url,
+            "INSERT INTO popular_repacks (repack_id, rank, period, updated_at)
+             VALUES (?1, ?2, ?3, CURRENT_TIMESTAMP)
+             ON CONFLICT(repack_id, period) DO UPDATE SET
                 rank = excluded.rank,
-                repack_id = excluded.repack_id,
                 updated_at = CURRENT_TIMESTAMP",
-            (url, title, image_url, rank, period, repack_id),
+            (repack_id, rank, period),
         )?;
         
         // Return the ID
         let id: i64 = conn.query_row(
-            "SELECT id FROM popular_repacks WHERE url = ?1 AND period = ?2",
-            (url, period),
+            "SELECT id FROM popular_repacks WHERE repack_id = ?1 AND period = ?2",
+            (repack_id, period),
             |row| row.get(0),
         )?;
         
@@ -37,10 +44,11 @@ impl PopularQueries {
     
     pub fn get_popular_repacks(conn: &rusqlite::Connection, period: &str, limit: i32) -> Result<Vec<PopularRepack>> {
         let mut stmt = conn.prepare(
-            "SELECT id, url, title, image_url, rank, period, repack_id 
-             FROM popular_repacks 
-             WHERE period = ?1
-             ORDER BY rank ASC
+            "SELECT pr.id, r.url, r.title, r.image_url, pr.rank, pr.period, pr.repack_id 
+             FROM popular_repacks pr
+             INNER JOIN repacks r ON pr.repack_id = r.id
+             WHERE pr.period = ?1
+             ORDER BY pr.rank ASC
              LIMIT ?2"
         )?;
 
@@ -64,12 +72,13 @@ impl PopularQueries {
     pub fn get_popular_repacks_with_games(conn: &rusqlite::Connection, period: &str, limit: i32) -> Result<Vec<PopularRepackWithGame>> {
         let mut stmt = conn.prepare(
             "SELECT 
-                pr.id, pr.url, pr.title, pr.image_url, pr.rank, pr.period,
+                pr.id, r.url, r.title, r.image_url, pr.rank, pr.period,
                 r.id, r.title, r.clean_name, r.genres_tags, r.company, r.languages, 
                 r.original_size, r.repack_size, r.size, r.url, r.date, r.image_url
              FROM popular_repacks pr
-             LEFT JOIN repacks r ON pr.repack_id = r.id
+             INNER JOIN repacks r ON pr.repack_id = r.id
              WHERE pr.period = ?1
+             AND EXISTS (SELECT 1 FROM magnet_links WHERE magnet_links.repack_id = r.id)
              ORDER BY pr.rank ASC
              LIMIT ?2"
         )?;
@@ -115,25 +124,11 @@ impl PopularQueries {
         Ok(())
     }
     
-    pub fn update_popular_repack_links(conn: &rusqlite::Connection, period: Option<&str>) -> Result<usize> {
-        // Update repack_id for all popular repacks where URL matches
-        let count = if let Some(p) = period {
-            conn.execute(
-                "UPDATE popular_repacks 
-                 SET repack_id = (SELECT id FROM repacks WHERE repacks.url = popular_repacks.url)
-                 WHERE period = ?1 AND EXISTS (SELECT 1 FROM repacks WHERE repacks.url = popular_repacks.url)",
-                [p],
-            )?
-        } else {
-            conn.execute(
-                "UPDATE popular_repacks 
-                 SET repack_id = (SELECT id FROM repacks WHERE repacks.url = popular_repacks.url)
-                 WHERE EXISTS (SELECT 1 FROM repacks WHERE repacks.url = popular_repacks.url)",
-                [],
-            )?
-        };
-        
-        Ok(count)
+    pub fn update_popular_repack_links(conn: &rusqlite::Connection, _period: Option<&str>) -> Result<usize> {
+        // This function is no longer needed with the normalized schema
+        // All popular repacks are now inserted with a valid repack_id
+        // Keeping for backward compatibility but returning 0
+        Ok(0)
     }
 }
 

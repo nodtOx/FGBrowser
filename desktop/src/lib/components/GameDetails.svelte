@@ -1,15 +1,16 @@
 <script lang="ts">
     import { featureFlags } from '$lib/featureFlags';
     import { addDownload } from '$lib/stores/downloads';
-    import { copyMagnetLink, formatSize, openMagnetLink, selectedGame } from '$lib/stores/games';
+    import { formatSize, openMagnetLink, selectedGame } from '$lib/stores/games';
+    import { browseView, goBack } from '$lib/stores/navigation';
     import { invoke } from '@tauri-apps/api/core';
+    import { onDestroy } from 'svelte';
     
-    async function handleOpenMagnet(magnet: string) {
-        await openMagnetLink(magnet);
-    }
+    let selectedMagnetIndex = 0;
     
-    async function handleCopyMagnet(magnet: string) {
-        await copyMagnetLink(magnet);
+    // Reset selection when game changes
+    $: if ($selectedGame) {
+        selectedMagnetIndex = 0;
     }
     
     async function handleDownload(magnet: string) {
@@ -32,11 +33,71 @@
             alert('Failed to start download: ' + error);
         }
     }
+    
+    async function handleOpenMagnet(magnet: string) {
+        await openMagnetLink(magnet);
+    }
+    
+    function handleKeydown(event: KeyboardEvent) {
+        // Check if we're typing in an input field
+        const target = event.target as HTMLElement;
+        const isTyping = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+        
+        // Handle back navigation
+        if (event.key === 'Escape' || event.key === 'Backspace') {
+            if (!isTyping) {
+                event.preventDefault();
+                goBack();
+                return;
+            }
+        }
+        
+        if (isTyping || !$selectedGame || $selectedGame.magnet_links.length === 0) {
+            return;
+        }
+        
+        const magnetCount = $selectedGame.magnet_links.length;
+        
+        // Navigate between magnet links with arrow keys
+        if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            selectedMagnetIndex = selectedMagnetIndex > 0 ? selectedMagnetIndex - 1 : magnetCount - 1;
+        } else if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            selectedMagnetIndex = selectedMagnetIndex < magnetCount - 1 ? selectedMagnetIndex + 1 : 0;
+        }
+        // Press Enter to download/open the selected magnet link
+        else if (event.key === 'Enter') {
+            event.preventDefault();
+            const selectedMagnet = $selectedGame.magnet_links[selectedMagnetIndex].magnet;
+            if (featureFlags.torrentClient) {
+                handleDownload(selectedMagnet);
+            } else {
+                handleOpenMagnet(selectedMagnet);
+            }
+        }
+    }
+    
+    // Only add keyboard listener when in details view
+    $: {
+        if ($browseView === 'details' && $selectedGame) {
+            window.addEventListener('keydown', handleKeydown);
+        } else {
+            window.removeEventListener('keydown', handleKeydown);
+        }
+    }
+    
+    onDestroy(() => {
+        window.removeEventListener('keydown', handleKeydown);
+    });
 </script>
 
 <div class="details-panel">
     {#if $selectedGame}
         <div class="details-header">
+            <button class="back-button" on:click={goBack} title="Go back (Esc or Backspace)">
+                ← Back
+            </button>
             <h2 class="game-title">{$selectedGame.title}</h2>
         </div>
         
@@ -93,35 +154,38 @@
             {#if $selectedGame.magnet_links.length > 0}
                 <div class="magnets-section">
                     <h3>MAGNET LINKS ({$selectedGame.magnet_links.length}):</h3>
-                    <div class="magnet-list">
+                    <div class="magnet-table">
                         {#each $selectedGame.magnet_links as link, index}
-                            <div class="magnet-item">
-                                <span class="magnet-index">[{index + 1}]</span>
+                            <div 
+                                class="magnet-row"
+                                class:selected={index === selectedMagnetIndex}
+                                on:click={() => {
+                                    selectedMagnetIndex = index;
+                                    if (featureFlags.torrentClient) {
+                                        handleDownload(link.magnet);
+                                    } else {
+                                        handleOpenMagnet(link.magnet);
+                                    }
+                                }}
+                                on:keydown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+                                        selectedMagnetIndex = index;
+                                        if (featureFlags.torrentClient) {
+                                            handleDownload(link.magnet);
+                                        } else {
+                                            handleOpenMagnet(link.magnet);
+                                        }
+                                    }
+                                }}
+                                role="button"
+                                tabindex={index === selectedMagnetIndex ? 0 : -1}
+                            >
+                                <span class="magnet-index">{index + 1}</span>
                                 <span class="magnet-source">{link.source}</span>
-                                <div class="magnet-actions">
-                                    {#if featureFlags.torrentClient}
-                                    <button 
-                                        class="btn btn-download"
-                                        on:click={() => handleDownload(link.magnet)}
-                                        title="Download with built-in torrent client"
-                                    >
-                                        ⬇ Download
-                                    </button>
-                                    {/if}
-                                    <button 
-                                        class="btn btn-primary"
-                                        on:click={() => handleOpenMagnet(link.magnet)}
-                                        title="Open with external torrent client"
-                                    >
-                                        Open
-                                    </button>
-                                    <button 
-                                        class="btn btn-secondary"
-                                        on:click={() => handleCopyMagnet(link.magnet)}
-                                    >
-                                        Copy
-                                    </button>
-                                </div>
+                                <span class="magnet-hint">
+                                    {index === selectedMagnetIndex ? 'Press Enter to download' : ''}
+                                </span>
                             </div>
                         {/each}
                     </div>
@@ -141,14 +205,36 @@
         display: flex;
         flex-direction: column;
         height: 100%;
-        background-color: var(--color-backgroundSecondary);
-        border-top: 1px solid var(--color-border);
+        background-color: var(--color-background);
         overflow-y: auto;
     }
     
     .details-header {
         padding: 16px;
         border-bottom: 1px solid var(--color-border);
+        background-color: var(--color-backgroundSecondary);
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+    
+    .back-button {
+        background: none;
+        border: none;
+        color: var(--color-primary);
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        padding: 8px 12px;
+        border-radius: var(--border-radius);
+        transition: all 0.15s ease;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    
+    .back-button:hover {
+        background-color: var(--color-hover);
     }
     
     .game-title {
@@ -156,6 +242,7 @@
         font-weight: 600;
         color: var(--color-text);
         margin: 0;
+        flex: 1;
     }
     
     .details-content {
@@ -168,16 +255,16 @@
     .cover-art {
         flex-shrink: 0;
         text-align: center;
+        width: 200px;
     }
     
     .cover-art img {
-        max-width: 200px;
-        max-height: 280px;
-        width: auto;
+        width: 200px;
         height: auto;
         border: 1px solid var(--color-border);
         border-radius: 4px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        display: block;
     }
     
     .details-info {
@@ -223,74 +310,73 @@
         margin-bottom: 12px;
     }
     
-    .magnet-list {
+    .magnet-table {
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        border: 1px solid var(--color-border);
+        border-radius: var(--border-radius);
+        overflow: hidden;
     }
     
-    .magnet-item {
-        display: flex;
+    .magnet-row {
+        display: grid;
+        grid-template-columns: 40px 1fr auto;
         align-items: center;
-        gap: 12px;
-        padding: 12px;
+        gap: 16px;
+        padding: 12px 16px;
         background-color: var(--color-backgroundTertiary);
-    }
-    
-    .magnet-index {
-        color: var(--color-primary);
-        font-weight: 600;
-        min-width: 30px;
-    }
-    
-    .magnet-source {
-        flex: 1;
-        color: var(--color-text);
-    }
-    
-    .magnet-actions {
-        display: flex;
-        gap: 8px;
-    }
-    
-    .btn {
-        padding: 6px 16px;
-        border: none;
+        border-bottom: 1px solid var(--color-border);
         cursor: pointer;
-        font-size: 12px;
-        font-weight: 500;
-        transition: var(--transition);
+        transition: all 0.15s ease;
+        outline: none;
     }
     
-    .btn-primary {
+    .magnet-row:last-child {
+        border-bottom: none;
+    }
+    
+    .magnet-row:hover {
+        background-color: var(--color-hover);
+    }
+    
+    .magnet-row.selected {
         background-color: var(--color-primary);
         color: var(--color-selectedText);
     }
     
-    .btn-primary:hover {
-        opacity: 0.9;
-        transform: translateY(-1px);
+    .magnet-row:focus {
+        outline: none;
     }
     
-    .btn-download {
-        background-color: #4CAF50;
-        color: white;
+    .magnet-index {
+        color: var(--color-textSecondary);
         font-weight: 600;
+        font-size: 13px;
+        text-align: center;
     }
     
-    .btn-download:hover {
-        background-color: #45a049;
-        transform: translateY(-1px);
-    }
-    
-    .btn-secondary {
-        background-color: var(--color-secondary);
+    .magnet-row.selected .magnet-index {
         color: var(--color-selectedText);
     }
     
-    .btn-secondary:hover {
-        opacity: 0.9;
-        transform: translateY(-1px);
+    .magnet-source {
+        color: var(--color-text);
+        font-size: 14px;
+        font-weight: 500;
+    }
+    
+    .magnet-row.selected .magnet-source {
+        color: var(--color-selectedText);
+    }
+    
+    .magnet-hint {
+        color: var(--color-textSecondary);
+        font-size: 12px;
+        font-style: italic;
+    }
+    
+    .magnet-row.selected .magnet-hint {
+        color: rgba(255, 255, 255, 0.8);
     }
     
     .no-selection {

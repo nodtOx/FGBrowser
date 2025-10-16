@@ -1,9 +1,10 @@
 <script lang="ts">
     import { DISK_INFO_REFRESH_INTERVAL_MS } from '$lib/constants';
-    import { formatSpeed, totalDownloadSpeed, totalUploadSpeed } from '$lib/stores/downloads';
-    import { totalGamesCount } from '$lib/stores/games';
+    import { activeFilters, totalGamesCount } from '$lib/stores/games';
+    import { browseView, currentPage, focusedPanel } from '$lib/stores/navigation';
     import { invoke } from '@tauri-apps/api/core';
     import { onMount } from 'svelte';
+    import Kbd from './Kbd.svelte';
     
     interface DiskInfo {
         total: number;
@@ -44,7 +45,7 @@
             <span>{$totalGamesCount.toLocaleString()} games</span>
         </div>
         
-        <div class="status-item">
+        <!-- <div class="status-item">
             <i class="fas fa-download"></i>
             <span>{formatSpeed($totalDownloadSpeed)}</span>
         </div>
@@ -52,18 +53,78 @@
         <div class="status-item">
             <i class="fas fa-upload"></i>
             <span>{formatSpeed($totalUploadSpeed)}</span>
-        </div>
+        </div> -->
     </div>
     
     <div class="status-center">
         <div class="shortcuts">
-            <span class="shortcut">Search: / or Ctrl+F</span>
-            <span class="shortcut">Navigate: ↑↓</span>
+            {#if $currentPage === 'browse' && $browseView === 'details'}
+                <div class="shortcut-item">
+                    <span class="shortcut-label">Back</span>
+                    <Kbd keys="Esc" />
+                </div>
+                <div class="shortcut-item">
+                    <span class="shortcut-label">Navigate</span>
+                    <Kbd keys="Up" />
+                    <Kbd keys="Down" />
+                </div>
+                <div class="shortcut-item">
+                    <span class="shortcut-label">Download</span>
+                    <Kbd keys="Enter" />
+                </div>
+            {:else if $currentPage === 'browse'}
+                <div class="shortcut-item">
+                    <span class="shortcut-label">Navigate</span>
+                    <Kbd keys="Up" />
+                    <Kbd keys="Down" />
+                </div>
+                {#if $focusedPanel === 'gamelist' || $focusedPanel === 'categories'}
+                <div class="shortcut-item">
+                    <span class="shortcut-label">Jump</span>
+                    <Kbd keys="PgUp" />
+                    <Kbd keys="PgDn" />
+                </div>
+                {/if}
+                <div class="shortcut-item">
+                    <span class="shortcut-label">Switch Panel</span>
+                    <Kbd keys="Tab" />
+                </div>
+                {#if $focusedPanel === 'categories'}
+                <div class="shortcut-item">
+                    <span class="shortcut-label">Toggle All</span>
+                    <Kbd keys="M" />
+                </div>
+                {/if}
+                {#if $focusedPanel === 'gamelist'}
+                <div class="shortcut-item">
+                    <span class="shortcut-label">Open</span>
+                    <Kbd keys="Enter" />
+                </div>
+                {:else if $focusedPanel !== 'search'}
+                <div class="shortcut-item">
+                    <span class="shortcut-label">Toggle</span>
+                    <Kbd keys="Enter" />
+                </div>
+                {/if}
+                {#if $activeFilters.length > 0}
+                <div class="shortcut-item">
+                    <span class="shortcut-label">Clear All</span>
+                    <Kbd keys="C" />
+                </div>
+                {/if}
+            {/if}
+        
+            <div class="shortcut-item">
+                <span class="shortcut-label">Navigate Tabs</span>
+                <Kbd keys={['Mod', '[']} />
+                <Kbd keys={['Mod', ']']} />
+            </div>
+        
         </div>
     </div>
     
     <div class="status-right">
-        <div class="status-item">
+        <div class="status-item free-disk-space">
             <i class="fas fa-hdd"></i>
             <span>Free: {formatBytes(diskInfo.free)}</span>
         </div>
@@ -111,22 +172,26 @@
     
     .status-item i {
         color: var(--color-textSecondary);
-        font-size: calc(var(--base-font-size) * 0.8);
+        /* font-size: calc(var(--base-font-size) * 0.8); */
         width: 14px;
         text-align: center;
     }
     
     .shortcuts {
         display: flex;
-        gap: 16px;
+        gap: 20px;
         align-items: center;
     }
     
-    .shortcut {
+    .shortcut-item {
         display: flex;
         align-items: center;
+        gap: 6px;
+    }
+    
+    .shortcut-label {
         color: var(--color-textSecondary);
-        font-size: calc(var(--base-font-size) * 0.8);
+        /* font-size: calc(var(--base-font-size) * 0.8); */
         font-weight: 500;
     }
 </style>

@@ -1,6 +1,8 @@
 <script lang="ts">
     import type { CategoryWithCount } from '$lib/stores/games';
     import { activeFilters, activeSizeFilter, activeStatusFilter, activeTimeFilter, applySizeFilter, applyStatusFilter, applyTimeFilter, categories, clearAllFilters, debouncedApplyFilters, removeFilter, selectedCategories, toggleCategorySelection } from '$lib/stores/games';
+    import { focusedPanel } from '$lib/stores/navigation';
+    import { onDestroy, onMount } from 'svelte';
     import SidebarBase from './SidebarBase.svelte';
     
     // Sidebar with categories and filters
@@ -9,10 +11,34 @@
     let showAllCategories = false;
     const INITIAL_CATEGORIES_COUNT = 10;
     
+    // Track focused item index in each section
+    let focusedCategoryIndex = 0;
+    let focusedRecentIndex = 0;
+    let focusedSizeIndex = 0;
+    
+    // Element refs for scrolling
+    let categoryElements: HTMLElement[] = [];
+    let moreButtonElement: HTMLElement | null = null;
+    
+    const recentOptions = ['Today', 'This Week', 'This Month'];
+    const sizeOptions = ['< 1 GB', '1-10 GB', '10-25 GB', '25-40 GB', '40-60 GB', '> 60 GB'];
+    
+    // Scroll element into view
+    function scrollIntoView(element: HTMLElement | null) {
+        if (element) {
+            element.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+    }
+    
     // Get categories to display based on show state
     $: visibleCategories = showAllCategories 
         ? $categories 
         : $categories.slice(0, INITIAL_CATEGORIES_COUNT);
+    
+    // Calculate total items in categories section (including More button if present)
+    $: totalCategoryItems = $categories.length > INITIAL_CATEGORIES_COUNT 
+        ? visibleCategories.length + 1  // +1 for More/Less button
+        : visibleCategories.length;
     
     // Auto-apply filters when any selection changes (debounced)
     $: if ($selectedCategories || $activeTimeFilter || $activeSizeFilter || $activeStatusFilter) {
@@ -28,6 +54,7 @@
     }
     
     async function handleCategoryToggle(category: CategoryWithCount) {
+        focusedPanel.set('categories');
         toggleCategorySelection(category);
         // Categories now work with all other filters - no need to clear them
     }
@@ -37,13 +64,25 @@
     }
     
     async function selectRecent(recent: string) {
+        focusedPanel.set('recent');
         console.log('Recent filter selected:', recent);
-        await applyTimeFilter(recent);
+        // Toggle: if already selected, clear it
+        if ($activeTimeFilter === recent) {
+            await applyTimeFilter('');
+        } else {
+            await applyTimeFilter(recent);
+        }
     }
     
     async function selectSize(size: string) {
+        focusedPanel.set('size');
         console.log('Size filter selected:', size);
-        await applySizeFilter(size);
+        // Toggle: if already selected, clear it
+        if ($activeSizeFilter === size) {
+            await applySizeFilter('');
+        } else {
+            await applySizeFilter(size);
+        }
     }
     
     async function selectStatus(status: string) {
@@ -57,6 +96,105 @@
             action();
         }
     }
+    
+    // Handle keyboard navigation within focused panels
+    function handlePanelKeydown(e: KeyboardEvent) {
+        const panel = $focusedPanel;
+        
+        // Clear all filters with 'c' key (when not typing)
+        const target = e.target as HTMLElement;
+        const isTyping = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+        
+        if ((e.key === 'c' || e.key === 'C') && !isTyping && !e.ctrlKey && !e.metaKey) {
+            if ($activeFilters.length > 0) {
+                e.preventDefault();
+                handleClearAll();
+                return;
+            }
+        }
+        
+        if (panel === 'categories') {
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                focusedCategoryIndex = focusedCategoryIndex > 0 ? focusedCategoryIndex - 1 : totalCategoryItems - 1;
+                // Scroll to focused item
+                if (focusedCategoryIndex === visibleCategories.length) {
+                    scrollIntoView(moreButtonElement);
+                } else {
+                    scrollIntoView(categoryElements[focusedCategoryIndex]);
+                }
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                focusedCategoryIndex = focusedCategoryIndex < totalCategoryItems - 1 ? focusedCategoryIndex + 1 : 0;
+                // Scroll to focused item
+                if (focusedCategoryIndex === visibleCategories.length) {
+                    scrollIntoView(moreButtonElement);
+                } else {
+                    scrollIntoView(categoryElements[focusedCategoryIndex]);
+                }
+            } else if (e.key === 'PageUp') {
+                e.preventDefault();
+                focusedCategoryIndex = Math.max(0, focusedCategoryIndex - 5);
+                scrollIntoView(categoryElements[focusedCategoryIndex]);
+            } else if (e.key === 'PageDown') {
+                e.preventDefault();
+                focusedCategoryIndex = Math.min(totalCategoryItems - 1, focusedCategoryIndex + 5);
+                if (focusedCategoryIndex === visibleCategories.length) {
+                    scrollIntoView(moreButtonElement);
+                } else {
+                    scrollIntoView(categoryElements[focusedCategoryIndex]);
+                }
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                // Check if we're on the More/Less button (last item)
+                if (focusedCategoryIndex === visibleCategories.length && $categories.length > INITIAL_CATEGORIES_COUNT) {
+                    toggleShowAllCategories();
+                    // Reset to first item after toggling
+                    focusedCategoryIndex = 0;
+                } else if (visibleCategories[focusedCategoryIndex]) {
+                    handleCategoryToggle(visibleCategories[focusedCategoryIndex]);
+                }
+            } else if (e.key === 'm' || e.key === 'M') {
+                // Quick toggle with 'm' key
+                e.preventDefault();
+                if ($categories.length > INITIAL_CATEGORIES_COUNT) {
+                    toggleShowAllCategories();
+                    focusedCategoryIndex = 0;
+                }
+            }
+        } else if (panel === 'recent') {
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                focusedRecentIndex = focusedRecentIndex > 0 ? focusedRecentIndex - 1 : recentOptions.length - 1;
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                focusedRecentIndex = focusedRecentIndex < recentOptions.length - 1 ? focusedRecentIndex + 1 : 0;
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                selectRecent(recentOptions[focusedRecentIndex]);
+            }
+        } else if (panel === 'size') {
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                focusedSizeIndex = focusedSizeIndex > 0 ? focusedSizeIndex - 1 : sizeOptions.length - 1;
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                focusedSizeIndex = focusedSizeIndex < sizeOptions.length - 1 ? focusedSizeIndex + 1 : 0;
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                selectSize(sizeOptions[focusedSizeIndex]);
+            }
+        }
+    }
+    
+    // Set up keyboard event listener
+    onMount(() => {
+        window.addEventListener('keydown', handlePanelKeydown);
+    });
+    
+    onDestroy(() => {
+        window.removeEventListener('keydown', handlePanelKeydown);
+    });
 </script>
 
 <SidebarBase>
@@ -78,7 +216,7 @@
         </div>
     {/if}
     
-    <div class="sidebar-section">
+    <div class="sidebar-section" class:focused={$focusedPanel === 'categories'}>
         <div class="section-title">Categories</div>
         
         <!-- Show "All" when no filters are active -->
@@ -89,14 +227,16 @@
         {/if}
         
         <!-- Category Selection -->
-        {#each visibleCategories as category (category.id)}
+        {#each visibleCategories as category, index (category.id)}
             <div 
+                bind:this={categoryElements[index]}
                 class="sidebar-item category-item" 
                 class:selected={isCategorySelected(category)}
+                class:keyboard-focused={$focusedPanel === 'categories' && index === focusedCategoryIndex}
                 on:click={() => handleCategoryToggle(category)} 
                 on:keydown={(e) => handleKeydown(e, () => handleCategoryToggle(category))} 
                 role="button" 
-                tabindex="0"
+                tabindex="-1"
             >
                 <span class="category-name">{category.name}</span>
                 <span class="category-count">({category.game_count})</span>
@@ -107,45 +247,53 @@
         {/each}
         
         {#if $categories.length > INITIAL_CATEGORIES_COUNT}
-            <div class="sidebar-item more-button" on:click={toggleShowAllCategories} on:keydown={(e) => handleKeydown(e, toggleShowAllCategories)} role="button" tabindex="0">
+            <div 
+                bind:this={moreButtonElement}
+                class="sidebar-item more-button" 
+                class:keyboard-focused={$focusedPanel === 'categories' && focusedCategoryIndex === visibleCategories.length}
+                on:click={toggleShowAllCategories} 
+                on:keydown={(e) => handleKeydown(e, toggleShowAllCategories)} 
+                role="button" 
+                tabindex="-1"
+                title="Press 'm' to toggle or navigate with arrows and press Enter"
+            >
                 <span>{showAllCategories ? `Less (${$categories.length - INITIAL_CATEGORIES_COUNT} hidden)` : `More (${$categories.length - INITIAL_CATEGORIES_COUNT} more)`}</span>
             </div>
         {/if}
     </div>
     <div class="seperator"></div>
-    <div class="sidebar-section">
+    <div class="sidebar-section" class:focused={$focusedPanel === 'recent'}>
         <div class="section-title">Recent</div>
-        <div class="sidebar-item" class:active={$activeTimeFilter === 'Today'} on:click={() => selectRecent('Today')} on:keydown={(e) => handleKeydown(e, () => selectRecent('Today'))} role="button" tabindex="0">
-            <span>Today</span>
-        </div>
-        <div class="sidebar-item" class:active={$activeTimeFilter === 'This Week'} on:click={() => selectRecent('This Week')} on:keydown={(e) => handleKeydown(e, () => selectRecent('This Week'))} role="button" tabindex="0">
-            <span>This Week</span>
-        </div>
-        <div class="sidebar-item" class:active={$activeTimeFilter === 'This Month'} on:click={() => selectRecent('This Month')} on:keydown={(e) => handleKeydown(e, () => selectRecent('This Month'))} role="button" tabindex="0">
-            <span>This Month</span>
-        </div>
+        {#each recentOptions as option, index}
+            <div 
+                class="sidebar-item" 
+                class:active={$activeTimeFilter === option} 
+                class:keyboard-focused={$focusedPanel === 'recent' && index === focusedRecentIndex}
+                on:click={() => selectRecent(option)} 
+                on:keydown={(e) => handleKeydown(e, () => selectRecent(option))} 
+                role="button" 
+                tabindex="-1"
+            >
+                <span>{option}</span>
+            </div>
+        {/each}
     </div>
     <div class="seperator"></div>
-    <div class="sidebar-section">
+    <div class="sidebar-section" class:focused={$focusedPanel === 'size'}>
         <div class="section-title">Size</div>
-        <div class="sidebar-item" class:active={$activeSizeFilter === '< 1 GB'} on:click={() => selectSize('< 1 GB')} on:keydown={(e) => handleKeydown(e, () => selectSize('< 1 GB'))} role="button" tabindex="0">
-            <span>{'<'} 1 GB</span>
-        </div>
-        <div class="sidebar-item" class:active={$activeSizeFilter === '1-10 GB'} on:click={() => selectSize('1-10 GB')} on:keydown={(e) => handleKeydown(e, () => selectSize('1-10 GB'))} role="button" tabindex="0">
-            <span>1-10 GB</span>
-        </div>
-        <div class="sidebar-item" class:active={$activeSizeFilter === '10-25 GB'} on:click={() => selectSize('10-25 GB')} on:keydown={(e) => handleKeydown(e, () => selectSize('10-25 GB'))} role="button" tabindex="0">
-            <span>10-25 GB</span>
-        </div>
-        <div class="sidebar-item" class:active={$activeSizeFilter === '25-40 GB'} on:click={() => selectSize('25-40 GB')} on:keydown={(e) => handleKeydown(e, () => selectSize('25-40 GB'))} role="button" tabindex="0">
-            <span>25-40 GB</span>
-        </div>
-        <div class="sidebar-item" class:active={$activeSizeFilter === '40-60 GB'} on:click={() => selectSize('40-60 GB')} on:keydown={(e) => handleKeydown(e, () => selectSize('40-60 GB'))} role="button" tabindex="0">
-            <span>40-60 GB</span>
-        </div>
-        <div class="sidebar-item" class:active={$activeSizeFilter === '> 60 GB'} on:click={() => selectSize('> 60 GB')} on:keydown={(e) => handleKeydown(e, () => selectSize('> 60 GB'))} role="button" tabindex="0">
-            <span>{'>'} 60 GB</span>
-        </div>
+        {#each sizeOptions as option, index}
+            <div 
+                class="sidebar-item" 
+                class:active={$activeSizeFilter === option} 
+                class:keyboard-focused={$focusedPanel === 'size' && index === focusedSizeIndex}
+                on:click={() => selectSize(option)} 
+                on:keydown={(e) => handleKeydown(e, () => selectSize(option))} 
+                role="button" 
+                tabindex="-1"
+            >
+                <span>{option}</span>
+            </div>
+        {/each}
     </div>
     
     
