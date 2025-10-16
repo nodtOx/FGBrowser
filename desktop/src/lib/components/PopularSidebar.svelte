@@ -1,11 +1,12 @@
 <script lang="ts">
   import SidebarBase from './SidebarBase.svelte';
 
-  export let selectedPeriod: 'month' | 'year' = 'month';
+  export let selectedPeriod: 'month' | 'year' | 'award' = 'month';
   export let monthlyCount: number = 0;
   export let yearlyCount: number = 0;
+  export let awardCount: number = 0;
 
-  function selectPeriod(period: 'month' | 'year') {
+  function selectPeriod(period: 'month' | 'year' | 'award') {
     selectedPeriod = period;
   }
 
@@ -43,6 +44,18 @@
     >
       <span class="filter-name">This Year</span>
       <span class="filter-count">{yearlyCount}</span>
+    </div>
+
+    <div
+      class="sidebar-item"
+      class:selected={selectedPeriod === 'award'}
+      on:click={() => selectPeriod('award')}
+      on:keydown={(e) => handleKeydown(e, () => selectPeriod('award'))}
+      role="button"
+      tabindex="0"
+    >
+      <span class="filter-name">Pink Paw Award</span>
+      <span class="filter-count">{awardCount}</span>
     </div>
   </div>
 

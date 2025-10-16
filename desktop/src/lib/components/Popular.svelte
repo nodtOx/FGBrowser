@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { POPULAR_MONTHLY_LIMIT, POPULAR_REFRESH_INTERVAL_MS, POPULAR_YEARLY_LIMIT } from '$lib/constants';
+  import { POPULAR_FETCH_LIMIT, POPULAR_REFRESH_INTERVAL_MS } from '$lib/constants';
   import { formatSize, isCrawlingPopular, selectedGame } from '$lib/stores/games';
   import { openGameDetails } from '$lib/stores/navigation';
   import { invoke } from '@tauri-apps/api/core';
@@ -34,18 +34,29 @@
   let isLoading = true;
   let error = '';
   let refreshInterval: any;
-  let selectedPeriod: 'month' | 'year' = 'month';
+  let selectedPeriod: 'month' | 'year' | 'award' = 'month';
+  let mounted = false;
+  
+  // Track counts for each period
+  let monthCount = 0;
+  let yearCount = 0;
+  let awardCount = 0;
 
   async function loadPopularRepacks() {
     try {
       isLoading = true;
       error = '';
-      const limit = selectedPeriod === 'month' ? POPULAR_MONTHLY_LIMIT : POPULAR_YEARLY_LIMIT;
+      // Fetch all games for the period (no artificial limit)
       popularRepacks = await invoke<PopularRepackWithGame[]>('get_popular_repacks_with_games', { 
         period: selectedPeriod, 
-        limit 
+        limit: POPULAR_FETCH_LIMIT 
       });
       console.log(`Loaded ${popularRepacks.length} popular repacks (${selectedPeriod}) with game data`);
+      
+      // Update the count for the current period
+      if (selectedPeriod === 'month') monthCount = popularRepacks.length;
+      else if (selectedPeriod === 'year') yearCount = popularRepacks.length;
+      else if (selectedPeriod === 'award') awardCount = popularRepacks.length;
     } catch (err) {
       console.error('Failed to load popular repacks:', err);
       error = 'Failed to load popular repacks. Try running the crawler first.';
@@ -55,8 +66,8 @@
     }
   }
   
-  function switchPeriod(period: 'month' | 'year') {
-    selectedPeriod = period;
+  // Reactive statement: reload when period changes (but not on initial mount)
+  $: if (mounted && selectedPeriod) {
     loadPopularRepacks();
   }
 
@@ -95,8 +106,37 @@
     stopAutoRefresh();
   }
 
-  onMount(() => {
-    loadPopularRepacks();
+  onMount(async () => {
+    // Load all counts on mount (fetch all games for each period)
+    try {
+      const monthlyRepacks = await invoke<PopularRepackWithGame[]>('get_popular_repacks_with_games', { 
+        period: 'month', 
+        limit: POPULAR_FETCH_LIMIT 
+      });
+      monthCount = monthlyRepacks.length;
+      
+      const yearlyRepacks = await invoke<PopularRepackWithGame[]>('get_popular_repacks_with_games', { 
+        period: 'year', 
+        limit: POPULAR_FETCH_LIMIT 
+      });
+      yearCount = yearlyRepacks.length;
+      
+      const awardRepacks = await invoke<PopularRepackWithGame[]>('get_popular_repacks_with_games', { 
+        period: 'award', 
+        limit: POPULAR_FETCH_LIMIT 
+      });
+      awardCount = awardRepacks.length;
+      
+      console.log(`Loaded counts: month=${monthCount}, year=${yearCount}, award=${awardCount}`);
+    } catch (err) {
+      console.warn('Failed to load all counts:', err);
+    }
+    
+    // Load the selected period's data
+    await loadPopularRepacks();
+    
+    // Now enable the reactive statement for future period changes
+    mounted = true;
   });
   
   onDestroy(() => {
@@ -108,16 +148,23 @@
   <div class="popular-layout">
     <PopularSidebar 
       bind:selectedPeriod 
-      monthlyCount={selectedPeriod === 'month' ? popularRepacks.length : POPULAR_MONTHLY_LIMIT}
-      yearlyCount={selectedPeriod === 'year' ? popularRepacks.length : POPULAR_YEARLY_LIMIT}
+      monthlyCount={monthCount}
+      yearlyCount={yearCount}
+      awardCount={awardCount}
     />
 
     <div class="popular-main">
       <div class="popular-header">
         <h1>
-          {selectedPeriod === 'month' ? 'Most Popular Repacks of the Month' : 'Most Popular Repacks of the Year'}
+          {selectedPeriod === 'month' ? 'Most Popular Repacks of the Month' : 
+           selectedPeriod === 'year' ? 'Most Popular Repacks of the Year' : 
+           'Games with Pink Paw Award'}
         </h1>
-        <p class="subtitle">Top {popularRepacks.length} most downloaded games</p>
+        <p class="subtitle">
+          {selectedPeriod === 'award' ? 
+            `${popularRepacks.length} games with exceptional audio/graphics/gameplay design` :
+            `Top ${popularRepacks.length} most downloaded games`}
+        </p>
       </div>
 
   {#if $isCrawlingPopular}

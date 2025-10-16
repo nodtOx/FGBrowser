@@ -114,10 +114,11 @@
   
   async function loadPopularRepacks() {
     try {
-      // Load both month and year popular repacks from database
-      const monthlyRepacks = await invoke<any[]>('get_popular_repacks', { period: 'month', limit: 50 });
-      const yearlyRepacks = await invoke<any[]>('get_popular_repacks', { period: 'year', limit: 150 });
-      console.log(`Loaded ${monthlyRepacks.length} monthly + ${yearlyRepacks.length} yearly popular repacks from database`);
+      // Load all three periods from database (fetch all available games)
+      const monthlyRepacks = await invoke<any[]>('get_popular_repacks', { period: 'month', limit: 9999 });
+      const yearlyRepacks = await invoke<any[]>('get_popular_repacks', { period: 'year', limit: 9999 });
+      const awardRepacks = await invoke<any[]>('get_popular_repacks', { period: 'award', limit: 9999 });
+      console.log(`Loaded ${monthlyRepacks.length} monthly + ${yearlyRepacks.length} yearly + ${awardRepacks.length} award popular repacks from database`);
       // TODO: Store in a store for UI display
     } catch (error) {
       console.warn('No popular repacks in database yet');
@@ -175,39 +176,47 @@
       console.log('🌟 POPULAR REPACKS UPDATE STARTED');
       console.log('='.repeat(60));
       
-      // Fetch both monthly and yearly
-      console.log('Step 1/4: Fetching monthly popular repacks from website...');
+      // Fetch all three periods: monthly, yearly, and award
+      console.log('Step 1/6: Fetching monthly popular repacks from website...');
       const monthCount = await invoke<number>('fetch_popular_repacks', { period: 'month' });
       console.log(`  ✅ Saved ${monthCount} monthly popular repacks`);
       
-      console.log('Step 2/4: Fetching yearly popular repacks from website...');
+      console.log('Step 2/6: Fetching yearly popular repacks from website...');
       const yearCount = await invoke<number>('fetch_popular_repacks', { period: 'year' });
       console.log(`  ✅ Saved ${yearCount} yearly popular repacks`);
       
-      console.log('Step 3/4: Crawling full game data for popular games...');
+      console.log('Step 3/6: Fetching Pink Paw Award games from website...');
+      const awardCount = await invoke<number>('fetch_popular_repacks', { period: 'award' });
+      console.log(`  ✅ Saved ${awardCount} Pink Paw Award games`);
+      
+      console.log('Step 4/6: Crawling full game data for popular games...');
       
       // Set crawling state
       isCrawlingPopular.set(true);
-      const totalCount = monthCount + yearCount;
+      const totalCount = monthCount + yearCount + awardCount;
       popularCrawlProgress.set({ crawled: 0, total: totalCount });
       
-      // Crawl both periods (this may take a while)
+      // Crawl all three periods (this may take a while)
       const monthCrawled = await invoke<number>('crawl_popular_games', { period: 'month' });
       console.log(`  ✅ Crawled ${monthCrawled} new monthly popular games`);
       
       const yearCrawled = await invoke<number>('crawl_popular_games', { period: 'year' });
       console.log(`  ✅ Crawled ${yearCrawled} new yearly popular games`);
       
+      const awardCrawled = await invoke<number>('crawl_popular_games', { period: 'award' });
+      console.log(`  ✅ Crawled ${awardCrawled} new Pink Paw Award games`);
+      
       // Clear crawling state
       isCrawlingPopular.set(false);
       
-      console.log('Step 4/4: Reloading popular repacks into UI...');
+      console.log('Step 5/6: Reloading popular repacks into UI...');
       await loadPopularRepacks();
       console.log('  ✅ UI updated');
       
+      console.log('Step 6/6: Complete');
       console.log('='.repeat(60));
       console.log('🎉 POPULAR REPACKS UPDATE COMPLETED');
-      console.log(`   Total: ${monthCrawled + yearCrawled} games crawled`);
+      console.log(`   Total: ${monthCrawled + yearCrawled + awardCrawled} games crawled`);
       console.log('='.repeat(60) + '\n');
     } catch (error) {
       console.error('❌ Failed to fetch popular repacks:', error);
