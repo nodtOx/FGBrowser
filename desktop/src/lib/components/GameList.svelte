@@ -72,7 +72,12 @@
             class="game-item"
             class:selected={index === $selectedIndex}
             on:click={(e) => handleGameClick(index, e)}
-            on:keydown={(e) => e.key === 'Enter' && handleGameClick(index, e as any)}
+            on:keydown={(e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleGameClick(index, e as any);
+                }
+            }}
             role="button"
             tabindex={index === $selectedIndex ? 0 : -1}
         >

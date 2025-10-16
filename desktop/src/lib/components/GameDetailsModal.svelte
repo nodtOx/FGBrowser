@@ -1,6 +1,7 @@
 <script lang="ts">
     import { selectedGame } from '$lib/stores/games';
     import { closeGameDetails, showGameDetails } from '$lib/stores/navigation';
+    import { onDestroy } from 'svelte';
     import GameDetails from './GameDetails.svelte';
 
     function handleBackdropClick(event: MouseEvent) {
@@ -10,10 +11,32 @@
     }
 
     function handleKeydown(event: KeyboardEvent) {
+        // Check if user is typing in an input field
+        const target = event.target as HTMLElement;
+        const isTyping = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+        
+        // Don't close modal with Backspace if user is typing (but allow Escape)
         if (event.key === 'Escape') {
+            event.preventDefault();
+            closeGameDetails();
+        } else if (event.key === 'Backspace' && !isTyping) {
+            event.preventDefault();
             closeGameDetails();
         }
     }
+
+    // Add/remove event listener based on modal visibility
+    $: {
+        if ($showGameDetails) {
+            window.addEventListener('keydown', handleKeydown);
+        } else {
+            window.removeEventListener('keydown', handleKeydown);
+        }
+    }
+
+    onDestroy(() => {
+        window.removeEventListener('keydown', handleKeydown);
+    });
 </script>
 
 {#if $showGameDetails && $selectedGame}
@@ -21,7 +44,6 @@
     <div 
         class="modal-backdrop" 
         on:click={handleBackdropClick}
-        on:keydown={handleKeydown}
     >
         <div class="modal-content">
             <div class="modal-header">

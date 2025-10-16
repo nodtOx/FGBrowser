@@ -47,12 +47,12 @@
     }
     
     function handleKeydown(e: KeyboardEvent, gameIndex: number) {
-        if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            handleGameClick(gameIndex, e as any);
-        } else if (e.key === 'Enter' && e.shiftKey) {
+        if (e.key === ' ') {
             e.preventDefault();
             handleGameDoubleClick(gameIndex, e as any);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            handleGameClick(gameIndex, e as any);
         }
     }
     

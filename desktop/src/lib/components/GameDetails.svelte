@@ -1,16 +1,9 @@
 <script lang="ts">
     import { featureFlags } from '$lib/featureFlags';
     import { addDownload } from '$lib/stores/downloads';
-    import { copyMagnetLink, formatSize, openMagnetLink, selectedGame } from '$lib/stores/games';
+    import { formatSize, openMagnetLink, selectedGame } from '$lib/stores/games';
     import { invoke } from '@tauri-apps/api/core';
-    
-    async function handleOpenMagnet(magnet: string) {
-        await openMagnetLink(magnet);
-    }
-    
-    async function handleCopyMagnet(magnet: string) {
-        await copyMagnetLink(magnet);
-    }
+    import { onDestroy } from 'svelte';
     
     async function handleDownload(magnet: string) {
         if (!$selectedGame) return;
@@ -32,6 +25,45 @@
             alert('Failed to start download: ' + error);
         }
     }
+    
+    async function handleOpenMagnet(magnet: string) {
+        await openMagnetLink(magnet);
+    }
+    
+    function handleKeydown(event: KeyboardEvent) {
+        // Check if we're typing in an input field
+        const target = event.target as HTMLElement;
+        const isTyping = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+        
+        if (isTyping || !$selectedGame || $selectedGame.magnet_links.length === 0) {
+            return;
+        }
+        
+        const firstMagnet = $selectedGame.magnet_links[0].magnet;
+        
+        // Press 'd' or 'Enter' to download/open the first magnet link
+        if (event.key === 'd' || event.key === 'Enter') {
+            event.preventDefault();
+            if (featureFlags.torrentClient) {
+                handleDownload(firstMagnet);
+            } else {
+                handleOpenMagnet(firstMagnet);
+            }
+        }
+    }
+    
+    // Add keyboard listener when component mounts
+    $: {
+        if ($selectedGame) {
+            window.addEventListener('keydown', handleKeydown);
+        } else {
+            window.removeEventListener('keydown', handleKeydown);
+        }
+    }
+    
+    onDestroy(() => {
+        window.removeEventListener('keydown', handleKeydown);
+    });
 </script>
 
 <div class="details-panel">
@@ -103,24 +135,19 @@
                                     <button 
                                         class="btn btn-download"
                                         on:click={() => handleDownload(link.magnet)}
-                                        title="Download with built-in torrent client"
+                                        title="Download with built-in torrent client{index === 0 ? ' (d or Enter)' : ''}"
                                     >
-                                        ⬇ Download
+                                        Download Torrent
                                     </button>
-                                    {/if}
+                                    {:else}
                                     <button 
                                         class="btn btn-primary"
                                         on:click={() => handleOpenMagnet(link.magnet)}
-                                        title="Open with external torrent client"
+                                        title="Open in your default torrent client{index === 0 ? ' (d or Enter)' : ''}"
                                     >
-                                        Open
+                                        Download Torrent
                                     </button>
-                                    <button 
-                                        class="btn btn-secondary"
-                                        on:click={() => handleCopyMagnet(link.magnet)}
-                                    >
-                                        Copy
-                                    </button>
+                                    {/if}
                                 </div>
                             </div>
                         {/each}
@@ -168,16 +195,16 @@
     .cover-art {
         flex-shrink: 0;
         text-align: center;
+        width: 200px;
     }
     
     .cover-art img {
-        max-width: 200px;
-        max-height: 280px;
-        width: auto;
+        width: 200px;
         height: auto;
         border: 1px solid var(--color-border);
         border-radius: 4px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        display: block;
     }
     
     .details-info {
@@ -254,12 +281,14 @@
     }
     
     .btn {
-        padding: 6px 16px;
+        padding: 8px 16px;
         border: none;
+        border-radius: var(--border-radius);
         cursor: pointer;
-        font-size: 12px;
+        font-size: 13px;
         font-weight: 500;
-        transition: var(--transition);
+        transition: all 0.15s ease;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
     }
     
     .btn-primary {
@@ -268,8 +297,7 @@
     }
     
     .btn-primary:hover {
-        opacity: 0.9;
-        transform: translateY(-1px);
+        background-color: color-mix(in srgb, var(--color-primary) 80%, white 40%);
     }
     
     .btn-download {
@@ -280,17 +308,6 @@
     
     .btn-download:hover {
         background-color: #45a049;
-        transform: translateY(-1px);
-    }
-    
-    .btn-secondary {
-        background-color: var(--color-secondary);
-        color: var(--color-selectedText);
-    }
-    
-    .btn-secondary:hover {
-        opacity: 0.9;
-        transform: translateY(-1px);
     }
     
     .no-selection {
