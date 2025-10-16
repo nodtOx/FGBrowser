@@ -335,7 +335,7 @@
         background-color: #ff1493;
         color: var(--color-background);
         border-color: #ff1493;
-        transform: translateY(-1px);
+        
     }
 
     .theme-selector-wrapper {
