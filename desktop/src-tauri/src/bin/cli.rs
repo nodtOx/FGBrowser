@@ -72,7 +72,7 @@ enum Commands {
 
     /// Update popular repacks
     Popular {
-        /// Period: "month", "year", "award", "both" (month+year), or "all" (month+year+award)
+        /// Period: "week", "today", "month", "year", "award", "both" (month+year), or "all" (all periods)
         #[arg(short, long, default_value = "both")]
         period: String,
     },
@@ -171,7 +171,7 @@ async fn update_popular(db: &Database, db_path: &PathBuf, period: &str, verbose:
     
     let periods: Vec<&str> = match period {
         "both" => vec!["month", "year"],
-        "all" => vec!["month", "year", "award"],
+        "all" => vec!["week", "today", "month", "year", "award"],
         _ => vec![period],
     };
 

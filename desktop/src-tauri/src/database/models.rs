@@ -133,6 +133,8 @@ pub struct AppSettings {
     pub refresh_interval: i32,
 
     // Popular last viewed timestamps (ISO 8601 strings)
+    pub popular_week_last_viewed: Option<String>,
+    pub popular_today_last_viewed: Option<String>,
     pub popular_month_last_viewed: Option<String>,
     pub popular_year_last_viewed: Option<String>,
     pub popular_award_last_viewed: Option<String>,
