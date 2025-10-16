@@ -1,6 +1,6 @@
 <script lang="ts">
     import { DISK_INFO_REFRESH_INTERVAL_MS } from '$lib/constants';
-    import { totalGamesCount } from '$lib/stores/games';
+    import { activeFilters, totalGamesCount } from '$lib/stores/games';
     import { browseView, currentPage, focusedPanel } from '$lib/stores/navigation';
     import { invoke } from '@tauri-apps/api/core';
     import { onMount } from 'svelte';
@@ -102,8 +102,14 @@
                 </div>
                 {:else if $focusedPanel !== 'search'}
                 <div class="shortcut-item">
-                    <span class="shortcut-label">Select</span>
+                    <span class="shortcut-label">Toggle</span>
                     <Kbd keys="Enter" />
+                </div>
+                {/if}
+                {#if $activeFilters.length > 0}
+                <div class="shortcut-item">
+                    <span class="shortcut-label">Clear All</span>
+                    <Kbd keys="C" />
                 </div>
                 {/if}
             {/if}

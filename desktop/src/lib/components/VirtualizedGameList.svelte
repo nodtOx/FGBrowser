@@ -34,6 +34,7 @@
     }
     
     async function handleGameClick(gameIndex: number, event: MouseEvent) {
+        focusedPanel.set('gamelist');
         await selectGame(startIndex + gameIndex);
         // Remove focus from clicked element to prevent residual focus state
         (event.currentTarget as HTMLElement).blur();
@@ -128,6 +129,7 @@
             bind:value={$searchQuery}
             on:input={handleSearch}
             on:keydown={handleSearchKeydown}
+            on:focus={() => focusedPanel.set('search')}
             type="search"
             placeholder="Search games... (press / to focus, Esc to clear)"
             class="search-input"

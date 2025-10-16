@@ -68,7 +68,95 @@ export const dracula: Theme = {
   },
 };
 
-export const availableThemes = [nord, dracula];
+export const tokyoNight: Theme = {
+  name: 'Tokyo Night',
+  colors: {
+    background: '#1a1b26',
+    backgroundSecondary: '#24283b',
+    backgroundTertiary: '#414868',
+    primary: '#7aa2f7',
+    secondary: '#bb9af7',
+    text: '#c0caf5',
+    textSecondary: '#a9b1d6',
+    textMuted: '#565f89',
+    border: '#3b4261',
+    hover: '#292e42',
+    selected: '#7aa2f7',
+    selectedText: '#1a1b26',
+    success: '#9ece6a',
+    warning: '#e0af68',
+    error: '#f7768e',
+    info: '#7dcfff',
+  },
+};
+
+export const gruvboxDark: Theme = {
+  name: 'Gruvbox Dark',
+  colors: {
+    background: '#282828',
+    backgroundSecondary: '#3c3836',
+    backgroundTertiary: '#504945',
+    primary: '#83a598',
+    secondary: '#d3869b',
+    text: '#ebdbb2',
+    textSecondary: '#d5c4a1',
+    textMuted: '#7c6f64',
+    border: '#504945',
+    hover: '#504945',
+    selected: '#83a598',
+    selectedText: '#282828',
+    success: '#b8bb26',
+    warning: '#fabd2f',
+    error: '#fb4934',
+    info: '#8ec07c',
+  },
+};
+
+export const gruvboxLight: Theme = {
+  name: 'Gruvbox Light',
+  colors: {
+    background: '#fbf1c7',
+    backgroundSecondary: '#ebdbb2',
+    backgroundTertiary: '#d5c4a1',
+    primary: '#076678',
+    secondary: '#8f3f71',
+    text: '#3c3836',
+    textSecondary: '#504945',
+    textMuted: '#928374',
+    border: '#d5c4a1',
+    hover: '#d5c4a1',
+    selected: '#076678',
+    selectedText: '#fbf1c7',
+    success: '#79740e',
+    warning: '#b57614',
+    error: '#cc241d',
+    info: '#427b58',
+  },
+};
+
+export const solarizedLight: Theme = {
+  name: 'Solarized Light',
+  colors: {
+    background: '#fdf6e3',
+    backgroundSecondary: '#eee8d5',
+    backgroundTertiary: '#93a1a1',
+    primary: '#268bd2',
+    secondary: '#6c71c4',
+    text: '#657b83',
+    textSecondary: '#586e75',
+    textMuted: '#93a1a1',
+    border: '#eee8d5',
+    hover: '#eee8d5',
+    selected: '#268bd2',
+    selectedText: '#fdf6e3',
+    success: '#859900',
+    warning: '#b58900',
+    error: '#dc322f',
+    info: '#2aa198',
+  },
+};
+
+export const availableThemes = [nord, dracula, tokyoNight, gruvboxDark, gruvboxLight, solarizedLight];
 
 export const currentTheme = writable<Theme>(nord);
 
