@@ -30,6 +30,7 @@ export interface AppConstants {
   popular_yearly_limit: number;
   popular_refresh_interval_ms: number;
   disk_info_refresh_interval_ms: number;
+  database_url: string;
 }
 
 // Load constants from backend (optional - use for runtime updates)
