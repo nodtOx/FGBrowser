@@ -180,6 +180,75 @@ pub fn migrate_popular_repacks_period(conn: &Connection) -> Result<()> {
     Ok(())
 }
 
+pub fn migrate_normalize_popular_repacks(conn: &Connection) -> Result<()> {
+    // Check if the table still has the redundant columns
+    let has_url: Result<i64, _> = conn.query_row(
+        "SELECT COUNT(*) FROM pragma_table_info('popular_repacks') WHERE name = 'url'",
+        [],
+        |row| row.get(0),
+    );
+    
+    match has_url {
+        Ok(count) if count > 0 => {
+            println!("🔄 Normalizing popular_repacks table to remove duplicate data...");
+            
+            // Create new normalized table
+            conn.execute(
+                "CREATE TABLE popular_repacks_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    repack_id INTEGER NOT NULL,
+                    rank INTEGER NOT NULL,
+                    period TEXT NOT NULL DEFAULT 'month',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (repack_id) REFERENCES repacks (id) ON DELETE CASCADE,
+                    UNIQUE(repack_id, period)
+                )",
+                [],
+            )?;
+            
+            // Copy data from old table (only keeping repack_id, rank, period)
+            // Only migrate records that have a valid repack_id
+            conn.execute(
+                "INSERT INTO popular_repacks_new (id, repack_id, rank, period, created_at, updated_at)
+                 SELECT id, repack_id, rank, period, created_at, updated_at 
+                 FROM popular_repacks 
+                 WHERE repack_id IS NOT NULL",
+                [],
+            )?;
+            
+            // Drop old table
+            conn.execute("DROP TABLE popular_repacks", [])?;
+            
+            // Rename new table
+            conn.execute("ALTER TABLE popular_repacks_new RENAME TO popular_repacks", [])?;
+            
+            // Create indexes
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_popular_repacks_period_rank ON popular_repacks(period, rank)",
+                [],
+            )?;
+            
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_popular_repacks_repack_id ON popular_repacks(repack_id)",
+                [],
+            )?;
+            
+            println!("✅ Migration completed! Normalized popular_repacks table");
+            println!("   - Removed duplicate columns: url, title, image_url");
+            println!("   - Data now comes from repacks table via JOIN");
+        }
+        Ok(_) => {
+            // Already normalized, do nothing
+        }
+        Err(e) => {
+            eprintln!("Warning: Could not check for url column: {}", e);
+        }
+    }
+    
+    Ok(())
+}
+
 pub fn migrate_categories_data(conn: &Connection) -> Result<()> {
     // Check if migration is needed (if categories table is empty but repacks have genres_tags)
     let categories_count: i64 = conn.query_row(
