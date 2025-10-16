@@ -901,6 +901,63 @@ pub async fn get_popular_repacks_with_games(
 }
 
 #[tauri::command]
+pub async fn get_unseen_popular_count(
+    period: String,
+    state: State<'_, AppState>,
+) -> Result<i64, String> {
+    let db_path = state.db_path.lock().unwrap().clone();
+    let db = Database::new(db_path).map_err(|e| e.to_string())?;
+    let settings = db.get_settings().map_err(|e| e.to_string())?;
+    
+    let last_viewed = match period.as_str() {
+        "month" => settings.popular_month_last_viewed.as_deref(),
+        "year" => settings.popular_year_last_viewed.as_deref(),
+        "award" => settings.popular_award_last_viewed.as_deref(),
+        _ => None,
+    };
+    
+    db.get_unseen_popular_count(&period, last_viewed).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_total_unseen_popular_count(
+    state: State<'_, AppState>,
+) -> Result<i64, String> {
+    let db_path = state.db_path.lock().unwrap().clone();
+    let db = Database::new(db_path).map_err(|e| e.to_string())?;
+    let settings = db.get_settings().map_err(|e| e.to_string())?;
+    
+    db.get_total_unseen_popular_count(
+        settings.popular_month_last_viewed.as_deref(),
+        settings.popular_year_last_viewed.as_deref(),
+        settings.popular_award_last_viewed.as_deref(),
+    ).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn mark_popular_as_viewed(
+    period: String,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let db_path = state.db_path.lock().unwrap().clone();
+    let db = Database::new(db_path).map_err(|e| e.to_string())?;
+    let mut settings = db.get_settings().map_err(|e| e.to_string())?;
+    
+    // Get current timestamp in ISO 8601 format
+    let now = chrono::Utc::now().to_rfc3339();
+    
+    // Update the appropriate timestamp
+    match period.as_str() {
+        "month" => settings.popular_month_last_viewed = Some(now),
+        "year" => settings.popular_year_last_viewed = Some(now),
+        "award" => settings.popular_award_last_viewed = Some(now),
+        _ => return Err("Invalid period".to_string()),
+    }
+    
+    db.save_settings(&settings).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub async fn update_popular_repack_links(
     period: Option<String>,
     state: State<'_, AppState>,

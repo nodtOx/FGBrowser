@@ -44,7 +44,7 @@ impl PopularQueries {
     
     pub fn get_popular_repacks(conn: &rusqlite::Connection, period: &str, limit: i32) -> Result<Vec<PopularRepack>> {
         let mut stmt = conn.prepare(
-            "SELECT pr.id, r.url, r.title, r.image_url, pr.rank, pr.period, pr.repack_id 
+            "SELECT pr.id, r.url, r.title, r.image_url, pr.rank, pr.period, pr.repack_id, pr.created_at 
              FROM popular_repacks pr
              INNER JOIN repacks r ON pr.repack_id = r.id
              WHERE pr.period = ?1
@@ -62,6 +62,7 @@ impl PopularQueries {
                     rank: row.get(4)?,
                     period: row.get(5)?,
                     repack_id: row.get(6)?,
+                    created_at: row.get(7)?,
                 })
             })?
             .collect::<Result<Vec<_>>>()?;
@@ -74,7 +75,9 @@ impl PopularQueries {
             "SELECT 
                 pr.id, r.url, r.title, r.image_url, pr.rank, pr.period,
                 r.id, r.title, r.clean_name, r.genres_tags, r.company, r.languages, 
-                r.original_size, r.repack_size, r.size, r.url, r.date, r.image_url
+                r.original_size, r.repack_size, r.size, r.url, r.date, r.image_url,
+                pr.created_at,
+                CASE WHEN julianday('now') - julianday(pr.created_at) <= 7 THEN 1 ELSE 0 END as is_new
              FROM popular_repacks pr
              INNER JOIN repacks r ON pr.repack_id = r.id
              WHERE pr.period = ?1
@@ -112,6 +115,8 @@ impl PopularQueries {
                     rank: row.get(4)?,
                     period: row.get(5)?,
                     game,
+                    created_at: row.get(18)?,
+                    is_new: row.get::<_, i32>(19)? == 1,
                 })
             })?
             .collect::<Result<Vec<_>>>()?;
@@ -129,6 +134,42 @@ impl PopularQueries {
         // All popular repacks are now inserted with a valid repack_id
         // Keeping for backward compatibility but returning 0
         Ok(0)
+    }
+
+    // Get count of unseen popular games for a period
+    pub fn get_unseen_count(conn: &rusqlite::Connection, period: &str, last_viewed: Option<&str>) -> Result<i64> {
+        let count = match last_viewed {
+            Some(timestamp) => {
+                conn.query_row(
+                    "SELECT COUNT(*) FROM popular_repacks 
+                     WHERE period = ?1 AND created_at > ?2",
+                    [period, timestamp],
+                    |row| row.get(0),
+                )?
+            }
+            None => {
+                // If never viewed, count all games
+                conn.query_row(
+                    "SELECT COUNT(*) FROM popular_repacks WHERE period = ?1",
+                    [period],
+                    |row| row.get(0),
+                )?
+            }
+        };
+        Ok(count)
+    }
+
+    // Get total unseen count across all periods
+    pub fn get_total_unseen_count(
+        conn: &rusqlite::Connection,
+        month_last_viewed: Option<&str>,
+        year_last_viewed: Option<&str>,
+        award_last_viewed: Option<&str>,
+    ) -> Result<i64> {
+        let month_count = Self::get_unseen_count(conn, "month", month_last_viewed)?;
+        let year_count = Self::get_unseen_count(conn, "year", year_last_viewed)?;
+        let award_count = Self::get_unseen_count(conn, "award", award_last_viewed)?;
+        Ok(month_count + year_count + award_count)
     }
 }
 

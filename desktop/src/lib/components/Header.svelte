@@ -6,11 +6,33 @@
     import { onMount } from 'svelte';
     
     let isDev = false;
+    let totalUnseenPopular = 0;
+    let unseenCheckInterval: any;
     
     onMount(() => {
         // Check if we're in development mode
         isDev = window.location.hostname === 'localhost' || window.location.hostname === 'tauri.localhost';
+        
+        // Load unseen count initially
+        loadUnseenPopularCount();
+        
+        // Check for unseen popular games every 30 seconds
+        unseenCheckInterval = setInterval(loadUnseenPopularCount, 30000);
+        
+        return () => {
+            if (unseenCheckInterval) {
+                clearInterval(unseenCheckInterval);
+            }
+        };
     });
+    
+    async function loadUnseenPopularCount() {
+        try {
+            totalUnseenPopular = await invoke<number>('get_total_unseen_popular_count');
+        } catch (err) {
+            console.error('Failed to load unseen popular count:', err);
+        }
+    }
     
     function handleNavClick(page: Page) {
         navigateTo(page);
@@ -64,6 +86,9 @@
                     on:click={() => handleNavClick('popular')}
                 >
                     Popular
+                    {#if totalUnseenPopular > 0}
+                        <span class="unseen-badge">{totalUnseenPopular}</span>
+                    {/if}
                 </button>
                 {#if featureFlags.torrentClient}
                 <button 
@@ -193,6 +218,27 @@
         background-color: var(--color-primary);
         
         border-bottom: none;
+    }
+
+    .nav-tab {
+        position: relative;
+    }
+
+    .unseen-badge {
+        display: inline-block;
+        background-color: var(--color-primary);
+        color: white;
+        font-size: 9px;
+        font-weight: 700;
+        padding: 2px 5px;
+        border-radius: 10px;
+        margin-left: 4px;
+        vertical-align: middle;
+    }
+
+    .nav-tab.active .unseen-badge {
+        background-color: white;
+        color: var(--color-primary);
     }
     
     .header-right {
