@@ -37,10 +37,11 @@ impl PopularQueries {
     
     pub fn get_popular_repacks(conn: &rusqlite::Connection, period: &str, limit: i32) -> Result<Vec<PopularRepack>> {
         let mut stmt = conn.prepare(
-            "SELECT id, url, title, image_url, rank, period, repack_id 
-             FROM popular_repacks 
-             WHERE period = ?1
-             ORDER BY rank ASC
+            "SELECT pr.id, pr.url, pr.title, COALESCE(pr.image_url, r.image_url) as image_url, pr.rank, pr.period, pr.repack_id 
+             FROM popular_repacks pr
+             LEFT JOIN repacks r ON pr.repack_id = r.id
+             WHERE pr.period = ?1
+             ORDER BY pr.rank ASC
              LIMIT ?2"
         )?;
 
@@ -64,7 +65,7 @@ impl PopularQueries {
     pub fn get_popular_repacks_with_games(conn: &rusqlite::Connection, period: &str, limit: i32) -> Result<Vec<PopularRepackWithGame>> {
         let mut stmt = conn.prepare(
             "SELECT 
-                pr.id, pr.url, pr.title, pr.image_url, pr.rank, pr.period,
+                pr.id, pr.url, pr.title, COALESCE(pr.image_url, r.image_url) as image_url, pr.rank, pr.period,
                 r.id, r.title, r.clean_name, r.genres_tags, r.company, r.languages, 
                 r.original_size, r.repack_size, r.size, r.url, r.date, r.image_url
              FROM popular_repacks pr
