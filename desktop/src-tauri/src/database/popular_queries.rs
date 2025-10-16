@@ -70,6 +70,7 @@ impl PopularQueries {
              FROM popular_repacks pr
              LEFT JOIN repacks r ON pr.repack_id = r.id
              WHERE pr.period = ?1
+             AND (r.id IS NULL OR EXISTS (SELECT 1 FROM magnet_links WHERE magnet_links.repack_id = r.id))
              ORDER BY pr.rank ASC
              LIMIT ?2"
         )?;
