@@ -1,6 +1,7 @@
 <script lang="ts">
     import { SEARCH_DEBOUNCE_MS } from '$lib/constants';
     import { formatSize, games, searchGames, searchQuery, selectedIndex, selectGame } from '$lib/stores/games';
+    import { focusedPanel } from '$lib/stores/navigation';
     
     let searchInput: HTMLInputElement;
     let searchTimeout: any;
@@ -71,6 +72,7 @@
         <div 
             class="game-item"
             class:selected={index === $selectedIndex}
+            class:focused-panel={$focusedPanel === 'gamelist'}
             on:click={(e) => handleGameClick(index, e)}
             on:keydown={(e) => {
                 // Keyboard shortcuts are now handled globally in keyboard.ts
@@ -159,6 +161,11 @@
     .game-item.selected {
         background-color: var(--color-primary);
         color: var(--color-selectedText);
+        opacity: 0.4;
+    }
+    
+    .game-item.selected.focused-panel {
+        opacity: 1;
     }
     
     .game-date {
@@ -170,7 +177,7 @@
         padding-right: 8px;
     }
     
-    .game-item.selected .game-date {
+    .game-item.selected.focused-panel .game-date {
         color: var(--color-selectedText);
     }
     
@@ -192,7 +199,7 @@
         padding-left: 8px;
     }
     
-    .game-item.selected .game-size {
+    .game-item.selected.focused-panel .game-size {
         color: var(--color-selectedText);
     }
 </style>

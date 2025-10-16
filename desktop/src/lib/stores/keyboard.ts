@@ -1,7 +1,15 @@
 import { featureFlags } from '$lib/featureFlags';
 import { get, writable } from 'svelte/store';
 import { moveSelection } from './games';
-import { browseView, currentPage, navigateTo, openGameDetails, type Page } from './navigation';
+import {
+  browseView,
+  currentPage,
+  cycleFocusPanel,
+  focusedPanel,
+  navigateTo,
+  openGameDetails,
+  type Page,
+} from './navigation';
 
 export const keyboardEnabled = writable<boolean>(true);
 
@@ -81,18 +89,63 @@ const globalBindings: KeyBinding[] = [
 const browseListBindings: KeyBinding[] = [
   {
     key: 'ArrowUp',
-    condition: (ctx) => !ctx.ctrl,
-    handler: () => moveSelection('up'),
+    condition: (ctx) => !ctx.ctrl && !ctx.isTyping,
+    handler: () => {
+      const panel = get(focusedPanel);
+      if (panel === 'gamelist') {
+        moveSelection('up');
+      }
+      // Other panels handle their own arrow navigation
+    },
   },
   {
     key: 'ArrowDown',
-    condition: (ctx) => !ctx.ctrl,
-    handler: () => moveSelection('down'),
+    condition: (ctx) => !ctx.ctrl && !ctx.isTyping,
+    handler: () => {
+      const panel = get(focusedPanel);
+      if (panel === 'gamelist') {
+        moveSelection('down');
+      }
+      // Other panels handle their own arrow navigation
+    },
+  },
+  {
+    key: 'PageUp',
+    condition: (ctx) => !ctx.ctrl && !ctx.isTyping,
+    handler: () => {
+      const panel = get(focusedPanel);
+      if (panel === 'gamelist') {
+        moveSelection('up', 10);
+      }
+    },
+  },
+  {
+    key: 'PageDown',
+    condition: (ctx) => !ctx.ctrl && !ctx.isTyping,
+    handler: () => {
+      const panel = get(focusedPanel);
+      if (panel === 'gamelist') {
+        moveSelection('down', 10);
+      }
+    },
   },
   {
     key: 'Enter',
     condition: (ctx) => !ctx.ctrl && !ctx.shift && !ctx.isTyping,
-    handler: () => openGameDetails(),
+    handler: () => {
+      const panel = get(focusedPanel);
+      if (panel === 'gamelist') {
+        openGameDetails();
+      }
+    },
+  },
+  {
+    key: 'Tab',
+    condition: (ctx) => !ctx.ctrl,
+    handler: (e, ctx) => {
+      e.preventDefault();
+      cycleFocusPanel(ctx.shift ? 'previous' : 'next');
+    },
   },
 ];
 

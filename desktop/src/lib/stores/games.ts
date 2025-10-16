@@ -674,17 +674,19 @@ export async function selectGame(index: number) {
 }
 
 // Navigate selection
-export async function moveSelection(direction: 'up' | 'down') {
+export async function moveSelection(direction: 'up' | 'down', pageSize: number = 1) {
   let currentIndex = 0;
   let currentGames: Game[] = [];
 
   selectedIndex.subscribe((i) => (currentIndex = i))();
   games.subscribe((g) => (currentGames = g))();
 
-  if (direction === 'up' && currentIndex > 0) {
-    await selectGame(currentIndex - 1);
-  } else if (direction === 'down' && currentIndex < currentGames.length - 1) {
-    await selectGame(currentIndex + 1);
+  if (direction === 'up') {
+    const newIndex = Math.max(0, currentIndex - pageSize);
+    await selectGame(newIndex);
+  } else if (direction === 'down') {
+    const newIndex = Math.min(currentGames.length - 1, currentIndex + pageSize);
+    await selectGame(newIndex);
   }
 }
 
