@@ -2,8 +2,10 @@
     import { DISK_INFO_REFRESH_INTERVAL_MS } from '$lib/constants';
     import { formatSpeed, totalDownloadSpeed, totalUploadSpeed } from '$lib/stores/downloads';
     import { totalGamesCount } from '$lib/stores/games';
+    import { browseView, currentPage } from '$lib/stores/navigation';
     import { invoke } from '@tauri-apps/api/core';
     import { onMount } from 'svelte';
+    import Kbd from './Kbd.svelte';
     
     interface DiskInfo {
         total: number;
@@ -57,8 +59,44 @@
     
     <div class="status-center">
         <div class="shortcuts">
-            <span class="shortcut">Search: / or Ctrl+F</span>
-            <span class="shortcut">Navigate: ↑↓</span>
+            {#if $currentPage === 'browse' && $browseView === 'details'}
+                <div class="shortcut-item">
+                    <span class="shortcut-label">Back</span>
+                    <Kbd keys="Esc" />
+                </div>
+                <div class="shortcut-item">
+                    <span class="shortcut-label">Navigate</span>
+                    <Kbd keys="Up" />
+                    <Kbd keys="Down" />
+                </div>
+                <div class="shortcut-item">
+                    <span class="shortcut-label">Download</span>
+                    <Kbd keys="Enter" />
+                </div>
+            {:else if $currentPage === 'browse'}
+                <div class="shortcut-item">
+                    <span class="shortcut-label">Search</span>
+                    <Kbd keys="/" />
+                    <span class="shortcut-divider">or</span>
+                    <Kbd keys={['Mod', 'F']} />
+                </div>
+                <div class="shortcut-item">
+                    <span class="shortcut-label">Navigate</span>
+                    <Kbd keys="Up" />
+                    <Kbd keys="Down" />
+                </div>
+                <div class="shortcut-item">
+                    <span class="shortcut-label">Open</span>
+                    <Kbd keys="Enter" />
+                </div>
+            {/if}
+        
+            <div class="shortcut-item">
+                <span class="shortcut-label">Navigate Tabs</span>
+                <Kbd keys={['Mod', '[']} />
+                <Kbd keys={['Mod', ']']} />
+            </div>
+        
         </div>
     </div>
     
@@ -111,23 +149,33 @@
     
     .status-item i {
         color: var(--color-textSecondary);
-        font-size: calc(var(--base-font-size) * 0.8);
+        /* font-size: calc(var(--base-font-size) * 0.8); */
         width: 14px;
         text-align: center;
     }
     
     .shortcuts {
         display: flex;
-        gap: 16px;
+        gap: 20px;
         align-items: center;
     }
     
-    .shortcut {
+    .shortcut-item {
         display: flex;
         align-items: center;
+        gap: 6px;
+    }
+    
+    .shortcut-label {
         color: var(--color-textSecondary);
-        font-size: calc(var(--base-font-size) * 0.8);
+        /* font-size: calc(var(--base-font-size) * 0.8); */
         font-weight: 500;
+    }
+    
+    .shortcut-divider {
+        color: var(--color-textSecondary);
+        /* font-size: calc(var(--base-font-size) * 0.75); */
+        margin: 0 2px;
     }
 </style>
 

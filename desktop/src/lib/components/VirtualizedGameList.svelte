@@ -47,13 +47,9 @@
     }
     
     function handleKeydown(e: KeyboardEvent, gameIndex: number) {
-        if (e.key === ' ') {
-            e.preventDefault();
-            handleGameDoubleClick(gameIndex, e as any);
-        } else if (e.key === 'Enter') {
-            e.preventDefault();
-            handleGameClick(gameIndex, e as any);
-        }
+        // Keyboard shortcuts are now handled globally in keyboard.ts
+        // This handler is kept for accessibility but doesn't preventDefault
+        // to allow global handlers to work
     }
     
     // Scroll to selected item when selection changes externally

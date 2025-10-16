@@ -1,14 +1,14 @@
 <script lang="ts">
   import { games, isCrawlingPopular, loadCategories, loadGames, popularCrawlProgress, totalGamesCount } from '$lib/stores/games';
   import { initKeyboardShortcuts } from '$lib/stores/keyboard';
-  import { currentPage } from '$lib/stores/navigation';
+  import { browseView, currentPage } from '$lib/stores/navigation';
   import { loadSavedTheme } from '$lib/stores/theme';
   import { invoke } from '@tauri-apps/api/core';
   import { onMount } from 'svelte';
 
   import CrawlerModal from '$lib/components/CrawlerModal.svelte';
   import Downloads from '$lib/components/Downloads.svelte';
-  import GameDetailsModal from '$lib/components/GameDetailsModal.svelte';
+  import GameDetails from '$lib/components/GameDetails.svelte';
   import Header from '$lib/components/Header.svelte';
   import Popular from '$lib/components/Popular.svelte';
   import Settings from '$lib/components/Settings.svelte';
@@ -256,8 +256,13 @@
         <div class="browse-layout">
           <Sidebar totalGames={$totalGamesCount} />
 
-          <div class="game-list-container">
-            <VirtualizedGameList />
+          <div class="main-content-area">
+            <div class="view-container" class:hidden={$browseView !== 'list'}>
+              <VirtualizedGameList />
+            </div>
+            <div class="view-container" class:hidden={$browseView !== 'details'}>
+              <GameDetails />
+            </div>
           </div>
         </div>
       </div>
@@ -284,8 +289,6 @@
     onComplete={onCrawlerComplete}
     onStart={onStartCrawl}
   />
-  
-  <GameDetailsModal />
 </div>
 
 <style>
@@ -317,11 +320,26 @@
     min-height: 0;
   }
 
-  .game-list-container {
+  .main-content-area {
     flex: 1;
     overflow: hidden;
+    position: relative;
+  }
+
+  .view-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
+  }
+
+  .view-container.hidden {
+    visibility: hidden;
+    pointer-events: none;
   }
 
   .page-placeholder {
