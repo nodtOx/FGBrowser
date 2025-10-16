@@ -61,6 +61,7 @@ impl FitGirlCrawler {
         }
     }
 
+
     fn is_blacklisted(&self, url: &str, title: &str) -> bool {
         let url_lower = url.to_lowercase();
         let title_lower = title.to_lowercase();
@@ -69,6 +70,7 @@ impl FitGirlCrawler {
             url_lower.contains(pattern) || title_lower.contains(pattern)
         })
     }
+
 
     async fn fetch_page(&self, url: &str) -> Result<String> {
         sleep(self.crawl_delay).await;
@@ -337,13 +339,53 @@ impl FitGirlCrawler {
         if period == "award" {
             PopularRepacks::parse_pink_paw_award_html(&html)
         } else {
-            PopularRepacks::parse_popular_repacks_html(&html)
+            // For month/year, apply blacklist filtering
+            let mut entries = PopularRepacks::parse_popular_repacks_html(&html)?;
+            
+            // Filter out blacklisted games for month/year periods
+            entries.retain(|entry| !is_popular_blacklisted(&entry.url));
+            
+            println!("  Filtered out {} blacklisted games", 
+                PopularRepacks::parse_popular_repacks_html(&html)?.len() - entries.len());
+            
+            Ok(entries)
         }
     }
     
     pub fn parse_popular_repacks_from_file(&self, file_path: &str) -> Result<Vec<PopularRepackEntry>> {
         PopularRepacks::parse_popular_repacks_from_file(file_path)
     }
+}
+
+// Helper functions for popular games blacklist
+fn is_popular_blacklisted(url: &str) -> bool {
+    let url_lower = url.to_lowercase();
+    let popular_blacklist = load_popular_blacklist();
+    
+    popular_blacklist.iter().any(|pattern| {
+        url_lower.contains(pattern)
+    })
+}
+
+fn load_popular_blacklist() -> Vec<String> {
+    // Hardcoded blacklist for popular games (NSFW/adult content)
+    vec![
+        "the-genesis-order".to_string(),
+        "one-more-night".to_string(),
+        "honeycome-come-come-party".to_string(),
+        "honey-select-2-libido".to_string(),
+        "gym-manager".to_string(),
+        "nymphomaniac-sex-addict".to_string(),
+        "lust-n-dead".to_string(),
+        "violet".to_string(),
+        "roomgirl-paradise".to_string(),
+        "house-party".to_string(),
+        "venus-vacation-prism-dead-or-alive-xtreme".to_string(),
+        "under-the-witch-heros-journey".to_string(),
+        "taboo-trial".to_string(),
+        "beach-club-simulator-2024".to_string(),
+        "succubus".to_string(),
+    ]
 }
 
 /// Create a crawler registry with all available sites
