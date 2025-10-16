@@ -6,6 +6,9 @@
     import { invoke } from '@tauri-apps/api/core';
     import { onDestroy } from 'svelte';
     
+    // Optional callback for custom back behavior (e.g., from Popular page)
+    export let onBack: (() => void) | undefined = undefined;
+    
     let selectedMagnetIndex = 0;
     
     // Reset selection when game changes
@@ -38,6 +41,14 @@
         await openMagnetLink(magnet);
     }
     
+    function handleBackAction() {
+        if (onBack) {
+            onBack();
+        } else {
+            goBack();
+        }
+    }
+    
     function handleKeydown(event: KeyboardEvent) {
         // Check if we're typing in an input field
         const target = event.target as HTMLElement;
@@ -47,7 +58,7 @@
         if (event.key === 'Escape' || event.key === 'Backspace') {
             if (!isTyping) {
                 event.preventDefault();
-                goBack();
+                handleBackAction();
                 return;
             }
         }
@@ -95,7 +106,7 @@
 <div class="details-panel">
     {#if $selectedGame}
         <div class="details-header">
-            <button class="back-button" on:click={goBack} title="Go back (Esc or Backspace)">
+            <button class="back-button" on:click={handleBackAction} title="Go back (Esc or Backspace)">
                 ← Back
             </button>
             <h2 class="game-title">{$selectedGame.title}</h2>

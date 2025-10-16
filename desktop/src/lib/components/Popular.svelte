@@ -1,9 +1,9 @@
 <script lang="ts">
   import { POPULAR_FETCH_LIMIT, POPULAR_REFRESH_INTERVAL_MS } from '$lib/constants';
   import { formatSize, isCrawlingPopular, selectedGame } from '$lib/stores/games';
-  import { openGameDetails } from '$lib/stores/navigation';
   import { invoke } from '@tauri-apps/api/core';
   import { onDestroy, onMount } from 'svelte';
+  import GameDetails from './GameDetails.svelte';
   import PopularSidebar from './PopularSidebar.svelte';
 
   interface Game {
@@ -38,6 +38,7 @@
   let refreshInterval: any;
   let selectedPeriod: 'month' | 'year' | 'award' = 'month';
   let mounted = false;
+  let showingDetails = false;
   
   // Track counts for each period
   let monthCount = 0;
@@ -89,11 +90,16 @@
       try {
         const details = await invoke('get_game_details', { gameId: repack.game.id });
         selectedGame.set(details as any);
-        openGameDetails();
+        showingDetails = true;
       } catch (err) {
         console.error('Failed to load game details:', err);
       }
     }
+  }
+
+  function handleBackToList() {
+    showingDetails = false;
+    selectedGame.set(null);
   }
   
   function startAutoRefresh() {
@@ -166,7 +172,9 @@
       awardCount={awardCount}
     />
 
-    <div class="popular-main">
+    <div class="popular-content-area">
+      <div class="view-container" class:hidden={showingDetails}>
+        <div class="popular-main">
       <div class="popular-header">
         <h1>
           {selectedPeriod === 'month' ? 'Most Popular Repacks of the Month' : 
@@ -244,6 +252,12 @@
       {/each}
     </div>
   {/if}
+        </div>
+      </div>
+
+      <div class="view-container" class:hidden={!showingDetails}>
+        <GameDetails onBack={handleBackToList} />
+      </div>
     </div>
   </div>
 </div>
@@ -260,6 +274,28 @@
     display: flex;
     flex: 1;
     overflow: hidden;
+  }
+
+  .popular-content-area {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .view-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .view-container.hidden {
+    visibility: hidden;
+    pointer-events: none;
   }
 
   .popular-main {
