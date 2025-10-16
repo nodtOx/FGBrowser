@@ -9,6 +9,8 @@ impl CategoryQueries {
             "SELECT c.id, c.name, COUNT(gc.repack_id) as game_count
              FROM categories c
              LEFT JOIN game_categories gc ON c.id = gc.category_id
+             LEFT JOIN repacks r ON gc.repack_id = r.id
+             WHERE gc.repack_id IS NULL OR EXISTS (SELECT 1 FROM magnet_links WHERE magnet_links.repack_id = r.id)
              GROUP BY c.id, c.name
              HAVING game_count > 0
              ORDER BY game_count DESC, c.name ASC"
@@ -49,6 +51,7 @@ impl CategoryQueries {
                  GROUP BY gc.repack_id 
                  HAVING COUNT(DISTINCT gc.category_id) = ?
              ) filtered_games ON gc.repack_id = filtered_games.repack_id
+             WHERE EXISTS (SELECT 1 FROM magnet_links WHERE magnet_links.repack_id = gc.repack_id)
              GROUP BY c.id, c.name
              HAVING game_count > 0
              ORDER BY game_count DESC, c.name ASC",
@@ -87,6 +90,7 @@ impl CategoryQueries {
              JOIN game_categories gc ON c.id = gc.category_id
              JOIN repacks r ON gc.repack_id = r.id
              WHERE r.date >= date('now', '-' || ? || ' days')
+             AND EXISTS (SELECT 1 FROM magnet_links WHERE magnet_links.repack_id = r.id)
              GROUP BY c.id, c.name
              HAVING game_count > 0
              ORDER BY game_count DESC, c.name ASC";
@@ -113,7 +117,7 @@ impl CategoryQueries {
              FROM categories c
              JOIN game_categories gc ON c.id = gc.category_id
              JOIN repacks r ON gc.repack_id = r.id
-             WHERE 1=1".to_string();
+             WHERE EXISTS (SELECT 1 FROM magnet_links WHERE magnet_links.repack_id = r.id)".to_string();
         
         let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
         
@@ -152,7 +156,8 @@ impl CategoryQueries {
              FROM categories c
              JOIN game_categories gc ON c.id = gc.category_id
              JOIN repacks r ON gc.repack_id = r.id
-             WHERE r.date >= date('now', '-' || ? || ' days')".to_string();
+             WHERE r.date >= date('now', '-' || ? || ' days')
+             AND EXISTS (SELECT 1 FROM magnet_links WHERE magnet_links.repack_id = r.id)".to_string();
         
         let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
         params.push(Box::new(days_ago));
@@ -194,7 +199,8 @@ impl CategoryQueries {
              FROM categories c
              JOIN game_categories gc ON c.id = gc.category_id
              JOIN repacks r ON gc.repack_id = r.id
-             WHERE r.title LIKE ?1 OR r.clean_name LIKE ?1
+             WHERE (r.title LIKE ?1 OR r.clean_name LIKE ?1)
+             AND EXISTS (SELECT 1 FROM magnet_links WHERE magnet_links.repack_id = r.id)
              GROUP BY c.id, c.name
              HAVING game_count > 0
              ORDER BY game_count DESC, c.name ASC"
