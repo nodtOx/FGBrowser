@@ -15,6 +15,8 @@
         "title": "desktop",
         "width": 1230,
         "height": 800,
+        "minWidth": 1000,
+        "minHeight": 600,
         "zoomHotkeysEnabled": true
       }
     ],

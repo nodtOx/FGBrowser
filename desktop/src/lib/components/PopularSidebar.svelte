@@ -3,18 +3,16 @@
   import { onMount } from 'svelte';
   import SidebarBase from './SidebarBase.svelte';
 
-  export let selectedPeriod: 'week' | 'today' | 'month' | 'year' | 'award' = 'week';
+  export let selectedPeriod: 'week' | 'today' | 'month' | 'year' = 'week';
   export let weeklyCount: number = 0;
   export let todayCount: number = 0;
   export let monthlyCount: number = 0;
   export let yearlyCount: number = 0;
-  export let awardCount: number = 0;
 
   let weekUnseen: number = 0;
   let todayUnseen: number = 0;
   let monthUnseen: number = 0;
   let yearUnseen: number = 0;
-  let awardUnseen: number = 0;
 
   onMount(async () => {
     await loadUnseenCounts();
@@ -26,13 +24,12 @@
       todayUnseen = await invoke<number>('get_unseen_popular_count', { period: 'today' });
       monthUnseen = await invoke<number>('get_unseen_popular_count', { period: 'month' });
       yearUnseen = await invoke<number>('get_unseen_popular_count', { period: 'year' });
-      awardUnseen = await invoke<number>('get_unseen_popular_count', { period: 'award' });
     } catch (err) {
       console.error('Failed to load unseen counts:', err);
     }
   }
 
-  async function selectPeriod(period: 'week' | 'today' | 'month' | 'year' | 'award') {
+  async function selectPeriod(period: 'week' | 'today' | 'month' | 'year') {
     selectedPeriod = period;
     // Reload counts after selection (will update after mark_as_viewed is called)
     setTimeout(() => loadUnseenCounts(), 500);
@@ -122,24 +119,6 @@
       </span>
       <span class="filter-count">{yearlyCount}</span>
     </div>
-
-    <div
-      class="sidebar-item"
-      class:selected={selectedPeriod === 'award'}
-      on:click={() => selectPeriod('award')}
-      on:keydown={(e) => handleKeydown(e, () => selectPeriod('award'))}
-      role="button"
-      tabindex="0"
-    >
-      <span class="filter-name">
-        Pink Paw Award
-        <span class="pink-paw-icon">🐾</span>
-        {#if awardUnseen > 0}
-          <span class="unseen-badge">{awardUnseen}</span>
-        {/if}
-      </span>
-      <span class="filter-count">{awardCount}</span>
-    </div>
   </div>
 
   
@@ -156,10 +135,6 @@
     border-radius: 10px;
     margin-left: 6px;
     vertical-align: middle;
-  }
-  .pink-paw-icon {
-    color: transparent;
-    text-shadow: 0 0 0 #ff69b4;
   }
 </style>
 

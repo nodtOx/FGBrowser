@@ -36,7 +36,7 @@
   let isLoading = true;
   let error = '';
   let refreshInterval: any;
-  let selectedPeriod: 'week' | 'today' | 'month' | 'year' | 'award' = 'month';
+  let selectedPeriod: 'week' | 'today' | 'month' | 'year' = 'month';
   let mounted = false;
   let showingDetails = false;
   
@@ -45,7 +45,6 @@
   let todayCount = 0;
   let monthCount = 0;
   let yearCount = 0;
-  let awardCount = 0;
 
   async function loadPopularRepacks() {
     try {
@@ -63,7 +62,6 @@
       else if (selectedPeriod === 'today') todayCount = popularRepacks.length;
       else if (selectedPeriod === 'month') monthCount = popularRepacks.length;
       else if (selectedPeriod === 'year') yearCount = popularRepacks.length;
-      else if (selectedPeriod === 'award') awardCount = popularRepacks.length;
     } catch (err) {
       console.error('Failed to load popular repacks:', err);
       error = 'Failed to load popular repacks. Try running the crawler first.';
@@ -156,13 +154,7 @@
       });
       yearCount = yearlyRepacks.length;
       
-      const awardRepacks = await invoke<PopularRepackWithGame[]>('get_popular_repacks_with_games', { 
-        period: 'award', 
-        limit: POPULAR_FETCH_LIMIT 
-      });
-      awardCount = awardRepacks.length;
-      
-      console.log(`Loaded counts: week=${weekCount}, today=${todayCount}, month=${monthCount}, year=${yearCount}, award=${awardCount}`);
+      console.log(`Loaded counts: week=${weekCount}, today=${todayCount}, month=${monthCount}, year=${yearCount}`);
     } catch (err) {
       console.warn('Failed to load all counts:', err);
     }
@@ -187,7 +179,6 @@
       todayCount={todayCount}
       monthlyCount={monthCount}
       yearlyCount={yearCount}
-      awardCount={awardCount}
     />
 
     <div class="popular-content-area">
@@ -198,13 +189,10 @@
           {selectedPeriod === 'week' ? 'Most Popular Repacks of the Week' : 
            selectedPeriod === 'today' ? "Today's Most Popular Repacks" :
            selectedPeriod === 'month' ? 'Most Popular Repacks of the Month' : 
-           selectedPeriod === 'year' ? 'Most Popular Repacks of the Year' : 
-           'Games with Pink Paw Award'}
+           'Most Popular Repacks of the Year'}
         </h1>
         <p class="subtitle">
-          {selectedPeriod === 'award' ? 
-            `${popularRepacks.length} games with exceptional audio/graphics/gameplay design` :
-            `Top ${popularRepacks.length} most downloaded games`}
+          Top {popularRepacks.length} most downloaded games
         </p>
       </div>
 
@@ -238,6 +226,7 @@
     </div>
   {:else}
     <div class="popular-grid">
+      <div class="games-wrapper">
       {#each popularRepacks as repack (repack.id)}
         <div 
           class="game-card"
@@ -270,6 +259,7 @@
           </div>
         </div>
       {/each}
+      </div>
     </div>
   {/if}
         </div>
@@ -372,9 +362,17 @@
     overflow-y: auto;
     padding: 24px;
     display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+  }
+
+  .games-wrapper {
+    display: flex;
     flex-wrap: wrap;
     gap: 20px;
-    align-content: flex-start;
+    justify-content: center;
+    width: 100%;
   }
 
   .game-card {

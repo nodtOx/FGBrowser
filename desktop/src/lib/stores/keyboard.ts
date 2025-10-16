@@ -35,7 +35,7 @@ function isUserTyping(target: HTMLElement): boolean {
 }
 
 function getTabOrder(): Page[] {
-  const tabs: Page[] = ['browse', 'popular'];
+  const tabs: Page[] = ['browse', 'popular', 'pinkpaw'];
   if (featureFlags.torrentClient) tabs.push('downloads');
   tabs.push('settings');
   if (featureFlags.stats) tabs.push('stats');
