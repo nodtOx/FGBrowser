@@ -45,7 +45,7 @@ impl GameQueries {
             GAME_SELECT_FIELDS
         ))?;
 
-        let games = stmt.query_map(&[&search_pattern, &limit.to_string()], map_row_to_game)?
+        let games = stmt.query_map([&search_pattern, &limit.to_string()], map_row_to_game)?
             .collect::<Result<Vec<_>>>()?;
         
         Ok(games)
@@ -59,7 +59,7 @@ impl GameQueries {
             GAME_SELECT_FIELDS
         ))?;
 
-        let games = stmt.query_map(&[&limit.to_string(), &offset.to_string()], map_row_to_game)?
+        let games = stmt.query_map([&limit.to_string(), &offset.to_string()], map_row_to_game)?
             .collect::<Result<Vec<_>>>()?;
         
         Ok(games)
@@ -376,7 +376,7 @@ impl GameQueries {
             GAME_SELECT_FIELDS_PREFIXED
         ))?;
 
-        let games = stmt.query_map(&[&category_id.to_string(), &limit.to_string(), &offset.to_string()], map_row_to_game)?
+        let games = stmt.query_map([&category_id.to_string(), &limit.to_string(), &offset.to_string()], map_row_to_game)?
             .collect::<Result<Vec<_>>>()?;
         
         Ok(games)
