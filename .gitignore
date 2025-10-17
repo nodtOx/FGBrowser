@@ -35,3 +35,8 @@ config/blacklist.txt
 .notes/
 server/
 samples/
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
