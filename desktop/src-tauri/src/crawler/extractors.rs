@@ -172,7 +172,7 @@ impl Extractors {
                         .to_string();
                     break;
                 }
-                current = elem.parent().and_then(|p| ElementRef::wrap(p));
+                current = elem.parent().and_then(ElementRef::wrap);
             }
 
             magnet_links.push(MagnetLink { source, magnet });
