@@ -26,4 +26,8 @@ page*.html
 game_page.html
 rss_feed.xml
 
+# Project-specific
 .notes/
+server/
+.cursor/
+samples/
