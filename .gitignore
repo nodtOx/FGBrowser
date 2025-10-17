@@ -27,18 +27,11 @@ config/blacklist.txt
 # IDE
 .vscode/
 .idea/
+.cursor/
 *.swp
 *.swo
-
-# Test/temporary files
-test_*.py
-copy-pages/
-page*.html
-game_page.html
-rss_feed.xml
 
 # Project-specific
 .notes/
 server/
-.cursor/
 samples/
