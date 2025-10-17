@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { isCrawlingPopular } from '$lib/stores/games';
+    import { refreshPopularCounts } from '$lib/stores/popular';
     import { invoke } from '@tauri-apps/api/core';
     
     export let isOpen = false;
@@ -85,6 +87,9 @@
                 status = 'Database is up to date';
             }
             
+            // Fetch popular repacks after database update
+            await fetchPopularRepacks();
+            
             // Wait before closing
             setTimeout(() => {
                 isOpen = false;
@@ -102,6 +107,41 @@
             setTimeout(() => {
                 isOpen = false;
             }, 3000);
+        }
+    }
+    
+    async function fetchPopularRepacks() {
+        try {
+            console.log('[CrawlerModal] Fetching popular repacks...');
+            status = 'Fetching popular repacks...';
+            
+            // Fetch all five periods: week, today, month, year, and award
+            await invoke<number>('fetch_popular_repacks', { period: 'week' });
+            await invoke<number>('fetch_popular_repacks', { period: 'today' });
+            await invoke<number>('fetch_popular_repacks', { period: 'month' });
+            await invoke<number>('fetch_popular_repacks', { period: 'year' });
+            await invoke<number>('fetch_popular_repacks', { period: 'award' });
+            
+            status = 'Crawling popular games...';
+            isCrawlingPopular.set(true);
+            
+            // Crawl all five periods
+            await invoke<number>('crawl_popular_games', { period: 'week' });
+            await invoke<number>('crawl_popular_games', { period: 'today' });
+            await invoke<number>('crawl_popular_games', { period: 'month' });
+            await invoke<number>('crawl_popular_games', { period: 'year' });
+            await invoke<number>('crawl_popular_games', { period: 'award' });
+            
+            isCrawlingPopular.set(false);
+            status = 'Popular repacks updated!';
+            
+            // Refresh badges
+            console.log('[CrawlerModal] Refreshing popular badges');
+            refreshPopularCounts();
+        } catch (error) {
+            console.error('[CrawlerModal] Failed to fetch popular repacks:', error);
+            isCrawlingPopular.set(false);
+            status = 'Popular repacks update failed';
         }
     }
 </script>

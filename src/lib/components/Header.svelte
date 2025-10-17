@@ -9,31 +9,24 @@
     const isDev = import.meta.env.DEV;
     let totalUnseenPopular = 0;
     let unseenAwardCount = 0;
-    let unseenCheckInterval: any;
     let themeDropdownRef: HTMLElement | null = null;
     
-    // React to popular items being viewed
-    $: if ($popularViewedTrigger >= 0) {
-        loadUnseenPopularCount();
-        loadUnseenAwardCount();
+    // React to popular items being viewed or counts needing refresh
+    $: {
+        if ($popularViewedTrigger >= 0) {
+            if (isDev) {
+                console.log(`[Header] Reactive trigger fired: ${$popularViewedTrigger}`);
+            }
+            loadUnseenPopularCount();
+            loadUnseenAwardCount();
+        }
     }
     
     onMount(() => {
-        // Load unseen counts initially
-        loadUnseenPopularCount();
-        loadUnseenAwardCount();
-        
-        // Check for unseen popular games every 30 seconds
-        unseenCheckInterval = setInterval(() => {
-            loadUnseenPopularCount();
-            loadUnseenAwardCount();
-        }, 30000);
-        
-        return () => {
-            if (unseenCheckInterval) {
-                clearInterval(unseenCheckInterval);
-            }
-        };
+        if (isDev) {
+            console.log('[Header] Component mounted');
+        }
+        // Note: Initial load happens via reactive statement above
     });
 
     onDestroy(() => {
@@ -44,7 +37,11 @@
     
     async function loadUnseenPopularCount() {
         try {
-            totalUnseenPopular = await invoke<number>('get_total_unseen_popular_count');
+            const count = await invoke<number>('get_total_unseen_popular_count');
+            if (isDev) {
+                console.log(`[Header] Popular unseen count: ${count} (was ${totalUnseenPopular})`);
+            }
+            totalUnseenPopular = count;
         } catch (err) {
             console.error('Failed to load unseen popular count:', err);
         }
@@ -52,7 +49,11 @@
     
     async function loadUnseenAwardCount() {
         try {
-            unseenAwardCount = await invoke<number>('get_unseen_popular_count', { period: 'award' });
+            const count = await invoke<number>('get_unseen_popular_count', { period: 'award' });
+            if (isDev) {
+                console.log(`[Header] Award unseen count: ${count} (was ${unseenAwardCount})`);
+            }
+            unseenAwardCount = count;
         } catch (err) {
             console.error('Failed to load unseen award count:', err);
         }
@@ -138,6 +139,7 @@
                         <span class="unseen-badge">{unseenAwardCount}</span>
                     {/if}
                 </button>
+                
                 {#if featureFlags.torrentClient}
                 <button 
                     class="nav-tab"
