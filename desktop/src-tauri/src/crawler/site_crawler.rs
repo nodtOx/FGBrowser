@@ -63,18 +63,20 @@ impl CrawlerRegistry {
     }
     
     /// Get all enabled crawlers
-    pub fn get_enabled_crawlers(&self) -> Vec<&Box<dyn SiteCrawler>> {
+    pub fn get_enabled_crawlers(&self) -> Vec<&dyn SiteCrawler> {
         self.crawlers
             .iter()
             .filter(|c| c.is_enabled())
+            .map(|c| c.as_ref())
             .collect()
     }
     
     /// Get a specific crawler by ID
-    pub fn get_crawler(&self, site_id: &str) -> Option<&Box<dyn SiteCrawler>> {
+    pub fn get_crawler(&self, site_id: &str) -> Option<&dyn SiteCrawler> {
         self.crawlers
             .iter()
             .find(|c| c.site_id() == site_id)
+            .map(|c| c.as_ref())
     }
     
     /// Crawl all enabled sites
