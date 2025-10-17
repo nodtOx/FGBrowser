@@ -154,12 +154,12 @@ pub async fn get_total_unseen_popular_count(
     let settings = state.db_service.get_settings().map_err(|e| e.to_string())?;
     
     // Calculate unseen count for each period with blacklist filtering
+    // Note: Award period is excluded since it has its own separate badge
     let periods = vec![
         ("week", settings.popular_week_last_viewed.as_deref()),
         ("today", settings.popular_today_last_viewed.as_deref()),
         ("month", settings.popular_month_last_viewed.as_deref()),
         ("year", settings.popular_year_last_viewed.as_deref()),
-        ("award", settings.popular_award_last_viewed.as_deref()),
     ];
     
     let mut total_unseen = 0i64;

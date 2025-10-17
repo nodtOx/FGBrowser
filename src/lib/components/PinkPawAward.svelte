@@ -1,6 +1,7 @@
 <script lang="ts">
   import { POPULAR_FETCH_LIMIT, POPULAR_REFRESH_INTERVAL_MS } from '$lib/constants';
   import { formatSize, isCrawlingPopular, selectedGame } from '$lib/stores/games';
+  import { triggerPopularViewed } from '$lib/stores/popular';
   import { invoke } from '@tauri-apps/api/core';
   import { onDestroy, onMount } from 'svelte';
   import CachedImage from './CachedImage.svelte';
@@ -61,6 +62,7 @@
     try {
       await invoke('mark_popular_as_viewed', { period: 'award' });
       console.log('Marked Pink Paw Award as viewed');
+      triggerPopularViewed();
     } catch (err) {
       console.error('Failed to mark as viewed:', err);
     }

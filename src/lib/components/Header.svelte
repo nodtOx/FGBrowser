@@ -1,24 +1,33 @@
 <script lang="ts">
     import { featureFlags } from '$lib/featureFlags';
     import { currentPage, navigateTo, type Page } from '$lib/stores/navigation';
+    import { popularViewedTrigger } from '$lib/stores/popular';
     import { applyTheme, currentTheme, darkThemes, lightThemes } from '$lib/stores/theme';
     import { invoke } from '@tauri-apps/api/core';
     import { onDestroy, onMount } from 'svelte';
     
-    let isDev = false;
+    const isDev = import.meta.env.DEV;
     let totalUnseenPopular = 0;
+    let unseenAwardCount = 0;
     let unseenCheckInterval: any;
     let themeDropdownRef: HTMLElement | null = null;
     
-    onMount(() => {
-        // Check if we're in development mode
-        isDev = window.location.hostname === 'localhost' || window.location.hostname === 'tauri.localhost';
-        
-        // Load unseen count initially
+    // React to popular items being viewed
+    $: if ($popularViewedTrigger >= 0) {
         loadUnseenPopularCount();
+        loadUnseenAwardCount();
+    }
+    
+    onMount(() => {
+        // Load unseen counts initially
+        loadUnseenPopularCount();
+        loadUnseenAwardCount();
         
         // Check for unseen popular games every 30 seconds
-        unseenCheckInterval = setInterval(loadUnseenPopularCount, 30000);
+        unseenCheckInterval = setInterval(() => {
+            loadUnseenPopularCount();
+            loadUnseenAwardCount();
+        }, 30000);
         
         return () => {
             if (unseenCheckInterval) {
@@ -38,6 +47,14 @@
             totalUnseenPopular = await invoke<number>('get_total_unseen_popular_count');
         } catch (err) {
             console.error('Failed to load unseen popular count:', err);
+        }
+    }
+    
+    async function loadUnseenAwardCount() {
+        try {
+            unseenAwardCount = await invoke<number>('get_unseen_popular_count', { period: 'award' });
+        } catch (err) {
+            console.error('Failed to load unseen award count:', err);
         }
     }
     
@@ -116,7 +133,10 @@
                     class:active={$currentPage === 'pinkpaw'}
                     on:click={() => handleNavClick('pinkpaw')}
                 >
-                Pink Paw Award <span class="paw-emoji">🐾</span> 
+                Pink Paw Award <span class="paw-emoji">🐾</span>
+                    {#if unseenAwardCount > 0}
+                        <span class="unseen-badge">{unseenAwardCount}</span>
+                    {/if}
                 </button>
                 {#if featureFlags.torrentClient}
                 <button 
@@ -162,6 +182,9 @@
             >
                 Donate to fitgirl
             </a>
+            <button class="btn" on:click={() => window.location.reload()} title="Reload Page" >
+                <i class="fa fa-refresh"></i>
+            </button>
             <div class="theme-selector-wrapper" bind:this={themeDropdownRef}>
                 <button class="theme-btn" on:click={toggleThemeSelector} title="Change Theme (T)">
                     T
@@ -275,6 +298,21 @@
         position: relative;
     }
     
+    .btn {
+        cursor: pointer;
+        padding: 2px 6px;
+        border: 1px solid var(--color-border);
+        background: none;
+        font-size: 11px;
+        font-weight: 600;
+    }
+    
+    .btn:hover {
+        background-color: var(--color-hover);
+        color: var(--color-text);
+        border-color: var(--color-border);
+    }
+
     .reset-btn {
         color: var(--color-error);
         cursor: pointer;
@@ -296,7 +334,7 @@
         background-color: #ff69b4;
         cursor: pointer;
         padding: 3px 8px;
-        border: 1px solid #ff1493;
+        
         font-size: 11px;
         font-weight: 600;
         text-decoration: none;
@@ -402,6 +440,15 @@
     .pink-paw-tab.active .paw-emoji {
         color: transparent;
         text-shadow: 0 0 0 white;
+    }
+
+    .pink-paw-tab .unseen-badge {
+        background-color: #ff69b4;
+    }
+
+    .pink-paw-tab.active .unseen-badge {
+        background-color: white;
+        color: #ff69b4;
     }
 </style>
 

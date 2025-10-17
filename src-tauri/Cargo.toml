@@ -51,7 +51,7 @@ rfd = "0.15"
 rusqlite = { version = "0.32", features = ["bundled"] }
 
 # HTTP client
-reqwest = { version = "0.12", features = ["json"] }
+reqwest = { version = "0.12", features = ["json", "blocking"] }
 
 # HTML parsing
 scraper = "0.21"
