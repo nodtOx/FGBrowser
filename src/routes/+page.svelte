@@ -1,12 +1,13 @@
 <script lang="ts">
-  import { games, isCrawlingPopular, loadCategories, loadGames, popularCrawlProgress, totalGamesCount } from '$lib/stores/games';
+  import { isCrawlingPopular, loadCategories, loadGames, totalGamesCount } from '$lib/stores/games';
   import { initKeyboardShortcuts } from '$lib/stores/keyboard';
   import { browseView, currentPage, gameListViewMode, loadSavedGameListViewMode } from '$lib/stores/navigation';
+  import { refreshPopularCounts } from '$lib/stores/popular';
   import { loadSavedTheme, watchOSThemeChanges } from '$lib/stores/theme';
+  import { popularStatus, updateStatus } from '$lib/stores/updates';
   import { invoke } from '@tauri-apps/api/core';
   import { onDestroy, onMount } from 'svelte';
 
-  import CrawlerModal from '$lib/components/CrawlerModal.svelte';
   import Downloads from '$lib/components/Downloads.svelte';
   import GameDetails from '$lib/components/GameDetails.svelte';
   import Header from '$lib/components/Header.svelte';
@@ -18,12 +19,9 @@
   import VirtualizedGameGrid from '$lib/components/VirtualizedGameGrid.svelte';
   import VirtualizedGameList from '$lib/components/VirtualizedGameList.svelte';
 
-  import { LOAD_ALL_GAMES, POLLING_INTERVAL_MS } from '$lib/constants';
+  import { LOAD_ALL_GAMES } from '$lib/constants';
   import '../app.css';
 
-  let showCrawlerModal = false;
-  let pollingInterval: any;
-  let isUpdating = false;
   let isDownloadingDatabase = false;
   let downloadError = '';
 
@@ -52,8 +50,8 @@
               console.warn('Failed to load popular repacks:', err)
             );
             
-            // Check for updates after downloading
-            checkForUpdates();
+            // Start background updates (non-blocking)
+            startBackgroundUpdates();
           } else {
             console.log('Database already exists, skipped download');
           }
@@ -83,7 +81,8 @@
               console.warn('Failed to load popular repacks:', err)
             );
             
-            checkForUpdates();
+            // Start background updates (non-blocking)
+            startBackgroundUpdates();
           } catch (error) {
             console.error('Failed to download database:', error);
             downloadError = `Failed to download database: ${error}`;
@@ -100,7 +99,8 @@
             console.warn('Failed to load popular repacks:', err)
           );
           
-          checkForUpdates();
+          // Start background updates (non-blocking)
+          startBackgroundUpdates();
         }
       }
     } catch (error) {
@@ -121,123 +121,70 @@
       const yearlyRepacks = await invoke<any[]>('get_popular_repacks', { period: 'year', limit: 9999 });
       const awardRepacks = await invoke<any[]>('get_popular_repacks', { period: 'award', limit: 9999 });
       console.log(`Loaded ${monthlyRepacks.length} monthly + ${yearlyRepacks.length} yearly + ${awardRepacks.length} award popular repacks from database`);
-      // TODO: Store in a store for UI display
     } catch (error) {
       console.warn('No popular repacks in database yet');
     }
   }
 
-  async function checkForUpdates() {
-    console.log('Checking for new games...');
+  async function startBackgroundUpdates() {
+    // Check for database updates
+    checkForUpdates();
     
-    // Show modal for update - let CrawlerModal handle the update logic
-    isUpdating = true;
-    showCrawlerModal = true;
+    // Fetch popular repacks (non-blocking)
+    fetchPopularRepacks();
   }
 
-  function startPollingGames() {
-    // Poll every 2 seconds to update game list while crawler is running
-    pollingInterval = setInterval(async () => {
-      await loadGames(LOAD_ALL_GAMES);
-    }, POLLING_INTERVAL_MS);
-  }
-
-  function stopPollingGames() {
-    if (pollingInterval) {
-      clearInterval(pollingInterval);
-      pollingInterval = null;
+  async function checkForUpdates() {
+    try {
+      updateStatus.set({ isUpdating: true, message: '', newGamesFound: 0 });
+      
+      const result = await invoke<{ total_games: number; status: string }>('update_database');
+      
+      if (result.total_games > 0) {
+        await loadGames(LOAD_ALL_GAMES);
+        await loadCategories();
+      }
+      
+      updateStatus.set({ isUpdating: false, message: '', newGamesFound: 0 });
+    } catch (error) {
+      console.error('Update error:', error);
+      updateStatus.set({ isUpdating: false, message: '', newGamesFound: 0 });
     }
   }
 
-  async function onStartCrawl() {
-    // Crawler started, start polling
-    await loadGames(LOAD_ALL_GAMES);
-    startPollingGames();
-  }
-
-  async function onCrawlerComplete() {
-    stopPollingGames();
-    // Reset updating state
-    isUpdating = false;
-    // Final load of all games and categories
-    await loadGames(LOAD_ALL_GAMES);
-    await loadCategories();
-    
-    // Fetch popular repacks from website after crawling
-    // This runs after both:
-    // 1. Initial database crawl (start_crawler)
-    // 2. Database updates (update_database)
-    fetchPopularRepacks().catch(err => 
-      console.error('Failed to fetch popular repacks:', err)
-    );
-  }
-  
   async function fetchPopularRepacks() {
     try {
-      console.log('\n' + '='.repeat(60));
-      console.log('🌟 POPULAR REPACKS UPDATE STARTED');
-      console.log('='.repeat(60));
+      popularStatus.set({ isFetching: true, message: '', currentPeriod: '' });
       
-      // Fetch all five periods: week, today, month, year, and award
-      console.log('Step 1/8: Fetching weekly popular repacks from website...');
-      const weekCount = await invoke<number>('fetch_popular_repacks', { period: 'week' });
-      console.log(`  ✅ Saved ${weekCount} weekly popular repacks`);
+      // Fetch all five periods
+      await invoke<number>('fetch_popular_repacks', { period: 'week' });
+      await invoke<number>('fetch_popular_repacks', { period: 'today' });
+      await invoke<number>('fetch_popular_repacks', { period: 'month' });
+      await invoke<number>('fetch_popular_repacks', { period: 'year' });
+      await invoke<number>('fetch_popular_repacks', { period: 'award' });
       
-      console.log('Step 2/8: Fetching today popular repacks from website...');
-      const todayCount = await invoke<number>('fetch_popular_repacks', { period: 'today' });
-      console.log(`  ✅ Saved ${todayCount} today popular repacks`);
-      
-      console.log('Step 3/8: Fetching monthly popular repacks from website...');
-      const monthCount = await invoke<number>('fetch_popular_repacks', { period: 'month' });
-      console.log(`  ✅ Saved ${monthCount} monthly popular repacks`);
-      
-      console.log('Step 4/8: Fetching yearly popular repacks from website...');
-      const yearCount = await invoke<number>('fetch_popular_repacks', { period: 'year' });
-      console.log(`  ✅ Saved ${yearCount} yearly popular repacks`);
-      
-      console.log('Step 5/8: Fetching Pink Paw Award games from website...');
-      const awardCount = await invoke<number>('fetch_popular_repacks', { period: 'award' });
-      console.log(`  ✅ Saved ${awardCount} Pink Paw Award games`);
-      
-      console.log('Step 6/8: Crawling full game data for popular games...');
-      
-      // Set crawling state
       isCrawlingPopular.set(true);
-      const totalCount = weekCount + todayCount + monthCount + yearCount + awardCount;
-      popularCrawlProgress.set({ crawled: 0, total: totalCount });
       
-      // Crawl all five periods (this may take a while)
-      const weekCrawled = await invoke<number>('crawl_popular_games', { period: 'week' });
-      console.log(`  ✅ Crawled ${weekCrawled} new weekly popular games`);
+      // Crawl all five periods
+      await invoke<number>('crawl_popular_games', { period: 'week' });
+      await invoke<number>('crawl_popular_games', { period: 'today' });
+      await invoke<number>('crawl_popular_games', { period: 'month' });
+      await invoke<number>('crawl_popular_games', { period: 'year' });
+      await invoke<number>('crawl_popular_games', { period: 'award' });
       
-      const todayCrawled = await invoke<number>('crawl_popular_games', { period: 'today' });
-      console.log(`  ✅ Crawled ${todayCrawled} new today popular games`);
-      
-      const monthCrawled = await invoke<number>('crawl_popular_games', { period: 'month' });
-      console.log(`  ✅ Crawled ${monthCrawled} new monthly popular games`);
-      
-      const yearCrawled = await invoke<number>('crawl_popular_games', { period: 'year' });
-      console.log(`  ✅ Crawled ${yearCrawled} new yearly popular games`);
-      
-      const awardCrawled = await invoke<number>('crawl_popular_games', { period: 'award' });
-      console.log(`  ✅ Crawled ${awardCrawled} new Pink Paw Award games`);
-      
-      // Clear crawling state
       isCrawlingPopular.set(false);
       
-      console.log('Step 7/8: Reloading popular repacks into UI...');
+      // Reload data
       await loadPopularRepacks();
-      console.log('  ✅ UI updated');
       
-      console.log('Step 8/8: Complete');
-      console.log('='.repeat(60));
-      console.log('🎉 POPULAR REPACKS UPDATE COMPLETED');
-      console.log(`   Total: ${weekCrawled + todayCrawled + monthCrawled + yearCrawled + awardCrawled} games crawled`);
-      console.log('='.repeat(60) + '\n');
+      // Refresh badges
+      refreshPopularCounts();
+      
+      popularStatus.set({ isFetching: false, message: '', currentPeriod: '' });
     } catch (error) {
-      console.error('❌ Failed to fetch popular repacks:', error);
+      console.error('Failed to fetch popular repacks:', error);
       isCrawlingPopular.set(false);
-      throw error;
+      popularStatus.set({ isFetching: false, message: '', currentPeriod: '' });
     }
   }
 
@@ -329,14 +276,6 @@
   </main>
 
   <StatusBar />
-  
-  <CrawlerModal 
-    bind:isOpen={showCrawlerModal}
-    bind:isUpdating={isUpdating}
-    totalGames={$games.length}
-    onComplete={onCrawlerComplete}
-    onStart={onStartCrawl}
-  />
 </div>
 
 <style>

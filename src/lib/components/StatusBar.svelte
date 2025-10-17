@@ -2,6 +2,7 @@
     import { DISK_INFO_REFRESH_INTERVAL_MS } from '$lib/constants';
     import { activeFilters, totalGamesCount } from '$lib/stores/games';
     import { browseView, currentPage, focusedPanel } from '$lib/stores/navigation';
+    import { popularStatus, updateStatus } from '$lib/stores/updates';
     import { invoke } from '@tauri-apps/api/core';
     import { onMount } from 'svelte';
     import Kbd from './Kbd.svelte';
@@ -40,20 +41,17 @@
 
 <div class="status-bar">
     <div class="status-left">
+        {#if $updateStatus.isUpdating || $popularStatus.isFetching}
+        <div class="status-item">
+            <div class="spinner-small"></div>
+            <span>Updating...</span>
+        </div>
+        {:else}
         <div class="status-item">
             <i class="fas fa-database"></i>
             <span>{$totalGamesCount.toLocaleString()} games</span>
         </div>
-        
-        <!-- <div class="status-item">
-            <i class="fas fa-download"></i>
-            <span>{formatSpeed($totalDownloadSpeed)}</span>
-        </div>
-        
-        <div class="status-item">
-            <i class="fas fa-upload"></i>
-            <span>{formatSpeed($totalUploadSpeed)}</span>
-        </div> -->
+        {/if}
     </div>
     
     <div class="status-center">
@@ -193,6 +191,19 @@
         color: var(--color-textSecondary);
         /* font-size: calc(var(--base-font-size) * 0.8); */
         font-weight: 500;
+    }
+    
+    .spinner-small {
+        width: 12px;
+        height: 12px;
+        border: 2px solid var(--color-border);
+        border-top-color: var(--color-text);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        to { transform: rotate(360deg); }
     }
 </style>
 
