@@ -40,8 +40,8 @@ pub struct AppConstants {
     pub database_url: String,
 }
 
-impl AppConstants {
-    pub fn new() -> Self {
+impl Default for AppConstants {
+    fn default() -> Self {
         Self {
             load_all_games: LOAD_ALL_GAMES,
             default_offset: DEFAULT_OFFSET,
@@ -54,6 +54,12 @@ impl AppConstants {
             disk_info_refresh_interval_ms: DISK_INFO_REFRESH_INTERVAL_MS,
             database_url: DATABASE_URL.to_string(),
         }
+    }
+}
+
+impl AppConstants {
+    pub fn new() -> Self {
+        Self::default()
     }
 }
 
