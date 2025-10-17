@@ -9,7 +9,7 @@ pub fn migrate_repacks_image_url(conn: &Connection) -> Result<()> {
     );
     
     match column_exists {
-        Ok(count) if count == 0 => {
+        Ok(0) => {
             println!("🔄 Adding image_url column to repacks table...");
             
             // Add image_url column
@@ -40,7 +40,7 @@ pub fn migrate_repacks_clean_name(conn: &Connection) -> Result<()> {
     );
     
     match column_exists {
-        Ok(count) if count == 0 => {
+        Ok(0) => {
             println!("🔄 Adding clean_name column to repacks table...");
             
             // Add clean_name column
@@ -120,7 +120,7 @@ pub fn migrate_popular_repacks_period(conn: &Connection) -> Result<()> {
     );
     
     match column_exists {
-        Ok(count) if count == 0 => {
+        Ok(0) => {
             println!("🔄 Migrating popular_repacks table to add period column...");
             
             // Add period column with default value 'month'
