@@ -24,56 +24,9 @@ jobs:
           override: true
           components: rustfmt, clippy
       
-      - name: Install sccache
-        uses: mozilla-actions/sccache-action@v0.0.3
-        with:
-          version: 'v0.8.0'
-      
-      - name: Setup sccache
-        run: |
-          echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
-          echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
-      
-      - name: Cache cargo registry
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-registry-
-      
-      - name: Cache cargo index
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/git
-          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-index-
-      
-      - name: Cache target directory
-        uses: actions/cache@v4
-        with:
-          path: src-tauri/target
-          key: ${{ runner.os }}-cargo-target-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-target-
-      
-      - name: Cache cargo bin
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/bin
-          key: ${{ runner.os }}-cargo-bin-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-bin-
-      
       - name: Build CLI
         working-directory: src-tauri
-        run: |
-          # Use more parallel jobs and optimize for CI
-          export CARGO_BUILD_JOBS=4
-          # Disable incremental compilation when using sccache
-          export CARGO_INCREMENTAL=0
-          cargo build --bin cli --release --features cli --jobs 4
+        run: cargo build --bin cli --release --features cli
       
       - name: Strip binary
         working-directory: src-tauri
