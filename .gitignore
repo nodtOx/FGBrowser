@@ -10,20 +10,6 @@ node_modules
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
-# Virtual environment
-venv/
-__pycache__/
-*.pyc
-*.pyo
-
-# Config (user-specific)
-config/blacklist.txt
-
-# Python
-*.py[cod]
-*$py.class
-*.so
-
 # IDE
 .vscode/
 .idea/
@@ -33,7 +19,6 @@ config/blacklist.txt
 
 # Project-specific
 .notes
-server/
 samples/
 
 # Database files
