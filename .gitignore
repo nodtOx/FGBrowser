@@ -32,7 +32,7 @@ config/blacklist.txt
 *.swo
 
 # Project-specific
-.notes/
+.notes
 server/
 samples/
 
