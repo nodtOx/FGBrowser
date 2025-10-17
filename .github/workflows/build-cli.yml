@@ -1,0 +1,108 @@
+name: Build and Deploy CLI
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'src-tauri/**'
+      - '.github/workflows/build-cli.yml'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+          components: rustfmt, clippy
+      
+      - name: Install sccache
+        uses: mozilla-actions/sccache-action@v0.0.3
+        with:
+          version: 'v0.8.0'
+      
+      - name: Setup sccache
+        run: |
+          echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
+          echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
+      
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-registry-
+      
+      - name: Cache cargo index
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-index-
+      
+      - name: Cache target directory
+        uses: actions/cache@v4
+        with:
+          path: src-tauri/target
+          key: ${{ runner.os }}-cargo-target-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-target-
+      
+      - name: Cache cargo bin
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin
+          key: ${{ runner.os }}-cargo-bin-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-bin-
+      
+      - name: Build CLI
+        working-directory: src-tauri
+        run: |
+          # Use more parallel jobs and optimize for CI
+          export CARGO_BUILD_JOBS=4
+          export CARGO_INCREMENTAL=1
+          cargo build --bin cli --release --features cli --jobs 4
+      
+      - name: Strip binary
+        working-directory: src-tauri
+        run: strip target/release/cli
+      
+      - name: Get binary info
+        id: binary_info
+        working-directory: src-tauri
+        run: |
+          SIZE=$(du -h target/release/cli | cut -f1)
+          echo "size=$SIZE" >> $GITHUB_OUTPUT
+          echo "Binary size: $SIZE"
+      
+      - name: Deploy CLI to server
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H 157.230.16.45 >> ~/.ssh/known_hosts
+          scp src-tauri/target/release/cli root@157.230.16.45:/var/www/fgbrowser/fgbrowser-cli
+          ssh root@157.230.16.45 'chmod +x /var/www/fgbrowser/fgbrowser-cli'
+          echo "✅ CLI deployed successfully"
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fgbrowser-cli-linux-x86_64
+          path: src-tauri/target/release/cli
+          retention-days: 90
+
+
