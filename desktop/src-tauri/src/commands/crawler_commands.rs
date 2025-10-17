@@ -2,7 +2,7 @@ use crate::crawler::{FitGirlCrawler, GameRepack, clean_game_title};
 use crate::database::Database;
 use super::utils::{AppState, parse_size_to_mb};
 use super::database_service::{DatabaseService, SqliteDatabaseService};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::Arc;
 use tauri::State;
 
