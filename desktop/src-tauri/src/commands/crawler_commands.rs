@@ -53,7 +53,7 @@ pub async fn start_crawler(
                 let count = repacks.len();
                 
                 // Save to database immediately after each page
-                if let Err(e) = save_repacks_to_db(&repacks, &*db_service) {
+                if let Err(e) = save_repacks_to_db(&repacks, &db_service) {
                     eprintln!("Error saving page {}: {}", current_page, e);
                     // Continue anyway - we've saved what we could
                 } else {
@@ -145,7 +145,7 @@ pub async fn update_database(
                 let count = new_repacks.len();
                 
                 // Save new games to database
-                if let Err(e) = save_repacks_to_db(&new_repacks, &*db_service) {
+                if let Err(e) = save_repacks_to_db(&new_repacks, &db_service) {
                     eprintln!("Error saving page {}: {}", current_page, e);
                 } else {
                     total_new_games += count;
