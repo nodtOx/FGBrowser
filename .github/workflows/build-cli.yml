@@ -71,7 +71,8 @@ jobs:
         run: |
           # Use more parallel jobs and optimize for CI
           export CARGO_BUILD_JOBS=4
-          export CARGO_INCREMENTAL=1
+          # Disable incremental compilation when using sccache
+          export CARGO_INCREMENTAL=0
           cargo build --bin cli --release --features cli --jobs 4
       
       - name: Strip binary
