@@ -14,7 +14,7 @@ pub mod cache;
 // Re-export commonly used types for convenience
 pub use models::*;
 pub use game_queries::GameQueries;
-pub use downloads_queries::DownloadQueries;
+pub use downloads_queries::{DownloadQueries, DownloadProgress};
 pub use category_queries::CategoryQueries;
 pub use popular_queries::PopularQueries;
 pub use settings::SettingsQueries;
@@ -384,32 +384,8 @@ impl Database {
         DownloadQueries::update_download_status(&self.conn, info_hash, status, error_message)
     }
 
-    pub fn update_download_progress(
-        &self,
-        info_hash: &str,
-        total_size: i64,
-        downloaded_bytes: i64,
-        uploaded_bytes: i64,
-        download_speed: i64,
-        upload_speed: i64,
-        progress: f64,
-        peers: i32,
-        seeds: i32,
-        eta_seconds: Option<i64>,
-    ) -> Result<()> {
-        DownloadQueries::update_download_progress(
-            &self.conn,
-            info_hash,
-            total_size,
-            downloaded_bytes,
-            uploaded_bytes,
-            download_speed,
-            upload_speed,
-            progress,
-            peers,
-            seeds,
-            eta_seconds,
-        )
+    pub fn update_download_progress(&self, progress: &DownloadProgress) -> Result<()> {
+        DownloadQueries::update_download_progress(&self.conn, progress)
     }
 
     pub fn delete_download(&self, info_hash: &str) -> Result<()> {
