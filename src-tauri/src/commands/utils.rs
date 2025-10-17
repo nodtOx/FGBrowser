@@ -163,4 +163,3 @@ fn load_popular_blacklist() -> Vec<String> {
         "av-director".to_string(),
     ]
 }
-

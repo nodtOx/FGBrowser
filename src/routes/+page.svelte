@@ -22,96 +22,50 @@
   import { LOAD_ALL_GAMES } from '$lib/constants';
   import '../app.css';
 
-  let isDownloadingDatabase = false;
-  let downloadError = '';
+  let databaseError = '';
+  let isRetrying = false;
 
-  async function checkAndInitializeDatabase() {
+  async function initializeApp() {
     try {
-      // First, check if database file exists
-      const dbExists = await invoke<boolean>('check_database_exists');
+      // Database should be ready from Rust startup, check if it has data
+      const isEmpty = await invoke<boolean>('is_database_empty');
       
-      if (!dbExists) {
-        // Database doesn't exist, download it from server
-        console.log('Database not found locally, downloading from server...');
-        isDownloadingDatabase = true;
-        downloadError = '';
-        
-        try {
-          const downloaded = await invoke<boolean>('download_database');
-          
-          if (downloaded) {
-            console.log('Database downloaded successfully!');
-            // Database downloaded, load games
-            await loadGames(LOAD_ALL_GAMES);
-            await loadCategories();
-            
-            // Load popular repacks in the background
-            loadPopularRepacks().catch(err => 
-              console.warn('Failed to load popular repacks:', err)
-            );
-            
-            // Start background updates (non-blocking)
-            startBackgroundUpdates();
-          } else {
-            console.log('Database already exists, skipped download');
-          }
-        } catch (error) {
-          console.error('Failed to download database:', error);
-          downloadError = `Failed to download database: ${error}`;
-        } finally {
-          isDownloadingDatabase = false;
-        }
-      } else {
-        // Database exists, check if it's empty
-        const isEmpty = await invoke<boolean>('is_database_empty');
-        
-        if (isEmpty) {
-          // Database file exists but is empty, download fresh copy
-          console.log('Database is empty, downloading fresh copy...');
-          isDownloadingDatabase = true;
-          downloadError = '';
-          
-          try {
-            await invoke<boolean>('download_database');
-            console.log('Database downloaded successfully!');
-            await loadGames(LOAD_ALL_GAMES);
-            await loadCategories();
-            
-            loadPopularRepacks().catch(err => 
-              console.warn('Failed to load popular repacks:', err)
-            );
-            
-            // Start background updates (non-blocking)
-            startBackgroundUpdates();
-          } catch (error) {
-            console.error('Failed to download database:', error);
-            downloadError = `Failed to download database: ${error}`;
-          } finally {
-            isDownloadingDatabase = false;
-          }
-        } else {
-          // Database has data, check for updates
-          await loadGames(LOAD_ALL_GAMES);
-          await loadCategories();
-          
-          // Load popular repacks in the background (non-blocking)
-          loadPopularRepacks().catch(err => 
-            console.warn('Failed to load popular repacks:', err)
-          );
-          
-          // Start background updates (non-blocking)
-          startBackgroundUpdates();
-        }
+      if (isEmpty) {
+        // Database exists but is empty - Rust download likely failed
+        databaseError = 'Database is empty. Please check your internet connection and retry.';
+        return;
       }
+      
+      // Load the games and categories
+      await loadGames(LOAD_ALL_GAMES);
+      await loadCategories();
+      
+      // Load popular repacks in the background (non-blocking)
+      loadPopularRepacks().catch(err => 
+        console.warn('Failed to load popular repacks:', err)
+      );
+      
+      // Start background updates (non-blocking)
+      startBackgroundUpdates();
     } catch (error) {
-      console.error('Error checking database:', error);
-      downloadError = `Error initializing database: ${error}`;
+      console.error('Failed to initialize app:', error);
+      databaseError = `Failed to load database: ${error}`;
     }
   }
-  
-  function retryDownload() {
-    downloadError = '';
-    checkAndInitializeDatabase();
+
+  async function retryDatabaseDownload() {
+    isRetrying = true;
+    databaseError = '';
+    
+    try {
+      await invoke<boolean>('download_database');
+      await initializeApp();
+    } catch (error) {
+      console.error('Failed to download database:', error);
+      databaseError = `Failed to download database: ${error}`;
+    } finally {
+      isRetrying = false;
+    }
   }
   
   async function loadPopularRepacks() {
@@ -205,8 +159,8 @@
     // Initialize keyboard shortcuts
     initKeyboardShortcuts();
 
-    // Check if database needs initialization and load games
-    await checkAndInitializeDatabase();
+    // Initialize app (database is already ready from Rust startup)
+    await initializeApp();
   });
 
   onDestroy(() => {
@@ -221,24 +175,17 @@
   <Header />
 
   <main class="main-content">
-    {#if downloadError}
+    {#if databaseError}
       <div class="page-placeholder">
         <div class="error-icon">✕</div>
-        <h2>Database Download Failed</h2>
-        <p class="error-message">{downloadError}</p>
+        <h2>Database Error</h2>
+        <p class="error-message">{databaseError}</p>
         <div class="error-actions">
-          <button class="retry-button" on:click={retryDownload}>
-            Retry Download
+          <button class="retry-button" on:click={retryDatabaseDownload} disabled={isRetrying}>
+            {isRetrying ? 'Downloading...' : 'Retry Download'}
           </button>
         </div>
-        <p class="text-muted">Please check your internet connection and try again</p>
-      </div>
-    {:else if isDownloadingDatabase}
-      <div class="page-placeholder">
-        <div class="loading-spinner"></div>
-        <h2>Downloading Database</h2>
-        <p>Please wait while we download the game database from the server...</p>
-        <p class="text-muted">This only happens once on first run</p>
+        <p class="text-muted">The database may have failed to download during startup</p>
       </div>
     {:else if $currentPage === 'browse'}
       <div class="browse-page">
@@ -354,21 +301,6 @@
     font-size: 14px;
   }
 
-  .loading-spinner {
-    width: 48px;
-    height: 48px;
-    border: 4px solid var(--color-border);
-    border-top-color: var(--color-primary);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-  }
-
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
-
   .error-icon {
     width: 64px;
     height: 64px;
@@ -405,12 +337,17 @@
     transition: all 0.2s;
   }
 
-  .retry-button:hover {
+  .retry-button:hover:not(:disabled) {
     background: var(--color-primaryHover);
     transform: translateY(-1px);
   }
 
-  .retry-button:active {
+  .retry-button:active:not(:disabled) {
     transform: translateY(0);
+  }
+
+  .retry-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 </style>

@@ -31,7 +31,15 @@ impl Database {
         Self::apply_pragmas(&conn)?;
         
         let db = Self { conn };
-        db.init_tables()?;
+        
+        // Database is always downloaded from server, no need to initialize locally
+        // This was useful during development but is now unnecessary
+        // uncomment if you want to initialize the database locally
+        // db.init_tables()?;
+        
+        // Run migrations on downloaded database (in case schema evolves)
+        db.run_migrations()?;
+        
         Ok(db)
     }
     
@@ -61,6 +69,23 @@ impl Database {
         Ok(())
     }
     
+    /// Run database migrations (for schema evolution on downloaded databases)
+    pub fn run_migrations(&self) -> Result<()> {
+        migrations::migrate_categories_data(&self.conn)?;
+        migrations::migrate_popular_repacks_period(&self.conn)?;
+        migrations::migrate_repacks_image_url(&self.conn)?;
+        migrations::migrate_repacks_clean_name(&self.conn)?;
+        migrations::populate_clean_names(&self.conn)?;
+        migrations::migrate_normalize_popular_repacks(&self.conn)?;
+        migrations::migrate_cleanup_malformed_categories(&self.conn)?;
+        migrations::migrate_normalize_genre_variations(&self.conn)?;
+        
+        Ok(())
+    }
+    
+    /// Initialize tables (ONLY for local development/testing - not used in production)
+    /// Database is downloaded from server with all tables pre-created
+    #[allow(dead_code)]
     pub fn init_tables(&self) -> Result<()> {
         // Create repacks table
         self.conn.execute(
@@ -231,15 +256,8 @@ impl Database {
             [],
         )?;
         
-        // Run migrations
-        migrations::migrate_categories_data(&self.conn)?;
-        migrations::migrate_popular_repacks_period(&self.conn)?;
-        migrations::migrate_repacks_image_url(&self.conn)?;
-        migrations::migrate_repacks_clean_name(&self.conn)?;
-        migrations::populate_clean_names(&self.conn)?;
-        migrations::migrate_normalize_popular_repacks(&self.conn)?;
-        migrations::migrate_cleanup_malformed_categories(&self.conn)?;
-        migrations::migrate_normalize_genre_variations(&self.conn)?;
+        // Run migrations after table creation
+        self.run_migrations()?;
         
         Ok(())
     }
