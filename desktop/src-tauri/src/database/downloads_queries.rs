@@ -3,6 +3,19 @@ use super::models::Download;
 
 pub struct DownloadQueries;
 
+pub struct DownloadProgress<'a> {
+    pub info_hash: &'a str,
+    pub total_size: i64,
+    pub downloaded_bytes: i64,
+    pub uploaded_bytes: i64,
+    pub download_speed: i64,
+    pub upload_speed: i64,
+    pub progress: f64,
+    pub peers: i32,
+    pub seeds: i32,
+    pub eta_seconds: Option<i64>,
+}
+
 impl DownloadQueries {
     pub fn get_all_downloads(conn: &rusqlite::Connection) -> Result<Vec<Download>> {
         let mut stmt = conn.prepare(
@@ -131,16 +144,7 @@ impl DownloadQueries {
 
     pub fn update_download_progress(
         conn: &rusqlite::Connection,
-        info_hash: &str,
-        total_size: i64,
-        downloaded_bytes: i64,
-        uploaded_bytes: i64,
-        download_speed: i64,
-        upload_speed: i64,
-        progress: f64,
-        peers: i32,
-        seeds: i32,
-        eta_seconds: Option<i64>,
+        progress: &DownloadProgress,
     ) -> Result<()> {
         conn.execute(
             "UPDATE downloads 
@@ -149,16 +153,16 @@ impl DownloadQueries {
                  peers = ?7, seeds = ?8, eta_seconds = ?9, updated_at = CURRENT_TIMESTAMP
              WHERE info_hash = ?10",
             rusqlite::params![
-                total_size,
-                downloaded_bytes,
-                uploaded_bytes,
-                download_speed,
-                upload_speed,
-                progress,
-                peers,
-                seeds,
-                eta_seconds,
-                info_hash,
+                progress.total_size,
+                progress.downloaded_bytes,
+                progress.uploaded_bytes,
+                progress.download_speed,
+                progress.upload_speed,
+                progress.progress,
+                progress.peers,
+                progress.seeds,
+                progress.eta_seconds,
+                progress.info_hash,
             ],
         )?;
         Ok(())
