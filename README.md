@@ -1,6 +1,8 @@
 # FGBrowser
 
-A desktop application for browsing FitGirl Repack game information.
+A desktop application for browsing and organizing FitGirl Repack information.
+
+> **Disclaimer**: This application does not host, create, or distribute any game files. It only aggregates and displays publicly available information and torrent magnet links from FitGirl Repacks website. Users are responsible for ensuring they have legal rights to download any content.
 
 ## Features
 
@@ -57,12 +59,14 @@ The built application will be available in `desktop/src-tauri/target/release/bun
 
 ## How It Works
 
-1. **Crawler**: Built-in Rust crawler fetches game data from the source
-2. **Database**: SQLite database stores all game information locally
+1. **Crawler**: Built-in Rust crawler fetches publicly available game information and torrent magnet links from FitGirl Repacks website
+2. **Database**: SQLite database stores game metadata and magnet links locally for easy browsing
 3. **Image Cache**: Automatically downloads and caches game cover images
-4. **Browse**: Search, filter, and view game details offline
-5. **Download**: Copy magnet links or open in your torrent client
-6. **Popular Repacks**: Tracks and displays trending games by time period
+4. **Browse**: Search, filter, and view game information offline
+5. **Magnet Links**: Copy magnet links to use with your torrent client
+6. **Popular Repacks**: Tracks and displays trending repacks by time period
+
+**Note**: This application only stores metadata and magnet links. No game files are downloaded, hosted, or distributed by this application.
 
 ## CLI Tool
 
@@ -147,6 +151,13 @@ FGBrowser/
 - [Popular Repacks Feature](docs/POPULAR_REPACKS.md)
 - [Crawler Implementation](docs/CRAWLER_RUST.md)
 
+## Important Notes
+
+- **No Content Hosting**: FGBrowser does not host, store, or distribute any game files
+- **Information Only**: The application only aggregates publicly available metadata and magnet links
+- **User Responsibility**: Users are solely responsible for ensuring they have legal rights to download any content
+- **Educational Purpose**: This project is intended for educational purposes and to demonstrate web scraping and desktop application development
+
 ## License
 
-This project is for educational purposes only.
+This project is for educational purposes only. The developers are not responsible for how this software is used.
