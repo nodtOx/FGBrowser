@@ -1,0 +1,25 @@
+name: Test SSH Connection
+
+on:
+  workflow_dispatch:  # Manual trigger only
+
+jobs:
+  test-ssh:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Test SSH connection
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          # Setup SSH
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H 157.230.16.45 >> ~/.ssh/known_hosts
+          
+          # Test connection
+          echo "Testing SSH connection..."
+          ssh -o ConnectTimeout=10 -o BatchMode=yes root@157.230.16.45 'echo "GitHub Actions SSH test successful" && whoami && pwd && ls -la /var/www/fgbrowser/'
+          
+          echo "✅ SSH connection test passed!"
