@@ -2,7 +2,7 @@ use crate::crawler::{FitGirlCrawler, GameRepack, clean_game_title};
 use crate::database::Database;
 use super::utils::{AppState, parse_size_to_mb};
 use super::database_service::{DatabaseService, SqliteDatabaseService};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tauri::State;
 
@@ -268,8 +268,8 @@ pub fn save_repacks_to_db(repacks: &[GameRepack], db_service: &SqliteDatabaseSer
 
 /// Legacy save function that takes a PathBuf
 /// Kept for backward compatibility with CLI
-pub fn save_repacks_to_db_legacy(repacks: &[GameRepack], db_path: &PathBuf) -> anyhow::Result<()> {
-    let db = Database::new(db_path.clone())?;
+pub fn save_repacks_to_db_legacy(repacks: &[GameRepack], db_path: &Path) -> anyhow::Result<()> {
+    let db = Database::new(db_path.to_path_buf())?;
     
     // Process all repacks in a single transaction for 100-1000x speedup
     let mut saved_count = 0;
