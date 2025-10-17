@@ -253,7 +253,7 @@ pub async fn crawl_popular_games(
         match crawler.crawl_single_game(&popular.url).await {
             Ok(Some(game_repack)) => {
                 // Save to database
-                if let Err(e) = save_repacks_to_db(&[game_repack], &*db_service) {
+                if let Err(e) = save_repacks_to_db(&[game_repack], &db_service) {
                     eprintln!("    ❌ Failed to save: {}", e);
                 } else {
                     crawled_count += 1;
@@ -287,7 +287,7 @@ pub async fn crawl_single_popular_game(
     match crawler.crawl_single_game(&url).await {
         Ok(Some(game_repack)) => {
             // Save to database
-            save_repacks_to_db(&[game_repack], &*db_service).map_err(|e| e.to_string())?;
+            save_repacks_to_db(&[game_repack], &db_service).map_err(|e| e.to_string())?;
             
             // Update links for all periods
             state.db_service.update_popular_repack_links(None).map_err(|e| e.to_string())?;
