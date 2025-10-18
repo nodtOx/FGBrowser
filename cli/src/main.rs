@@ -42,8 +42,8 @@ fn find_database_path() -> PathBuf {
 }
 
 #[derive(Parser)]
-#[command(name = "FitBoy CLI")]
-#[command(about = "Crawl repack sites and update the database from command line", long_about = None)]
+#[command(name = "fgbrowser-cli")]
+#[command(author, version, about = "Crawl repack sites and update the database from command line", long_about = None)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
