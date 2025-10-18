@@ -47,7 +47,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
   git push
   git push --tags
   
-  REPO=$(git remote get-url origin | sed 's/.*github.com[:/]\(.*\)\.git/\1/')
+  REPO=$(git remote get-url origin | sed -E 's#.*[:/]([^/]+/[^/]+).*#\1#' | sed 's/\.git$//')
   
   echo ""
   echo "✅ Tag pushed to GitHub!"
