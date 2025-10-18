@@ -23,7 +23,11 @@ jobs:
           toolchain: stable
           profile: minimal
           override: true
-          target: aarch64-apple-darwin
+      
+      - name: Add Rust targets for Universal Binary
+        run: |
+          rustup target add x86_64-apple-darwin
+          rustup target add aarch64-apple-darwin
       
       - name: Setup Apple certificate
         env:
