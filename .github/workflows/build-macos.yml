@@ -75,7 +75,23 @@ jobs:
       - name: Build Tauri app (Universal Binary)
         env:
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-        run: npm run tauri build -- --target universal-apple-darwin
+        run: |
+          # Build only the main fgbrowser binary, not the CLI
+          cd src-tauri
+          cargo build --release --target x86_64-apple-darwin --bin fgbrowser
+          cargo build --release --target aarch64-apple-darwin --bin fgbrowser
+          
+          # Create universal binary
+          mkdir -p target/universal-apple-darwin/release
+          lipo -create \
+            target/x86_64-apple-darwin/release/fgbrowser \
+            target/aarch64-apple-darwin/release/fgbrowser \
+            -output target/universal-apple-darwin/release/fgbrowser
+          
+          cd ..
+          
+          # Now bundle (Tauri will use the pre-built universal binary)
+          npm run tauri build -- --target universal-apple-darwin
       
       - name: Cleanup keychain
         if: always()
