@@ -49,7 +49,7 @@ echo "✅ Tag created: $TAG"
 echo ""
 echo "Pushing tag to GitHub..."
 git push
-git push --tags
+git push origin "$TAG"
 
 REPO=$(git remote get-url origin | sed -E 's#.*[:/]([^/]+/[^/]+).*#\1#' | sed 's/\.git$//')
 
