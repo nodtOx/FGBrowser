@@ -105,7 +105,7 @@ jobs:
             Download, run the installer, and start browsing repacks!
           releaseDraft: false
           prerelease: false
-          args: ${{ matrix.args }} --bin fgbrowser
+          args: ${{ matrix.args }}
 
       - name: Cleanup keychain (macOS)
         if: always() && matrix.platform == 'macos-latest'
