@@ -68,7 +68,8 @@ release:
 # Build releases (requires GitHub CLI)
 build-release:
 	@VERSION=$$(cat VERSION); \
+	REPO=$$(git remote get-url origin | sed -E 's#.*[:/]([^/]+/[^/]+).*#\1#' | sed 's/\.git$$//'); \
 	echo "🚀 Triggering release build for v$$VERSION..."; \
 	gh workflow run "Release" -f version=v$$VERSION; \
 	echo "✅ Release build triggered for all platforms."; \
-	echo "📦 Check GitHub Actions: https://github.com/$$(git remote get-url origin | sed 's/.*github.com[:/]\(.*\)\.git/\1/')/actions"
+	echo "📦 Check GitHub Actions: https://github.com/$$REPO/actions"
