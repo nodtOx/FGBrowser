@@ -26,12 +26,17 @@ jobs:
           target: aarch64-apple-darwin
       
       - name: Setup Apple certificate
-        if: ${{ secrets.APPLE_CERTIFICATE }}
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
         run: |
+          # Skip if certificate is not set
+          if [ -z "$APPLE_CERTIFICATE" ]; then
+            echo "⚠️  No Apple certificate found. App will not be signed."
+            exit 0
+          fi
+          
           # Create variables
           CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
@@ -50,6 +55,8 @@ jobs:
           
           # Allow codesign to access the keychain
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          
+          echo "✅ Certificate imported successfully"
       
       - name: Install dependencies
         run: npm install
@@ -67,10 +74,10 @@ jobs:
         run: npm run tauri build -- --target universal-apple-darwin
       
       - name: Cleanup keychain
-        if: ${{ always() && secrets.APPLE_CERTIFICATE }}
+        if: always()
         run: |
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-          security delete-keychain $KEYCHAIN_PATH || true
+          security delete-keychain $KEYCHAIN_PATH 2>/dev/null || true
       
       - name: Create Release
         id: create_release
