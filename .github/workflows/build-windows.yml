@@ -1,0 +1,68 @@
+name: Build Windows Release
+
+on:
+  workflow_dispatch:  # Manual trigger only
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      
+      - name: Install dependencies
+        run: npm install
+      
+      - name: Read version
+        id: version
+        shell: bash
+        run: |
+          VERSION=$(cat VERSION)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+      
+      - name: Build Tauri app
+        run: npm run tauri build
+      
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: FGBrowser v${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: false
+          files: |
+            src-tauri/target/release/bundle/msi/*.msi
+            src-tauri/target/release/bundle/nsis/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Upload MSI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fgbrowser-windows-msi-v${{ steps.version.outputs.version }}
+          path: src-tauri/target/release/bundle/msi/*.msi
+          retention-days: 90
+      
+      - name: Upload NSIS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fgbrowser-windows-nsis-v${{ steps.version.outputs.version }}
+          path: src-tauri/target/release/bundle/nsis/*.exe
+          retention-days: 90
+

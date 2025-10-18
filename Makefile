@@ -1,4 +1,4 @@
-.PHONY: run build clear-db run-clear-db test lint clean install upload-db deploy-nginx version bump-patch bump-minor bump-major release
+.PHONY: run build clear-db run-clear-db test lint clean install upload-db deploy-nginx version bump-patch bump-minor bump-major release build-windows build-macos build-all
 
 run:
 	npm run tauri dev
@@ -64,3 +64,20 @@ bump-major:
 
 release:
 	@bash scripts/release.sh
+
+# Build releases (requires GitHub CLI)
+build-windows:
+	@echo "🪟 Triggering Windows build..."
+	gh workflow run "Build Windows Release"
+	@echo "✅ Windows build triggered. Check GitHub Actions for progress."
+
+build-macos:
+	@echo "🍎 Triggering macOS build..."
+	gh workflow run "Build macOS Release"
+	@echo "✅ macOS build triggered. Check GitHub Actions for progress."
+
+build-all:
+	@echo "🚀 Triggering all platform builds..."
+	gh workflow run "Build Windows Release"
+	gh workflow run "Build macOS Release"
+	@echo "✅ All builds triggered. Check GitHub Actions for progress."

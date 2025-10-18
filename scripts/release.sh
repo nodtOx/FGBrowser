@@ -45,4 +45,18 @@ echo "  git push origin $TAG"
 echo ""
 echo "Or push everything:"
 echo "  git push && git push --tags"
+echo ""
+read -p "Push now and trigger builds? (y/n) " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+  git push
+  git push --tags
+  echo ""
+  echo "🚀 Triggering release builds..."
+  make build-all
+  echo ""
+  echo "✅ Release complete!"
+  echo "📦 Check GitHub Actions: https://github.com/$(git remote get-url origin | sed 's/.*github.com[:/]\(.*\)\.git/\1/')/actions"
+  echo "📋 View releases: https://github.com/$(git remote get-url origin | sed 's/.*github.com[:/]\(.*\)\.git/\1/')/releases"
+fi
 
