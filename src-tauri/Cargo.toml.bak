@@ -1,0 +1,91 @@
+[package]
+name = "fgbrowser"
+version = "0.1.0"
+description = "FitGirl Repack Browser"
+authors = ["you"]
+edition = "2021"
+default-run = "fgbrowser"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "fgbrowser_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+# Main desktop binary (bundled by Tauri)
+[[bin]]
+name = "fgbrowser"
+path = "src/main.rs"
+
+# CLI binary (standalone, not bundled)
+# Only built when --features cli is specified
+# Named fgbrowser-cli to avoid Tauri trying to bundle it
+[[bin]]
+name = "fgbrowser-cli"
+path = "src/bin/cli.rs"
+required-features = ["cli"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[features]
+# CLI feature for building the standalone CLI binary
+cli = []
+
+[dependencies]
+tauri = { version = "2", features = ["protocol-asset", "devtools"] }
+tauri-plugin-opener = "2"
+tauri-plugin-fs = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Clipboard support
+arboard = "3.4"
+
+# File dialog
+rfd = "0.15"
+
+# Database
+rusqlite = { version = "0.32", features = ["bundled"] }
+
+# HTTP client
+reqwest = { version = "0.12", features = ["json", "blocking"] }
+
+# HTML parsing
+scraper = "0.21"
+
+# Regex
+regex = "1.11"
+
+# Async runtime
+tokio = { version = "1.40", features = ["full"] }
+async-trait = "0.1"
+
+# Error handling
+anyhow = "1.0"
+
+# CLI argument parsing
+clap = { version = "4.5", features = ["derive"] }
+
+# Torrent client (we'll use a Rust implementation)
+# For now, we'll use libtorrent-rasterbar bindings
+# Alternative: pure Rust implementation later
+# libtorrent = "0.3"  # Uncomment when ready
+
+# File system watching
+notify = "6.1"
+
+# Date/time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Configuration management
+config = "0.14"
+
+# System information (disk space, etc.)
+sysinfo = "0.33"
+
+# Cryptographic hashing (for image cache)
+sha2 = "0.10"
