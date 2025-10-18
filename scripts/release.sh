@@ -16,8 +16,7 @@ if [[ -n $(git status -s) ]]; then
   echo "⚠️  You have uncommitted changes:"
   git status -s
   echo ""
-  read -p "Commit changes? (y/n) " -n 1 -r
-  echo
+  read -p "Commit changes? (y/n) " -r
   if [[ $REPLY =~ ^[Yy]$ ]]; then
     git add -A
     git commit -m "chore: bump version to $VERSION"
@@ -30,8 +29,7 @@ fi
 # Check if tag already exists
 if git rev-parse "$TAG" >/dev/null 2>&1; then
   echo "⚠️  Tag $TAG already exists"
-  read -p "Delete and recreate tag? (y/n) " -n 1 -r
-  echo
+  read -p "Delete and recreate tag? (y/n) " -r
   if [[ ! $REPLY =~ ^[Yy]$ ]]; then
     echo "❌ Aborted"
     exit 1
