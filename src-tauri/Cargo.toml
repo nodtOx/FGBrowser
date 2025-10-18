@@ -1,6 +1,6 @@
 [package]
 name = "fgbrowser"
-version = "0.1.0"
+version = "0.1.1"
 description = "FitGirl Repack Browser"
 authors = ["you"]
 edition = "2021"
@@ -20,19 +20,11 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 name = "fgbrowser"
 path = "src/main.rs"
 
-# CLI binary (standalone, not bundled)
-# Only built when --features cli is specified
-[[bin]]
-name = "cli"
-path = "src/bin/cli.rs"
-required-features = ["cli"]
+# Note: CLI binary has been moved to ../cli/ directory as a separate crate
+# This prevents Tauri from trying to bundle it
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
-
-[features]
-# CLI feature for building the standalone CLI binary
-cli = []
 
 [dependencies]
 tauri = { version = "2", features = ["protocol-asset", "devtools"] }

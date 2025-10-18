@@ -1,0 +1,22 @@
+[package]
+name = "fgbrowser-cli"
+version = "0.1.0"
+description = "CLI tool for FGBrowser - Crawl repack sites and update the database"
+authors = ["you"]
+edition = "2021"
+
+[dependencies]
+# Reuse the library from the main app
+# We reference the package by its package name "fgbrowser"
+# But we import it as "fgbrowser_lib" (the lib name)
+fgbrowser = { path = "../src-tauri" }
+
+# CLI argument parsing
+clap = { version = "4.5", features = ["derive"] }
+
+# Error handling
+anyhow = "1.0"
+
+# Async runtime (needed for CLI async main)
+tokio = { version = "1.40", features = ["full"] }
+
