@@ -1,6 +1,9 @@
 name: Release
 
 on:
+  push:
+    tags:
+      - 'v*'
   workflow_dispatch:
     inputs:
       version:
@@ -83,10 +86,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
         with:
-          tagName: ${{ inputs.version }}
-          releaseName: "FGBrowser ${{ inputs.version }}"
+          tagName: ${{ inputs.version || github.ref_name }}
+          releaseName: "FGBrowser ${{ inputs.version || github.ref_name }}"
           releaseBody: |
-            ## FGBrowser ${{ inputs.version }}
+            ## FGBrowser ${{ inputs.version || github.ref_name }}
 
             ### Downloads
 
@@ -98,7 +101,7 @@ jobs:
             - Installer (recommended): `*_x64-setup.exe`
             - MSI Installer: `*_x64_en-US.msi` (if available)
 
-            Download, run the installer, and start browsing FitGirl repacks!
+            Download, run the installer, and start browsing repacks!
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
