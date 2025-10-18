@@ -1,0 +1,6 @@
+/Users/ekinertac/Code/fit-boy/cli/target/release/deps/zerofrom_derive-06ecc982709c31c2.d: /Users/ekinertac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerofrom-derive-0.1.6/src/lib.rs /Users/ekinertac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerofrom-derive-0.1.6/src/visitor.rs
+
+/Users/ekinertac/Code/fit-boy/cli/target/release/deps/libzerofrom_derive-06ecc982709c31c2.dylib: /Users/ekinertac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerofrom-derive-0.1.6/src/lib.rs /Users/ekinertac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerofrom-derive-0.1.6/src/visitor.rs
+
+/Users/ekinertac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerofrom-derive-0.1.6/src/lib.rs:
+/Users/ekinertac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerofrom-derive-0.1.6/src/visitor.rs:

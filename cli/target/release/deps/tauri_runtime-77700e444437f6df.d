@@ -1,0 +1,11 @@
+/Users/ekinertac/Code/fit-boy/cli/target/release/deps/tauri_runtime-77700e444437f6df.d: /Users/ekinertac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tauri-runtime-2.8.0/src/lib.rs /Users/ekinertac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tauri-runtime-2.8.0/src/dpi.rs /Users/ekinertac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tauri-runtime-2.8.0/src/monitor.rs /Users/ekinertac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tauri-runtime-2.8.0/src/webview.rs /Users/ekinertac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tauri-runtime-2.8.0/src/window.rs
+
+/Users/ekinertac/Code/fit-boy/cli/target/release/deps/libtauri_runtime-77700e444437f6df.rlib: /Users/ekinertac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tauri-runtime-2.8.0/src/lib.rs /Users/ekinertac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tauri-runtime-2.8.0/src/dpi.rs /Users/ekinertac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tauri-runtime-2.8.0/src/monitor.rs /Users/ekinertac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tauri-runtime-2.8.0/src/webview.rs /Users/ekinertac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tauri-runtime-2.8.0/src/window.rs
+
+/Users/ekinertac/Code/fit-boy/cli/target/release/deps/libtauri_runtime-77700e444437f6df.rmeta: /Users/ekinertac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tauri-runtime-2.8.0/src/lib.rs /Users/ekinertac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tauri-runtime-2.8.0/src/dpi.rs /Users/ekinertac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tauri-runtime-2.8.0/src/monitor.rs /Users/ekinertac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tauri-runtime-2.8.0/src/webview.rs /Users/ekinertac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tauri-runtime-2.8.0/src/window.rs
+
+/Users/ekinertac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tauri-runtime-2.8.0/src/lib.rs:
+/Users/ekinertac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tauri-runtime-2.8.0/src/dpi.rs:
+/Users/ekinertac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tauri-runtime-2.8.0/src/monitor.rs:
+/Users/ekinertac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tauri-runtime-2.8.0/src/webview.rs:
+/Users/ekinertac/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tauri-runtime-2.8.0/src/window.rs:
