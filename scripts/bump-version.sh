@@ -65,6 +65,14 @@ if [ -f "src-tauri/Cargo.lock" ]; then
   echo "✅ Updated Cargo.lock"
 fi
 
+# Update tauri.conf.json (required for auto-updater)
+if [ -f "src-tauri/tauri.conf.json" ]; then
+  if command -v node &> /dev/null; then
+    node -e "const conf = require('./src-tauri/tauri.conf.json'); conf.version = '$NEW_VERSION'; require('fs').writeFileSync('src-tauri/tauri.conf.json', JSON.stringify(conf, null, 2) + '\n');"
+    echo "✅ Updated tauri.conf.json"
+  fi
+fi
+
 echo ""
 echo "✨ Version bumped to $NEW_VERSION"
 echo ""

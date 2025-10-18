@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { checkForUpdatesOnStartup } from '$lib/stores/appUpdater';
   import { isCrawlingPopular, loadCategories, loadGames, totalGamesCount } from '$lib/stores/games';
   import { initKeyboardShortcuts } from '$lib/stores/keyboard';
   import { browseView, currentPage, gameListViewMode, loadSavedGameListViewMode } from '$lib/stores/navigation';
@@ -16,6 +17,7 @@
   import Settings from '$lib/components/Settings.svelte';
   import Sidebar from '$lib/components/Sidebar.svelte';
   import StatusBar from '$lib/components/StatusBar.svelte';
+  import UpdateNotification from '$lib/components/UpdateNotification.svelte';
   import VirtualizedGameGrid from '$lib/components/VirtualizedGameGrid.svelte';
   import VirtualizedGameList from '$lib/components/VirtualizedGameList.svelte';
 
@@ -27,6 +29,12 @@
 
   async function initializeApp() {
     try {
+      // Track app launch (if telemetry enabled)
+      invoke('track_app_launch').catch(() => {}); // Non-blocking, ignore errors
+      
+      // Check for app updates in the background
+      checkForUpdatesOnStartup();
+      
       // Database should be ready from Rust startup, check if it has data
       const isEmpty = await invoke<boolean>('is_database_empty');
       
@@ -172,6 +180,7 @@
 </script>
 
 <div class="app">
+  <UpdateNotification />
   <Header />
 
   <main class="main-content">

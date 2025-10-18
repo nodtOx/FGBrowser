@@ -12,6 +12,7 @@ pub mod download_commands;
 pub mod settings_commands;
 pub mod image_commands;
 pub mod system_commands;
+pub mod telemetry_commands;
 
 // Re-export AppState for convenience
 pub use utils::AppState;
@@ -104,5 +105,14 @@ pub use system_commands::{
     select_download_folder,
     open_download_folder,
     DiskInfo,
+};
+
+// Telemetry commands
+pub use telemetry_commands::{
+    track_app_launch,
+    track_feature_usage,
+    track_crawler_run,
+    track_error,
+    is_telemetry_enabled,
 };
 

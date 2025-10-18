@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { appUpdateStatus, checkForUpdates } from '$lib/stores/appUpdater';
   import { invoke } from '@tauri-apps/api/core';
   import { downloadDir } from '@tauri-apps/api/path';
   import { onMount } from 'svelte';
@@ -325,6 +326,17 @@
             <div class="setting-description">Show desktop notifications for downloads and updates</div>
           </div>
         </div>
+
+        <div class="setting-group">
+          <div class="group-title">Privacy & Telemetry</div>
+
+          <div class="setting-item">
+            <div class="setting-description" style="padding: 12px; background: rgba(99, 102, 241, 0.1); border-radius: 6px; border-left: 3px solid rgb(99, 102, 241);">
+              <strong>Anonymous Usage Tracking:</strong> This app automatically sends anonymous crash reports and usage statistics to help improve the experience.
+              No personal data or game information is collected. Powered by Sentry.
+            </div>
+          </div>
+        </div>
       {:else if activeSection === 'downloads'}
         <div class="setting-group">
           <div class="group-title">Download Location</div>
@@ -518,16 +530,43 @@
           <div class="about-info">
             <div class="info-item">
               <span class="info-label">Version:</span>
-              <span class="info-value">0.1.0</span>
+              <span class="info-value">0.1.1</span>
             </div>
             <div class="info-item">
               <span class="info-label">Build:</span>
-              <span class="info-value">2025.01.14</span>
+              <span class="info-value">2025.01.18</span>
             </div>
             <div class="info-item">
               <span class="info-label">Framework:</span>
               <span class="info-value">Tauri 2.0 + Svelte</span>
             </div>
+          </div>
+
+          <div class="update-check-section">
+            <button 
+              class="btn-check-update" 
+              on:click={() => checkForUpdates(false)}
+              disabled={$appUpdateStatus.checking}
+            >
+              {#if $appUpdateStatus.checking}
+                Checking for updates...
+              {:else if $appUpdateStatus.available}
+                Update Available! (v{$appUpdateStatus.latestVersion})
+              {:else if $appUpdateStatus.error}
+                Check Failed - Try Again
+              {:else}
+                Check for Updates
+              {/if}
+            </button>
+            {#if $appUpdateStatus.available}
+              <p class="update-available-text">
+                A new version is available. The notification will appear in the top-right corner.
+              </p>
+            {:else if !$appUpdateStatus.checking && !$appUpdateStatus.error}
+              <p class="update-info-text">
+                App automatically checks for updates on startup.
+              </p>
+            {/if}
           </div>
 
           <div class="about-description">
@@ -897,6 +936,51 @@
     flex-direction: column;
     gap: 8px;
     width: 100%;
+  }
+
+  .update-check-section {
+    margin: 24px 0;
+    padding: 20px;
+    background: var(--color-backgroundSecondary);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--color-border);
+    text-align: center;
+  }
+
+  .btn-check-update {
+    padding: 12px 32px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+    min-width: 200px;
+  }
+
+  .btn-check-update:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  }
+
+  .btn-check-update:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .update-available-text {
+    margin-top: 12px;
+    color: #10b981;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .update-info-text {
+    margin-top: 12px;
+    color: var(--color-textSecondary);
+    font-size: 13px;
   }
 
   .link-button {
