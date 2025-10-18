@@ -25,3 +25,7 @@ samples/
 *.db
 *.db-shm
 *.db-wal
+
+# Rust build artifacts
+/cli/target/
+/src-tauri/target/
