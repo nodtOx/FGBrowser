@@ -40,22 +40,32 @@ git tag -a "$TAG" -m "Release $TAG"
 echo ""
 echo "✅ Tag created: $TAG"
 echo ""
-echo "Push tag and trigger release builds? (y/n)"
+echo "Push tag? (y/n)"
 read -p "> " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
   git push
   git push --tags
+  
+  REPO=$(git remote get-url origin | sed 's/.*github.com[:/]\(.*\)\.git/\1/')
+  
   echo ""
-  echo "🚀 Triggering release builds for all platforms..."
-  make build-release
+  echo "✅ Tag pushed to GitHub!"
   echo ""
-  echo "✅ Release complete!"
-  echo "📋 View releases: https://github.com/$(git remote get-url origin | sed 's/.*github.com[:/]\(.*\)\.git/\1/')/releases"
+  echo "🚀 To trigger the release build:"
+  echo ""
+  echo "   1. Go to: https://github.com/$REPO/actions/workflows/release.yml"
+  echo "   2. Click 'Run workflow'"
+  echo "   3. Enter version: $TAG"
+  echo "   4. Click 'Run workflow' button"
+  echo ""
+  echo "Or run this command:"
+  echo "   gh workflow run Release -f version=$TAG"
+  echo ""
+  echo "📋 View releases: https://github.com/$REPO/releases"
 else
   echo ""
   echo "📝 To push later:"
   echo "  git push && git push --tags"
-  echo "  make build-release"
 fi
 
