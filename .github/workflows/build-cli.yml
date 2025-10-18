@@ -1,6 +1,9 @@
 name: Build and Deploy CLI
 
 on:
+  push:
+    tags:
+      - 'v*'
   workflow_dispatch:  # Manual trigger only
 
 jobs:
