@@ -2,6 +2,8 @@
 
 A desktop application for browsing and organizing FitGirl Repack information.
 
+![FGBrowser](.github/assets/FGBrowser-03.png)
+
 > **Disclaimer**: This application does not host, create, or distribute any game files. It only aggregates and displays publicly available information and torrent magnet links from FitGirl Repacks website. Users are responsible for ensuring they have legal rights to download any content.
 
 ## Features
