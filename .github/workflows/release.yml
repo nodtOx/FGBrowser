@@ -105,8 +105,7 @@ jobs:
             Download, run the installer, and start browsing repacks!
           releaseDraft: false
           prerelease: false
-          args: ${{ matrix.args }}
-          tauriScript: npm run tauri -- build --bin fgbrowser ${{ matrix.args }}
+          args: ${{ matrix.args }} --bin fgbrowser
 
       - name: Cleanup keychain (macOS)
         if: always() && matrix.platform == 'macos-latest'
