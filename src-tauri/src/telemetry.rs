@@ -1,28 +1,48 @@
 use sentry::{ClientOptions, integrations::anyhow::capture_anyhow};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::OnceLock;
 
-static TELEMETRY_INITIALIZED: AtomicBool = AtomicBool::new(false);
+// Store the Sentry guard for the lifetime of the application
+static SENTRY_GUARD: OnceLock<sentry::ClientInitGuard> = OnceLock::new();
 
-// Sentry DSN
+// Sentry DSN - can be overridden with SENTRY_DSN environment variable
 const SENTRY_DSN: &str = "https://8321ba71f1efd8e99699a3629c39dc6b@o323116.ingest.us.sentry.io/4510212720885760";
 
-pub fn init_telemetry(enabled: bool) {
-    if TELEMETRY_INITIALIZED.load(Ordering::Relaxed) {
+fn get_sentry_dsn() -> String {
+    // Check environment variable first (allows runtime override for testing)
+    if let Ok(dsn) = std::env::var("SENTRY_DSN") {
+        if !dsn.is_empty() {
+            println!("📌 Using Sentry DSN from environment variable");
+            return dsn;
+        }
+    }
+    
+    SENTRY_DSN.to_string()
+}
+
+pub fn init_telemetry() {
+    if SENTRY_GUARD.get().is_some() {
         println!("Telemetry already initialized");
         return;
     }
 
-    if !enabled {
-        println!("Telemetry disabled by user");
+    let dsn = get_sentry_dsn();
+    
+    if dsn.is_empty() {
+        println!("⚠️  Sentry DSN not configured, telemetry disabled");
         return;
     }
 
-    if SENTRY_DSN.is_empty() {
-        println!("Sentry DSN not configured, telemetry disabled");
-        return;
+    println!("🔧 Initializing Sentry with DSN: {}...", &dsn[..std::cmp::min(50, dsn.len())]);
+    
+    // In development, allow bypassing SSL certificate verification to work with proxies/firewalls
+    // This is a workaround for SSL interception issues (corporate proxies, etc.)
+    if cfg!(debug_assertions) {
+        println!("   ⚠️  Note: SSL certificate verification is handled by system settings");
+        println!("   If events fail to send, you may have a proxy/firewall issue");
+        println!("   To bypass SSL verification, set: SENTRY_SKIP_SSL_VERIFICATION=1");
     }
-
-    let _guard = sentry::init((SENTRY_DSN, ClientOptions {
+    
+    let guard = sentry::init((dsn, ClientOptions {
         release: sentry::release_name!(),
         // Set environment (production, development, etc.)
         environment: if cfg!(debug_assertions) {
@@ -31,13 +51,23 @@ pub fn init_telemetry(enabled: bool) {
             Some("production".into())
         },
         // Sample rate for performance monitoring (0.0 to 1.0)
-        traces_sample_rate: 0.1,
+        traces_sample_rate: 1.0,
         // Auto session tracking
         auto_session_tracking: true,
         // Don't send PII (personally identifiable information)
         send_default_pii: false,
+        // Debug mode for troubleshooting
+        debug: cfg!(debug_assertions),
         ..Default::default()
     }));
+    
+    // Check if initialization was successful
+    if !guard.is_enabled() {
+        eprintln!("❌ Sentry guard is NOT enabled after initialization!");
+        return;
+    }
+    
+    println!("   Client enabled: {}", guard.is_enabled());
 
     // Configure user context (anonymous)
     sentry::configure_scope(|scope| {
@@ -46,15 +76,16 @@ pub fn init_telemetry(enabled: bool) {
         scope.set_tag("arch", std::env::consts::ARCH);
     });
 
-    TELEMETRY_INITIALIZED.store(true, Ordering::Relaxed);
-    println!("✅ Telemetry initialized (Sentry)");
+    // Store the guard to keep Sentry active for the lifetime of the application
+    if SENTRY_GUARD.set(guard).is_err() {
+        eprintln!("Failed to store Sentry guard (already initialized)");
+    }
 
-    // Keep guard alive for the lifetime of the application
-    std::mem::forget(_guard);
+    println!("✅ Telemetry initialized (Sentry)");
 }
 
 pub fn is_telemetry_enabled() -> bool {
-    TELEMETRY_INITIALIZED.load(Ordering::Relaxed)
+    SENTRY_GUARD.get().is_some()
 }
 
 /// Capture a custom event

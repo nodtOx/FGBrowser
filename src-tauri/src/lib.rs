@@ -30,7 +30,7 @@ use commands::{
     get_app_constants, open_magnet_link, copy_to_clipboard, get_disk_info,
     select_download_folder, open_download_folder,
     // Telemetry commands
-    track_app_launch, track_feature_usage, track_crawler_run, track_error, is_telemetry_enabled,
+    track_app_launch, track_feature_usage, track_crawler_run, track_error, is_telemetry_enabled, test_sentry_integration,
     // AppState
     AppState,
 };
@@ -204,8 +204,8 @@ pub fn run() {
 
     println!("✅ Database service initialized successfully");
 
-    // Initialize telemetry (always enabled)
-    telemetry::init_telemetry(true);
+    // Initialize telemetry
+    telemetry::init_telemetry();
 
     // Clone db_path for commands that need it directly (reset/download/check)
     let db_path_for_commands = db_path.clone();
@@ -277,7 +277,8 @@ pub fn run() {
             track_feature_usage,
             track_crawler_run,
             track_error,
-            is_telemetry_enabled
+            is_telemetry_enabled,
+            test_sentry_integration
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

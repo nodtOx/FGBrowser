@@ -114,5 +114,6 @@ pub use telemetry_commands::{
     track_crawler_run,
     track_error,
     is_telemetry_enabled,
+    test_sentry_integration,
 };
 

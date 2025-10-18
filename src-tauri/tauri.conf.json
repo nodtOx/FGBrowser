@@ -52,7 +52,7 @@
       }
     },
     "macOS": {
-      "signingIdentity": null,
+      "signingIdentity": "-",
       "entitlements": "entitlements.plist"
     }
   },

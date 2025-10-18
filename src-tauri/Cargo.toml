@@ -83,4 +83,9 @@ sysinfo = "0.33"
 sha2 = "0.10"
 
 # Error tracking and telemetry
-sentry = { version = "0.45", features = ["debug-images", "anyhow", "reqwest"] }
+sentry = { version = "0.45", features = [
+  "debug-images",
+  "anyhow",
+  "reqwest",
+  "panic",
+] }

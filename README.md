@@ -26,22 +26,24 @@ Download the latest version from [GitHub Releases](https://github.com/ekinertac/
 - Apple Silicon (M1/M2/M3/M4): Download `*_aarch64.dmg`
 - Intel Macs: Download `*_x86_64.dmg`
 
-**Important for macOS users:** The app is currently unsigned. After copying to Applications, use ONE of these methods:
+### macOS Installation Instructions
 
-**Method 1 - Right-click to Open:**
+If you see **"FGBrowser is damaged and can't be opened"** - don't worry, the app is not actually damaged. This is macOS blocking unsigned apps downloaded from the internet.
 
-1. Right-click (or Control-click) on FGBrowser.app in Applications folder
-2. Select "Open" from the menu
-3. Click "Open" in the security dialog that appears
-4. The app will launch and you can use it normally from then on
-
-**Method 2 - Terminal (removes quarantine flag):**
+**Option 1 - Terminal (Recommended):**
 
 ```bash
 xattr -cr /Applications/FGBrowser.app
 ```
 
-Then open the app normally by double-clicking it.
+Then open the app normally. This removes the quarantine flag.
+
+**Option 2 - Right-click Method:**
+
+1. Right-click (or Control-click) on FGBrowser.app in Applications
+2. Select "Open" from the menu
+3. Click "Open" in the security dialog
+4. App will open normally from then on
 
 **Windows:**
 
