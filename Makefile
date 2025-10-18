@@ -1,4 +1,4 @@
-.PHONY: run build clear-db run-clear-db test lint clean install
+.PHONY: run build clear-db run-clear-db test lint clean install upload-db deploy-nginx version bump-patch bump-minor bump-major release
 
 run:
 	npm run tauri dev
@@ -48,3 +48,19 @@ deploy-nginx:
 	@echo "Reloading nginx..."
 	ssh root@157.230.16.45 'systemctl reload nginx'
 	@echo "✅ Nginx config deployed and reloaded successfully"
+
+# Version management
+version:
+	@cat VERSION
+
+bump-patch:
+	@bash scripts/bump-version.sh patch
+
+bump-minor:
+	@bash scripts/bump-version.sh minor
+
+bump-major:
+	@bash scripts/bump-version.sh major
+
+release:
+	@bash scripts/release.sh

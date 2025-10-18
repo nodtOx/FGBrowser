@@ -1,12 +1,7 @@
 name: Build and Deploy CLI
 
 on:
-  push:
-    branches: [ main ]
-    paths:
-      - 'src-tauri/**'
-      - '.github/workflows/build-cli.yml'
-  workflow_dispatch:  # Allow manual trigger
+  workflow_dispatch:  # Manual trigger only
 
 jobs:
   build-and-deploy:
