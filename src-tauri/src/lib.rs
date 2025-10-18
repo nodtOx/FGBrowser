@@ -3,6 +3,7 @@ mod constants;
 pub mod crawler;
 pub mod database;
 pub mod image_cache;
+mod telemetry;
 
 use commands::{
     // Game commands
@@ -28,6 +29,8 @@ use commands::{
     // System commands
     get_app_constants, open_magnet_link, copy_to_clipboard, get_disk_info,
     select_download_folder, open_download_folder,
+    // Telemetry commands
+    track_app_launch, track_feature_usage, track_crawler_run, track_error, is_telemetry_enabled,
     // AppState
     AppState,
 };
@@ -201,12 +204,16 @@ pub fn run() {
 
     println!("✅ Database service initialized successfully");
 
+    // Initialize telemetry (always enabled)
+    telemetry::init_telemetry(true);
+
     // Clone db_path for commands that need it directly (reset/download/check)
     let db_path_for_commands = db_path.clone();
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(AppState {
             db_service,
         })
@@ -265,7 +272,12 @@ pub fn run() {
             check_image_cached,
             cache_image_background,
             clear_image_cache,
-            get_image_cache_size
+            get_image_cache_size,
+            track_app_launch,
+            track_feature_usage,
+            track_crawler_run,
+            track_error,
+            is_telemetry_enabled
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

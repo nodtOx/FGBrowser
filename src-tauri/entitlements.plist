@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+    <dict>
+        <!-- Allow JIT compilation (required for some Rust features) -->
+        <key>com.apple.security.cs.allow-jit</key>
+        <true />
+
+        <!-- Allow unsigned executable memory (required for Rust/WASM) -->
+        <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+        <true />
+
+        <!-- Allow DYLD environment variables -->
+        <key>com.apple.security.cs.allow-dyld-environment-variables</key>
+        <true />
+
+        <!-- Network client access (for updater, crawler, downloading database) -->
+        <key>com.apple.security.network.client</key>
+        <true />
+
+        <!-- File system read/write access -->
+        <key>com.apple.security.files.user-selected.read-write</key>
+        <true />
+
+        <!-- Disable library validation (needed for unsigned app) -->
+        <key>com.apple.security.cs.disable-library-validation</key>
+        <true />
+    </dict>
+</plist>

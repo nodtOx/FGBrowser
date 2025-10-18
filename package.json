@@ -1,6 +1,6 @@
 {
   "name": "fgbrowser",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "FitGirl Repack Browser",
   "type": "module",
   "scripts": {
@@ -14,20 +14,22 @@
   "license": "MIT",
   "dependencies": {
     "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-fs": "^2",
     "@tauri-apps/plugin-opener": "^2",
-    "@tauri-apps/plugin-fs": "^2"
+    "@tauri-apps/plugin-process": "^2.3.0",
+    "@tauri-apps/plugin-updater": "^2.9.0"
   },
   "devDependencies": {
     "@sveltejs/adapter-static": "^3.0.6",
     "@sveltejs/kit": "^2.9.0",
     "@sveltejs/vite-plugin-svelte": "^5.0.0",
+    "@tauri-apps/cli": "^2",
+    "autoprefixer": "^10.4.17",
+    "postcss": "^8.4.35",
     "svelte": "^5.0.0",
     "svelte-check": "^4.0.0",
-    "typescript": "~5.6.2",
-    "vite": "^6.0.3",
-    "@tauri-apps/cli": "^2",
     "tailwindcss": "^3.4.1",
-    "autoprefixer": "^10.4.17",
-    "postcss": "^8.4.35"
+    "typescript": "~5.6.2",
+    "vite": "^6.0.3"
   }
 }

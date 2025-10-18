@@ -62,4 +62,5 @@ echo "📦 Check GitHub Actions: https://github.com/$REPO/actions"
 echo "📋 View releases: https://github.com/$REPO/releases"
 echo ""
 echo "💡 Tip: The release will be created when all platform builds complete successfully."
+echo "📱 Auto-updater: Users will be notified of this update automatically within 5 seconds of app launch."
 

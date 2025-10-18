@@ -1,6 +1,6 @@
 [package]
 name = "fgbrowser"
-version = "0.1.1"
+version = "0.1.2"
 description = "FitGirl Repack Browser"
 authors = ["you"]
 edition = "2021"
@@ -30,6 +30,7 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = ["protocol-asset", "devtools"] }
 tauri-plugin-opener = "2"
 tauri-plugin-fs = "2"
+tauri-plugin-updater = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
@@ -80,3 +81,6 @@ sysinfo = "0.33"
 
 # Cryptographic hashing (for image cache)
 sha2 = "0.10"
+
+# Error tracking and telemetry
+sentry = { version = "0.45", features = ["debug-images", "anyhow", "reqwest"] }
