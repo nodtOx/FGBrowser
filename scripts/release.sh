@@ -49,27 +49,19 @@ git tag -a "$TAG" -m "Release $TAG"
 echo ""
 echo "✅ Tag created: $TAG"
 echo ""
-echo "Push tag? (y/n)"
-read -p "> " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-  git push
-  git push --tags
-  
-  REPO=$(git remote get-url origin | sed -E 's#.*[:/]([^/]+/[^/]+).*#\1#' | sed 's/\.git$//')
-  
-  echo ""
-  echo "✅ Tag pushed to GitHub!"
-  echo ""
-  echo "🚀 Release build will start automatically in a few seconds..."
-  echo ""
-  echo "📦 Check GitHub Actions: https://github.com/$REPO/actions"
-  echo "📋 View releases: https://github.com/$REPO/releases"
-  echo ""
-  echo "💡 Tip: The release will be created when all platform builds complete successfully."
-else
-  echo ""
-  echo "📝 To push later:"
-  echo "  git push && git push --tags"
-fi
+echo "Pushing tag to GitHub..."
+git push
+git push --tags
+
+REPO=$(git remote get-url origin | sed -E 's#.*[:/]([^/]+/[^/]+).*#\1#' | sed 's/\.git$//')
+
+echo ""
+echo "✅ Tag pushed to GitHub!"
+echo ""
+echo "🚀 Release build will start automatically in a few seconds..."
+echo ""
+echo "📦 Check GitHub Actions: https://github.com/$REPO/actions"
+echo "📋 View releases: https://github.com/$REPO/releases"
+echo ""
+echo "💡 Tip: The release will be created when all platform builds complete successfully."
 
