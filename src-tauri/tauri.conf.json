@@ -43,7 +43,7 @@
     ],
     "externalBin": [],
     "macOS": {
-      "signingIdentity": null,
+      "signingIdentity": "$APPLE_SIGNING_IDENTITY",
       "entitlements": null
     }
   }
