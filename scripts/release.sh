@@ -29,11 +29,20 @@ fi
 
 # Check if tag already exists
 if git rev-parse "$TAG" >/dev/null 2>&1; then
-  echo "❌ Tag $TAG already exists"
-  exit 1
+  echo "⚠️  Tag $TAG already exists"
+  read -p "Delete and recreate tag? (y/n) " -n 1 -r
+  echo
+  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "❌ Aborted"
+    exit 1
+  fi
+  
+  echo "Deleting old tag..."
+  git tag -d "$TAG"
+  git push origin ":refs/tags/$TAG" 2>/dev/null || true
 fi
 
-# Create and push tag
+# Create tag
 echo "Creating tag $TAG..."
 git tag -a "$TAG" -m "Release $TAG"
 
