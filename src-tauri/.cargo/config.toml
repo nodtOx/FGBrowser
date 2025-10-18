@@ -1,0 +1,4 @@
+[build]
+# Only build the fgbrowser binary by default (not CLI)
+# CLI requires --features cli to be built
+target-dir = "target"
