@@ -1,0 +1,42 @@
+/Users/ekinertac/Code/fit-boy/cli/target/debug/deps/fgbrowser_lib-26171abc3df4589d.d: /Users/ekinertac/Code/fit-boy/src-tauri/src/lib.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/commands/mod.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/commands/utils.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/commands/database_service.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/commands/game_commands.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/commands/crawler_commands.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/commands/popular_commands.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/commands/download_commands.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/commands/settings_commands.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/commands/image_commands.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/commands/system_commands.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/constants.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/crawler/mod.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/crawler/models.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/crawler/title_cleaner.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/crawler/extractors.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/crawler/popular.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/crawler/site_crawler.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/crawler/fitgirl.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/database/mod.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/database/models.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/database/migrations.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/database/game_queries.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/database/category_queries.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/database/popular_queries.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/database/downloads_queries.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/database/settings.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/database/cache.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/image_cache.rs /Users/ekinertac/Code/fit-boy/cli/target/debug/build/fgbrowser-61772bc7b92c1322/out/12caf02e7bcd12c339b0db64b2d1b31f73015acf42cc37fc578374e471051780 /Users/ekinertac/Code/fit-boy/cli/target/debug/build/fgbrowser-61772bc7b92c1322/out/114afbe0fd3e0a1477fb43a3debe32a6375bf634b867f2d6c83256954cda76c8 /Users/ekinertac/Code/fit-boy/cli/target/debug/build/fgbrowser-61772bc7b92c1322/out/0e32491fcae893595bf13fee407d1c819b35e562c27a0c05b591157cb644a8fe
+
+/Users/ekinertac/Code/fit-boy/cli/target/debug/deps/libfgbrowser_lib-26171abc3df4589d.rmeta: /Users/ekinertac/Code/fit-boy/src-tauri/src/lib.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/commands/mod.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/commands/utils.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/commands/database_service.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/commands/game_commands.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/commands/crawler_commands.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/commands/popular_commands.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/commands/download_commands.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/commands/settings_commands.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/commands/image_commands.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/commands/system_commands.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/constants.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/crawler/mod.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/crawler/models.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/crawler/title_cleaner.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/crawler/extractors.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/crawler/popular.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/crawler/site_crawler.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/crawler/fitgirl.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/database/mod.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/database/models.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/database/migrations.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/database/game_queries.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/database/category_queries.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/database/popular_queries.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/database/downloads_queries.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/database/settings.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/database/cache.rs /Users/ekinertac/Code/fit-boy/src-tauri/src/image_cache.rs /Users/ekinertac/Code/fit-boy/cli/target/debug/build/fgbrowser-61772bc7b92c1322/out/12caf02e7bcd12c339b0db64b2d1b31f73015acf42cc37fc578374e471051780 /Users/ekinertac/Code/fit-boy/cli/target/debug/build/fgbrowser-61772bc7b92c1322/out/114afbe0fd3e0a1477fb43a3debe32a6375bf634b867f2d6c83256954cda76c8 /Users/ekinertac/Code/fit-boy/cli/target/debug/build/fgbrowser-61772bc7b92c1322/out/0e32491fcae893595bf13fee407d1c819b35e562c27a0c05b591157cb644a8fe
+
+/Users/ekinertac/Code/fit-boy/src-tauri/src/lib.rs:
+/Users/ekinertac/Code/fit-boy/src-tauri/src/commands/mod.rs:
+/Users/ekinertac/Code/fit-boy/src-tauri/src/commands/utils.rs:
+/Users/ekinertac/Code/fit-boy/src-tauri/src/commands/database_service.rs:
+/Users/ekinertac/Code/fit-boy/src-tauri/src/commands/game_commands.rs:
+/Users/ekinertac/Code/fit-boy/src-tauri/src/commands/crawler_commands.rs:
+/Users/ekinertac/Code/fit-boy/src-tauri/src/commands/popular_commands.rs:
+/Users/ekinertac/Code/fit-boy/src-tauri/src/commands/download_commands.rs:
+/Users/ekinertac/Code/fit-boy/src-tauri/src/commands/settings_commands.rs:
+/Users/ekinertac/Code/fit-boy/src-tauri/src/commands/image_commands.rs:
+/Users/ekinertac/Code/fit-boy/src-tauri/src/commands/system_commands.rs:
+/Users/ekinertac/Code/fit-boy/src-tauri/src/constants.rs:
+/Users/ekinertac/Code/fit-boy/src-tauri/src/crawler/mod.rs:
+/Users/ekinertac/Code/fit-boy/src-tauri/src/crawler/models.rs:
+/Users/ekinertac/Code/fit-boy/src-tauri/src/crawler/title_cleaner.rs:
+/Users/ekinertac/Code/fit-boy/src-tauri/src/crawler/extractors.rs:
+/Users/ekinertac/Code/fit-boy/src-tauri/src/crawler/popular.rs:
+/Users/ekinertac/Code/fit-boy/src-tauri/src/crawler/site_crawler.rs:
+/Users/ekinertac/Code/fit-boy/src-tauri/src/crawler/fitgirl.rs:
+/Users/ekinertac/Code/fit-boy/src-tauri/src/database/mod.rs:
+/Users/ekinertac/Code/fit-boy/src-tauri/src/database/models.rs:
+/Users/ekinertac/Code/fit-boy/src-tauri/src/database/migrations.rs:
+/Users/ekinertac/Code/fit-boy/src-tauri/src/database/game_queries.rs:
+/Users/ekinertac/Code/fit-boy/src-tauri/src/database/category_queries.rs:
+/Users/ekinertac/Code/fit-boy/src-tauri/src/database/popular_queries.rs:
+/Users/ekinertac/Code/fit-boy/src-tauri/src/database/downloads_queries.rs:
+/Users/ekinertac/Code/fit-boy/src-tauri/src/database/settings.rs:
+/Users/ekinertac/Code/fit-boy/src-tauri/src/database/cache.rs:
+/Users/ekinertac/Code/fit-boy/src-tauri/src/image_cache.rs:
+/Users/ekinertac/Code/fit-boy/cli/target/debug/build/fgbrowser-61772bc7b92c1322/out/12caf02e7bcd12c339b0db64b2d1b31f73015acf42cc37fc578374e471051780:
+/Users/ekinertac/Code/fit-boy/cli/target/debug/build/fgbrowser-61772bc7b92c1322/out/114afbe0fd3e0a1477fb43a3debe32a6375bf634b867f2d6c83256954cda76c8:
+/Users/ekinertac/Code/fit-boy/cli/target/debug/build/fgbrowser-61772bc7b92c1322/out/0e32491fcae893595bf13fee407d1c819b35e562c27a0c05b591157cb644a8fe:
+
+# env-dep:CARGO_MANIFEST_DIR=/Users/ekinertac/Code/fit-boy/src-tauri
+# env-dep:CARGO_PKG_AUTHORS=you
+# env-dep:CARGO_PKG_DESCRIPTION=FitGirl Repack Browser
+# env-dep:CARGO_PKG_NAME=fgbrowser
+# env-dep:OUT_DIR=/Users/ekinertac/Code/fit-boy/cli/target/debug/build/fgbrowser-61772bc7b92c1322/out
