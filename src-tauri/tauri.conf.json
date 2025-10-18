@@ -42,6 +42,11 @@
       "icons/icon.ico"
     ],
     "externalBin": [],
+    "windows": {
+      "wix": {
+        "language": "en-US"
+      }
+    },
     "macOS": {
       "signingIdentity": "$APPLE_SIGNING_IDENTITY",
       "entitlements": null
