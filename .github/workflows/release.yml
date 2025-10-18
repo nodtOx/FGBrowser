@@ -85,6 +85,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          CARGO_BUILD_TARGET: ${{ matrix.platform == 'macos-latest' && contains(matrix.args, 'aarch64') && 'aarch64-apple-darwin' || matrix.platform == 'macos-latest' && 'x86_64-apple-darwin' || '' }}
         with:
           tagName: ${{ inputs.version || github.ref_name }}
           releaseName: "FGBrowser ${{ inputs.version || github.ref_name }}"
@@ -105,6 +106,7 @@ jobs:
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
+          tauriScript: npm run tauri -- build --bin fgbrowser ${{ matrix.args }}
 
       - name: Cleanup keychain (macOS)
         if: always() && matrix.platform == 'macos-latest'
