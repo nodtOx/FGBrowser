@@ -40,23 +40,22 @@ git tag -a "$TAG" -m "Release $TAG"
 echo ""
 echo "✅ Tag created: $TAG"
 echo ""
-echo "Push tag to GitHub:"
-echo "  git push origin $TAG"
-echo ""
-echo "Or push everything:"
-echo "  git push && git push --tags"
-echo ""
-read -p "Push now and trigger builds? (y/n) " -n 1 -r
+echo "Push tag and trigger release builds? (y/n)"
+read -p "> " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
   git push
   git push --tags
   echo ""
-  echo "🚀 Triggering release builds..."
-  make build-all
+  echo "🚀 Triggering release builds for all platforms..."
+  make build-release
   echo ""
   echo "✅ Release complete!"
-  echo "📦 Check GitHub Actions: https://github.com/$(git remote get-url origin | sed 's/.*github.com[:/]\(.*\)\.git/\1/')/actions"
   echo "📋 View releases: https://github.com/$(git remote get-url origin | sed 's/.*github.com[:/]\(.*\)\.git/\1/')/releases"
+else
+  echo ""
+  echo "📝 To push later:"
+  echo "  git push && git push --tags"
+  echo "  make build-release"
 fi
 
