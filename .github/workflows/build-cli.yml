@@ -16,6 +16,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
+      - name: Cache apt packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            /var/cache/apt/archives
+            /var/lib/apt/lists
+          key: ${{ runner.os }}-apt-${{ hashFiles('.github/workflows/build-cli.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-apt-
+      
       - name: Install system dependencies
         run: |
           sudo apt-get update
@@ -25,7 +35,6 @@ jobs:
             librsvg2-dev \
             libssl-dev \
             libayatana-appindicator3-dev
-          # Dependencies installed successfully
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1
