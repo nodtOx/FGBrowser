@@ -10,6 +10,30 @@ This guide explains how to create and maintain a Homebrew tap for FGBrowser dist
 ✅ **Maintains anonymity** - No code signing required  
 ✅ **Professional distribution** - Users trust Homebrew
 
+## Prerequisites
+
+### GitHub CLI Authentication
+
+The automated SHA256 update script uses GitHub CLI. Set up a token for your nodtOx account:
+
+1. **Create Personal Access Token:**
+   - Go to: https://github.com/settings/tokens
+   - Click "Generate new token (classic)"
+   - Select scopes: `repo`, `workflow`
+   - Generate and copy the token
+
+2. **Add to your shell profile** (`~/.zshrc` or `~/.bashrc`):
+   ```bash
+   export GH_TOKEN_NODTOX="ghp_your_token_here"
+   ```
+
+3. **Reload shell:**
+   ```bash
+   source ~/.zshrc
+   ```
+
+Now the script will use your nodtOx token instead of your primary GitHub account!
+
 ## Setup Steps
 
 ### 1. Create the Tap Repository

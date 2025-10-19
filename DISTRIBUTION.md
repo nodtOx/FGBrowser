@@ -112,27 +112,32 @@ From their GitHub Actions workflow analysis:
 ### Simple 2-Step Process
 
 **Step 1: Bump version**
+
 ```bash
 make bump-patch  # or bump-minor, bump-major
 ```
 
 **Step 2: Create release** (this triggers GitHub Actions to build)
+
 ```bash
 make release
 ```
 
 **Step 3: Wait for build & update Homebrew** (automatic)
+
 ```bash
 make update-homebrew-sha
 ```
 
 This command will:
+
 - ⏳ Wait for GitHub Actions to complete (~10 min)
 - 📥 Download DMG files from the release
 - 🔐 Calculate SHA256 hashes
 - ✅ Update `homebrew/fgbrowser.rb` automatically
 
 **Step 4: Commit and push SHA256 update**
+
 ```bash
 git add homebrew/fgbrowser.rb
 git commit -m "chore: update Homebrew SHA256 for vX.X.X"
@@ -140,6 +145,7 @@ git push
 ```
 
 **Step 5: Copy to homebrew-fgbrowser repo**
+
 ```bash
 cp homebrew/fgbrowser.rb ../homebrew-fgbrowser/Casks/
 cd ../homebrew-fgbrowser

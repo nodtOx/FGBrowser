@@ -2,6 +2,10 @@
 
 # Wait for GitHub Actions to complete, download DMGs, calculate SHA256, and update Homebrew cask
 # Usage: ./scripts/update-homebrew-after-release.sh [version]
+#
+# For authentication, either:
+# 1. Set GH_TOKEN_NODTOX environment variable with a GitHub personal access token
+# 2. Use default gh CLI authentication
 
 set -e
 
@@ -22,6 +26,20 @@ if ! command -v gh &> /dev/null; then
   echo "❌ GitHub CLI (gh) is not installed."
   echo "Install it with: brew install gh"
   exit 1
+fi
+
+# Use GH_TOKEN_NODTOX if available, otherwise use default gh auth
+if [ -n "$GH_TOKEN_NODTOX" ]; then
+  export GH_TOKEN="$GH_TOKEN_NODTOX"
+  echo "✅ Using GH_TOKEN_NODTOX for authentication"
+elif [ -z "$GH_TOKEN" ]; then
+  echo "ℹ️  Using default gh CLI authentication"
+  # Check if authenticated
+  gh auth status &>/dev/null || {
+    echo "❌ Not authenticated with GitHub CLI"
+    echo "Either run 'gh auth login' or set GH_TOKEN_NODTOX environment variable"
+    exit 1
+  }
 fi
 
 # Wait for workflow to complete
