@@ -19,31 +19,11 @@ A desktop application for browsing and organizing FitGirl Repack information.
 
 ## Download
 
-### macOS
+Download the Windows installer from [GitHub Releases](https://github.com/nodtOx/FGBrowser/releases):
 
-**Homebrew (Recommended - No Security Warnings!):**
+**`FGBrowser_*_x64-setup.exe`**
 
-```bash
-brew tap nodtox/fgbrowser
-brew install --cask fgbrowser
-```
-
-**Direct Download from [GitHub Releases](https://github.com/nodtOx/FGBrowser/releases):**
-
-- Apple Silicon (M1/M2/M3/M4): `*_aarch64.dmg`
-- Intel Macs: `*_x86_64.dmg`
-
-If you see "FGBrowser is damaged" error after direct download:
-
-```bash
-xattr -cr /Applications/FGBrowser.app
-```
-
-Or: Right-click app → Open → Open
-
-### Windows
-
-Download `*_x64-setup.exe` from [GitHub Releases](https://github.com/nodtOx/FGBrowser/releases)
+Run the installer and start browsing FitGirl Repacks!
 
 ## Development
 

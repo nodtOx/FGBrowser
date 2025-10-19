@@ -98,25 +98,7 @@ echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "✅ Build completed successfully!"
 echo ""
-
-# Now update Homebrew SHA256 automatically
-echo "🔐 Updating Homebrew SHA256 hashes..."
-echo ""
-
-SKIP_WORKFLOW_WAIT=1 bash "$(dirname "$0")/update-homebrew-after-release.sh" "$VERSION" || {
-  echo ""
-  echo "❌ Failed to update Homebrew SHA256"
-  echo "You can run manually: make update-homebrew-sha"
-  exit 1
-}
-
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "🎉 Release v$VERSION complete!"
 echo ""
-echo "Next steps:"
-echo "  1. Review changes: git diff homebrew/fgbrowser.rb"
-echo "  2. Commit: git add homebrew/fgbrowser.rb && git commit -m 'chore: update Homebrew SHA256 for v$VERSION'"
-echo "  3. Push: git push"
-echo "  4. Copy to homebrew-fgbrowser repo"
+echo "📦 Download: https://github.com/$REPO/releases/tag/v$VERSION"
 

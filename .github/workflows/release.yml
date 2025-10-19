@@ -15,18 +15,7 @@ jobs:
   build-release:
     permissions:
       contents: write
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: 'macos-latest'
-            args: '--target aarch64-apple-darwin'
-          - platform: 'macos-latest'
-            args: '--target x86_64-apple-darwin'
-          - platform: 'windows-latest'
-            args: ''
-
-    runs-on: ${{ matrix.platform }}
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -38,16 +27,13 @@ jobs:
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - name: Rust cache
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
 
-      - name: Install WebView2 (Windows)
-        if: matrix.platform == 'windows-latest'
+      - name: Install WebView2
         shell: pwsh
         run: |
           Invoke-WebRequest -Uri 'https://go.microsoft.com/fwlink/p/?LinkId=2124703' -OutFile 'MicrosoftEdgeWebview2Setup.exe'
@@ -68,18 +54,10 @@ jobs:
           releaseBody: |
             ## FGBrowser ${{ inputs.version || github.ref_name }}
 
-            ### Downloads
+            **Windows Installer:** `FGBrowser_${{ inputs.version || github.ref_name }}_x64-setup.exe`
 
-            **macOS:**
-            - Apple Silicon (M1/M2/M3/M4): `*_aarch64.dmg`
-            - Intel Macs: `*_x86_64.dmg`
-
-            **Windows:**
-            - Installer (recommended): `*_x64-setup.exe`
-
-            Download, run the installer, and start browsing repacks!
+            Download, run the installer, and start browsing FitGirl Repacks!
           releaseDraft: false
           prerelease: false
-          args: ${{ matrix.args }}
 
 

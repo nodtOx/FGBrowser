@@ -73,20 +73,13 @@ if [ -f "src-tauri/tauri.conf.json" ]; then
   fi
 fi
 
-# Update Homebrew cask
-if [ -f "homebrew/fgbrowser.rb" ]; then
-  sed -i.bak "s/version \".*\"/version \"$NEW_VERSION\"/" homebrew/fgbrowser.rb
-  rm -f homebrew/fgbrowser.rb.bak
-  echo "✅ Updated homebrew/fgbrowser.rb"
-fi
-
 echo ""
 echo "✨ Version bumped to $NEW_VERSION"
 echo ""
 
 # Auto-commit the version bump
 echo "📝 Committing version bump..."
-git add VERSION package.json src-tauri/Cargo.toml src-tauri/Cargo.lock src-tauri/tauri.conf.json homebrew/fgbrowser.rb
+git add VERSION package.json src-tauri/Cargo.toml src-tauri/Cargo.lock src-tauri/tauri.conf.json
 git commit -m "chore: bump version to $NEW_VERSION"
 
 echo "✅ Changes committed"
@@ -97,6 +90,5 @@ echo ""
 echo "This will:"
 echo "  🏷️  Create and push tag v$NEW_VERSION"
 echo "  📺 Show live build logs from GitHub Actions"
-echo "  🔐 Auto-update Homebrew SHA256 after build"
-echo "  ⚡ Everything happens automatically!"
+echo "  ⚡ Windows-only build, super fast!"
 
