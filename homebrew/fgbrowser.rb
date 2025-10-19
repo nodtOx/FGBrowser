@@ -1,5 +1,5 @@
 cask "fgbrowser" do
-  version "0.1.9"
+  version "0.1.10"
   
   on_arm do
     sha256 "a0e5b536035a2bd3d22bca0e6eedaaa1c2c3c78b977ad8dbda2d79d1e1c09797"
