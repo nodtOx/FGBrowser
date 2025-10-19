@@ -124,8 +124,9 @@ make release
 ```
 
 This single command does everything:
+
 - ✅ Commits version changes
-- 🏷️  Creates git tag
+- 🏷️ Creates git tag
 - 🚀 Pushes to GitHub (triggers Actions)
 - 📺 Shows **live build logs** from GitHub Actions
 - ⏳ Waits for build to complete (~10 min)
