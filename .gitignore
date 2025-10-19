@@ -11,8 +11,6 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
 # IDE
-.vscode/
-.idea/
 .cursor/
 *.swp
 *.swo
