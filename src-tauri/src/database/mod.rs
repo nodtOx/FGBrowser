@@ -79,6 +79,7 @@ impl Database {
         migrations::migrate_normalize_popular_repacks(&self.conn)?;
         migrations::migrate_cleanup_malformed_categories(&self.conn)?;
         migrations::migrate_normalize_genre_variations(&self.conn)?;
+        migrations::migrate_add_is_seen_column(&self.conn)?;
         
         Ok(())
     }

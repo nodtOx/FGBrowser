@@ -2,11 +2,12 @@
   import {
     formatSize,
     games,
+    markAllGamesAsSeen,
+    newGamesCount,
     searchGames,
     searchQuery,
     selectedIndex,
-    newGamesCount,
-    markAllGamesAsSeen,
+    selectGame,
   } from '$lib/stores/games';
   import { focusedPanel, gameListViewMode, openGameDetails, setGameListViewMode } from '$lib/stores/navigation';
   import { onMount, tick } from 'svelte';
@@ -48,6 +49,14 @@
   function handleGameClick(localIndex: number) {
     const globalIndex = startIndex + localIndex;
     selectedIndex.set(globalIndex);
+    // Don't open details on single click - only on double click
+  }
+
+  async function handleGameDoubleClick(localIndex: number) {
+    console.log('🔍 Grid double-click handler called for index:', localIndex);
+    const globalIndex = startIndex + localIndex;
+    await selectGame(globalIndex);
+    console.log('🔍 Calling openGameDetails...');
     openGameDetails();
   }
 
@@ -177,16 +186,17 @@
               class="game-card"
               class:selected={globalIndex === $selectedIndex}
               on:click={() => handleGameClick(index)}
-              on:keydown={(e) => e.key === 'Enter' && handleGameClick(index)}
+              on:dblclick={() => handleGameDoubleClick(index)}
+              on:keydown={(e) => e.key === 'Enter' && handleGameDoubleClick(index)}
               role="button"
               tabindex={globalIndex === $selectedIndex ? 0 : -1}
             >
               <div class="game-image">
-                <CachedImage src={game.image_url} alt={game.clean_name || game.title} />
+                <CachedImage src={game.image_url} alt={game.title} />
               </div>
               <div class="game-info">
                 <h3 class="game-title">
-                  {game.clean_name || game.title}
+                  {game.title}
                   {#if game.is_new}
                     <span class="new-badge">NEW</span>
                   {/if}

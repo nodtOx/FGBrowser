@@ -43,6 +43,7 @@ pub use game_commands::{
     clear_category_cache,
     is_database_empty,
     mark_all_games_as_seen,
+    mark_game_as_seen,
     get_new_games_count,
 };
 

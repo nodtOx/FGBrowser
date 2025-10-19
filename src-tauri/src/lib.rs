@@ -14,7 +14,7 @@ use commands::{
     get_games_by_categories_and_time, get_games_by_categories_size_and_time,
     get_games_by_category, get_games_by_date_range, get_games_by_multiple_categories,
     get_games_by_size_and_time, get_games_by_size_range, clear_category_cache, is_database_empty,
-    mark_all_games_as_seen, get_new_games_count,
+    mark_all_games_as_seen, mark_game_as_seen, get_new_games_count,
     // Crawler commands
     start_crawler, update_database, save_repacks_to_db,
     // Popular repacks commands
@@ -42,11 +42,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::fs;
 use std::io::Write;
-use tauri::Manager;
-
-#[cfg(not(target_os = "macos"))]
-use tauri::{Emitter, menu::{Menu, MenuItem}, tray::{TrayIconBuilder, MouseButton, MouseButtonState}};
-#[cfg(not(target_os = "macos"))]
+use tauri::{Manager, Emitter, menu::{Menu, MenuItem}, tray::{TrayIconBuilder, MouseButton, MouseButtonState}};
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 
 fn find_database() -> PathBuf {
@@ -178,7 +174,6 @@ fn download_database_sync(db_path: &PathBuf) -> Result<(), String> {
     }
 }
 
-#[cfg(not(target_os = "macos"))]
 fn setup_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let show_hide = MenuItem::with_id(app, "show_hide", "Show/Hide Window", true, None::<&str>)?;
     let check_updates = MenuItem::with_id(app, "check_updates", "Check for Updates", true, None::<&str>)?;
@@ -320,8 +315,7 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
         .setup(move |app| {
-            // Setup system tray (skip on macOS during development)
-            #[cfg(not(target_os = "macos"))]
+            // Setup system tray
             setup_tray(app)?;
             
             // Handle window close event - hide to tray instead of closing
@@ -338,9 +332,10 @@ pub fn run() {
             
             // Start background crawler task (runs every 10 minutes)
             let db_service_clone = Arc::clone(&db_service_for_crawler);
+            let app_handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 // Wait 10 minutes before first run (let app settle)
-                std::thread::sleep(std::time::Duration::from_secs(600));
+                tokio::time::sleep(tokio::time::Duration::from_secs(600)).await;
                 
                 loop {
                     println!("🔄 Background crawler: Checking for new games...");
@@ -403,6 +398,10 @@ pub fn run() {
                                     
                                     if total_new_games > 0 {
                                         println!("✅ Background crawler: Found {} new games", total_new_games);
+                                        // Emit event to frontend to refresh new games count
+                                        if let Some(window) = app_handle.get_webview_window("main") {
+                                            let _ = window.emit("background-crawler-update", total_new_games);
+                                        }
                                     } else {
                                         println!("✅ Background crawler: No new games found");
                                     }
@@ -417,7 +416,7 @@ pub fn run() {
                     }
                     
                     // Wait 10 minutes before next run
-                    std::thread::sleep(std::time::Duration::from_secs(600));
+                    tokio::time::sleep(tokio::time::Duration::from_secs(600)).await;
                 }
             });
             
@@ -450,6 +449,7 @@ pub fn run() {
             clear_category_cache,
             is_database_empty,
             mark_all_games_as_seen,
+            mark_game_as_seen,
             get_new_games_count,
             check_database_exists,
             download_database,

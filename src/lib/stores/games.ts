@@ -15,7 +15,8 @@ export interface Game {
   url: string;
   date: string | null;
   image_url: string | null;
-  is_new: boolean; // true if added after games_last_seen_date
+  is_seen: boolean; // true if user has viewed this game
+  is_new: boolean; // true if !is_seen (calculated field)
 }
 
 export interface MagnetLink {
@@ -666,10 +667,10 @@ export async function selectGame(index: number) {
   selectedIndex.set(index);
   const game = currentGames[index];
 
-  // Clear new badge if this is a new game
-  if (game.is_new) {
-    clearNewBadgeForGame(game.id);
-  }
+  // Don't clear new badge just for selection - only clear when viewing details
+  // if (game.is_new) {
+  //   clearNewBadgeForGame(game.id);
+  // }
 
   // Fetch details for magnet links
   try {
@@ -755,16 +756,36 @@ export async function markAllGamesAsSeen() {
 }
 
 // Clear new badge for a specific game (when viewing details)
-export function clearNewBadgeForGame(gameId: number) {
-  games.update(($games) => {
-    return $games.map((game) => {
-      if (game.id === gameId) {
-        return { ...game, is_new: false };
-      }
-      return game;
-    });
-  });
+export async function clearNewBadgeForGame(gameId: number) {
+  console.log('🔍 clearNewBadgeForGame called for gameId:', gameId);
+  try {
+    // Mark game as seen in backend
+    console.log('🔍 Calling backend mark_game_as_seen...');
+    await invoke('mark_game_as_seen', { gameId });
+    console.log('🔍 Backend call successful');
 
-  // Update count
-  newGamesCount.update((count) => Math.max(0, count - 1));
+    // Update local state
+    console.log('🔍 Updating local state...');
+    games.update(($games) => {
+      return $games.map((game) => {
+        if (game.id === gameId) {
+          console.log('🔍 Updating game:', {
+            id: game.id,
+            title: game.title,
+            is_new: game.is_new,
+            is_seen: game.is_seen,
+          });
+          return { ...game, is_seen: true, is_new: false };
+        }
+        return game;
+      });
+    });
+
+    // Update count
+    console.log('🔍 Updating new games count...');
+    newGamesCount.update((count) => Math.max(0, count - 1));
+    console.log('🔍 clearNewBadgeForGame completed successfully');
+  } catch (error) {
+    console.error('Failed to mark game as seen:', error);
+  }
 }

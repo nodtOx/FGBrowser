@@ -246,20 +246,36 @@ pub async fn is_database_empty(
 pub async fn mark_all_games_as_seen(
     state: State<'_, AppState>,
 ) -> Result<(), String> {
-    // Get current settings
-    let mut settings = state.db_service
-        .get_settings()
-        .map_err(|e| e.to_string())?;
-    
-    // Update games_last_seen_date to current timestamp
-    settings.games_last_seen_date = Some(chrono::Utc::now().to_rfc3339());
-    
-    // Save settings
+    // Update all games to mark them as seen using is_seen field
     state.db_service
-        .save_settings(&settings)
+        .with_connection(|db| {
+            let updated_count = db.conn.execute(
+                "UPDATE repacks SET is_seen = 1 WHERE EXISTS (SELECT 1 FROM magnet_links WHERE magnet_links.repack_id = repacks.id)",
+                [],
+            )?;
+            Ok(updated_count)
+        })
         .map_err(|e| e.to_string())?;
     
-    println!("✅ Marked all games as seen at {}", settings.games_last_seen_date.as_ref().unwrap());
+    println!("✅ Marked all games as seen");
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn mark_game_as_seen(
+    game_id: i64,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    state.db_service
+        .with_connection(|db| {
+            db.conn.execute(
+                "UPDATE repacks SET is_seen = 1 WHERE id = ?1",
+                [game_id],
+            )?;
+            Ok(())
+        })
+        .map_err(|e| e.to_string())?;
+    
     Ok(())
 }
 

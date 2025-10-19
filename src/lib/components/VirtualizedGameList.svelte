@@ -3,12 +3,12 @@
   import {
     formatSize,
     games,
+    markAllGamesAsSeen,
+    newGamesCount,
     searchGames,
     searchQuery,
     selectedIndex,
     selectGame,
-    newGamesCount,
-    markAllGamesAsSeen,
   } from '$lib/stores/games';
   import { focusedPanel, gameListViewMode, openGameDetails, setGameListViewMode } from '$lib/stores/navigation';
   import { onMount, tick } from 'svelte';
@@ -45,14 +45,20 @@
     focusedPanel.set('gamelist');
     await selectGame(startIndex + gameIndex);
     // Remove focus from clicked element to prevent residual focus state
-    (event.currentTarget as HTMLElement).blur();
+    if (event.currentTarget) {
+      (event.currentTarget as HTMLElement).blur();
+    }
   }
 
   async function handleGameDoubleClick(gameIndex: number, event: MouseEvent) {
+    console.log('🔍 List double-click handler called for index:', gameIndex);
     await selectGame(startIndex + gameIndex);
+    console.log('🔍 Calling openGameDetails...');
     openGameDetails();
     // Remove focus from clicked element to prevent residual focus state
-    (event.currentTarget as HTMLElement).blur();
+    if (event.currentTarget) {
+      (event.currentTarget as HTMLElement).blur();
+    }
   }
 
   function handleKeydown(e: KeyboardEvent, gameIndex: number) {
@@ -209,7 +215,7 @@
               {formatDate(game.date)}
             </div>
             <div class="game-title">
-              {game.clean_name || game.title}
+              {game.title}
               {#if game.is_new}
                 <span class="new-badge">NEW</span>
               {/if}

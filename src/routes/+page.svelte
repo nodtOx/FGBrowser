@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { checkForUpdatesOnStartup, checkForUpdates as checkForAppUpdates } from '$lib/stores/appUpdater';
-  import { isCrawlingPopular, loadCategories, loadGames, totalGamesCount, loadNewGamesCount } from '$lib/stores/games';
+  import { checkForUpdates as checkForAppUpdates, checkForUpdatesOnStartup } from '$lib/stores/appUpdater';
+  import { isCrawlingPopular, loadCategories, loadGames, loadNewGamesCount, totalGamesCount } from '$lib/stores/games';
   import { initKeyboardShortcuts } from '$lib/stores/keyboard';
   import { browseView, currentPage, gameListViewMode, loadSavedGameListViewMode } from '$lib/stores/navigation';
   import { refreshPopularCounts } from '$lib/stores/popular';
@@ -27,6 +27,7 @@
 
   let databaseError = '';
   let isRetrying = false;
+  let unwatchBackgroundCrawler: (() => void) | null = null;
 
   async function initializeApp() {
     try {
@@ -111,6 +112,9 @@
         await loadCategories();
       }
 
+      // Refresh new games count after update
+      await loadNewGamesCount();
+
       updateStatus.set({ isUpdating: false, message: '', newGamesFound: 0 });
     } catch (error) {
       console.error('Update error:', error);
@@ -176,6 +180,13 @@
       checkForAppUpdates(false);
     });
 
+    // Listen for background crawler updates
+    unwatchBackgroundCrawler = await window.listen('background-crawler-update', (event) => {
+      console.log('Background crawler found new games:', event.payload);
+      // Refresh new games count to show "Mark All as Seen" button
+      loadNewGamesCount();
+    });
+
     // Initialize keyboard shortcuts
     initKeyboardShortcuts();
 
@@ -192,6 +203,11 @@
     // Cleanup tray event listener
     if (unwatchTrayEvents) {
       unwatchTrayEvents();
+    }
+
+    // Cleanup background crawler event listener
+    if (unwatchBackgroundCrawler) {
+      unwatchBackgroundCrawler();
     }
   });
 </script>

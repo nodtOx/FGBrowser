@@ -460,3 +460,65 @@ pub fn migrate_normalize_genre_variations(conn: &Connection) -> Result<()> {
     Ok(())
 }
 
+pub fn migrate_add_is_seen_column(conn: &Connection) -> Result<()> {
+    // Check if is_seen column exists
+    let column_exists: Result<i64, _> = conn.query_row(
+        "SELECT COUNT(*) FROM pragma_table_info('repacks') WHERE name = 'is_seen'",
+        [],
+        |row| row.get(0),
+    );
+    
+    let mut column_added = false;
+    
+    match column_exists {
+        Ok(0) => {
+            println!("🔄 Adding is_seen column to repacks table...");
+            
+            // Add is_seen column with default FALSE
+            conn.execute(
+                "ALTER TABLE repacks ADD COLUMN is_seen BOOLEAN DEFAULT FALSE",
+                [],
+            )?;
+            
+            println!("✅ Added is_seen column to repacks");
+            column_added = true;
+        }
+        Ok(_) => {
+            // Column already exists, check if migration is needed
+            let needs_migration: i64 = conn.query_row(
+                "SELECT COUNT(*) FROM repacks WHERE is_seen = 0 AND EXISTS (SELECT 1 FROM magnet_links WHERE magnet_links.repack_id = repacks.id)",
+                [],
+                |row| row.get(0),
+            )?;
+            
+            if needs_migration > 0 {
+                println!("🔄 Running is_seen migration for {} games...", needs_migration);
+            }
+        }
+        Err(e) => {
+            eprintln!("Warning: Could not check for is_seen column: {}", e);
+            return Ok(());
+        }
+    }
+    
+    // Only run the migration logic if column was just added
+    // Mark ALL existing games as "seen" - they're not "new" to first-time users
+    if column_added {
+        let updated_count = conn.execute(
+            "UPDATE repacks 
+             SET is_seen = 1 
+             WHERE EXISTS (SELECT 1 FROM magnet_links WHERE magnet_links.repack_id = repacks.id)
+             AND is_seen = 0",
+            [],
+        )?;
+        
+        if updated_count > 0 {
+            println!("✅ Migration completed! Marked {} games as seen", updated_count);
+            println!("   - All existing games are now marked as seen");
+            println!("   - Only games added after this point will show as 'new'");
+        }
+    }
+    
+    Ok(())
+}
+

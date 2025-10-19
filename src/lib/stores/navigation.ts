@@ -1,4 +1,5 @@
-import { writable } from 'svelte/store';
+import { get, writable } from 'svelte/store';
+import { clearNewBadgeForGame, selectedGame } from './games';
 
 export type Page = 'browse' | 'popular' | 'pinkpaw' | 'downloads' | 'settings' | 'stats' | 'about';
 export type BrowseView = 'list' | 'details';
@@ -22,9 +23,18 @@ export function navigateTo(page: Page) {
   }
 }
 
-export function openGameDetails() {
+export async function openGameDetails() {
+  console.log('🔍 openGameDetails called');
   browseView.set('details');
   showGameDetails.set(true); // Keep for backward compatibility
+
+  // Clear new badge for the selected game
+  const game = get(selectedGame);
+  console.log('🔍 Selected game:', game ? { id: game.id, title: game.title, is_new: game.is_new } : 'null');
+  if (game && game.is_new) {
+    console.log('🔍 Clearing NEW badge for game:', game.id);
+    await clearNewBadgeForGame(game.id);
+  }
 }
 
 export function closeGameDetails() {

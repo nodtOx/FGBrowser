@@ -226,10 +226,7 @@ impl DatabaseService for SqliteDatabaseService {
         self.with_db(|db| {
             let count: i64 = db.conn.query_row(
                 "SELECT COUNT(*) FROM repacks 
-                 WHERE created_at > COALESCE(
-                     (SELECT json_extract(value, '$.games_last_seen_date') FROM settings WHERE key = 'app_settings'), 
-                     '1970-01-01'
-                 )
+                 WHERE is_seen = 0
                  AND EXISTS (SELECT 1 FROM magnet_links WHERE magnet_links.repack_id = repacks.id)",
                 [],
                 |row| row.get(0),
