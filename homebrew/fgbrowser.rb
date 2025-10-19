@@ -7,7 +7,7 @@ cask "fgbrowser" do
   end
   
   on_intel do
-    sha256 "30f970d7bb08dad6204f346782f1147ee2aff086f82c3a89e0ba31560ea211ca"
+    sha256 "REPLACE_WITH_SHA256_OF_X64_DMG"
     url "https://github.com/nodtOx/FGBrowser/releases/download/v#{version}/FGBrowser_#{version}_x64.dmg"
   end
 

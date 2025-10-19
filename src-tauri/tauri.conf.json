@@ -60,10 +60,10 @@
     "updater": {
       "active": true,
       "endpoints": [
-        "https://github.com/ekinertac/fit-boy/releases/latest/download/latest.json"
+        "https://github.com/nodtOx/FGBrowser/releases/latest/download/latest.json"
       ],
       "dialog": false,
-      "pubkey": ""
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEU2OTk4QTg1NkE1RDU0REUKUldUZVZGMXFoWXFaNWx0RWhGbXFvaExWNlNnSmV2VXNSRjM1RlV4MWwxL2QrU2gySkNIN1NvbWMK"
     }
   }
 }
