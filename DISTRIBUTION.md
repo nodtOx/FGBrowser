@@ -109,48 +109,44 @@ From their GitHub Actions workflow analysis:
 
 ## Release Workflow
 
-### Complete Process
+### Simple 2-Step Process
 
-1. **Bump version:**
+**Step 1: Bump version**
+```bash
+make bump-patch  # or bump-minor, bump-major
+```
 
-   ```bash
-   make bump-patch  # or bump-minor, bump-major
-   ```
+**Step 2: Create release** (this triggers GitHub Actions to build)
+```bash
+make release
+```
 
-2. **Build locally:**
+**Step 3: Wait for build & update Homebrew** (automatic)
+```bash
+make update-homebrew-sha
+```
 
-   ```bash
-   make build
-   ```
+This command will:
+- ⏳ Wait for GitHub Actions to complete (~10 min)
+- 📥 Download DMG files from the release
+- 🔐 Calculate SHA256 hashes
+- ✅ Update `homebrew/fgbrowser.rb` automatically
 
-3. **Update Homebrew SHA256 hashes:**
+**Step 4: Commit and push SHA256 update**
+```bash
+git add homebrew/fgbrowser.rb
+git commit -m "chore: update Homebrew SHA256 for vX.X.X"
+git push
+```
 
-   ```bash
-   make update-homebrew-sha
-   ```
-
-4. **Review and commit:**
-
-   ```bash
-   git diff
-   git add -A
-   git commit -m "chore: bump version to X.X.X"
-   ```
-
-5. **Create release:**
-
-   ```bash
-   make release
-   ```
-
-6. **Copy to homebrew-fgbrowser repo:**
-   ```bash
-   cp homebrew/fgbrowser.rb ../homebrew-fgbrowser/Casks/
-   cd ../homebrew-fgbrowser
-   git add Casks/fgbrowser.rb
-   git commit -m "Update FGBrowser to vX.X.X"
-   git push
-   ```
+**Step 5: Copy to homebrew-fgbrowser repo**
+```bash
+cp homebrew/fgbrowser.rb ../homebrew-fgbrowser/Casks/
+cd ../homebrew-fgbrowser
+git add Casks/fgbrowser.rb
+git commit -m "Update FGBrowser to vX.X.X"
+git push
+```
 
 ## Next Steps
 

@@ -63,7 +63,7 @@ bump-major:
 	@bash scripts/bump-version.sh major
 
 update-homebrew-sha:
-	@bash scripts/update-homebrew-sha.sh
+	@bash scripts/update-homebrew-after-release.sh
 
 release:
 	@bash scripts/release.sh
