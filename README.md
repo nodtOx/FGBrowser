@@ -57,6 +57,7 @@ Anonymous telemetry(Sentry) is enabled to help improve the app. No personal data
 - Include game updates
 - Global application Settings
 - Built-in torrent client (not decided yet)
+- Crawl game screenshots
 
 ## Disclaimer
 
