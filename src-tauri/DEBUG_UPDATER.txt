@@ -1,0 +1,18 @@
+To debug the auto-updater:
+
+1. Open your installed FGBrowser v0.1.11
+2. Press F12 or Ctrl+Shift+I to open DevTools
+3. Check the Console tab for:
+   - "Update available: 0.1.11 -> 0.1.12" (if it works)
+   - "No updates available" (if version check fails)
+   - Any error messages
+
+Common issues:
+- If you see "No updates available", the app might think it's already v0.1.12
+- Check what version is shown in Settings
+- The updater only checks ONCE on startup (5 seconds after launch)
+
+To manually trigger a check:
+- Go to Settings page
+- Click "Check for Updates" button
+- Watch the console for output
