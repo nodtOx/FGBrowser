@@ -1,5 +1,5 @@
 cask "fgbrowser" do
-  version "0.1.5"
+  version "0.1.6"
   
   on_arm do
     sha256 "REPLACE_WITH_SHA256_OF_AARCH64_DMG"
