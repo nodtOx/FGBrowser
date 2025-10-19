@@ -48,7 +48,13 @@ make build
 
 ## Privacy
 
-Anonymous telemetry is enabled to help improve the app. No personal data or game information is collected - only crash reports and usage statistics.
+Anonymous telemetry(Sentry) is enabled to help improve the app. No personal data or game information is collected - only crash reports and usage statistics.
+
+## Roadmap:
+
+- Include game updates
+- Global application Settings
+- Built-in torrent client (not decided yet)
 
 ## Disclaimer
 
