@@ -23,7 +23,7 @@ pub async fn cache_image_background(app_handle: tauri::AppHandle, url: String) -
     }
     
     // Cache the image in the background (fire and forget)
-    tokio::spawn(async move {
+    tauri::async_runtime::spawn(async move {
         let _ = crate::image_cache::ImageCache::get_cached_image_url(&app_handle, &url).await;
     });
     

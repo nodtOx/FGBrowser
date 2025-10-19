@@ -42,7 +42,11 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::fs;
 use std::io::Write;
-use tauri::{Manager, Emitter, menu::{Menu, MenuItem}, tray::{TrayIconBuilder, MouseButton, MouseButtonState}};
+use tauri::Manager;
+
+#[cfg(not(target_os = "macos"))]
+use tauri::{Emitter, menu::{Menu, MenuItem}, tray::{TrayIconBuilder, MouseButton, MouseButtonState}};
+#[cfg(not(target_os = "macos"))]
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 
 fn find_database() -> PathBuf {
@@ -174,6 +178,7 @@ fn download_database_sync(db_path: &PathBuf) -> Result<(), String> {
     }
 }
 
+#[cfg(not(target_os = "macos"))]
 fn setup_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let show_hide = MenuItem::with_id(app, "show_hide", "Show/Hide Window", true, None::<&str>)?;
     let check_updates = MenuItem::with_id(app, "check_updates", "Check for Updates", true, None::<&str>)?;
@@ -315,7 +320,8 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
         .setup(move |app| {
-            // Setup system tray
+            // Setup system tray (skip on macOS during development)
+            #[cfg(not(target_os = "macos"))]
             setup_tray(app)?;
             
             // Handle window close event - hide to tray instead of closing
@@ -332,9 +338,9 @@ pub fn run() {
             
             // Start background crawler task (runs every 10 minutes)
             let db_service_clone = Arc::clone(&db_service_for_crawler);
-            tokio::spawn(async move {
+            tauri::async_runtime::spawn(async move {
                 // Wait 10 minutes before first run (let app settle)
-                tokio::time::sleep(tokio::time::Duration::from_secs(600)).await;
+                std::thread::sleep(std::time::Duration::from_secs(600));
                 
                 loop {
                     println!("🔄 Background crawler: Checking for new games...");
@@ -411,7 +417,7 @@ pub fn run() {
                     }
                     
                     // Wait 10 minutes before next run
-                    tokio::time::sleep(tokio::time::Duration::from_secs(600)).await;
+                    std::thread::sleep(std::time::Duration::from_secs(600));
                 }
             });
             
