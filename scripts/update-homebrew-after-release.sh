@@ -87,7 +87,7 @@ echo "📥 Downloading DMG files from release $TAG..."
 cd "$TEMP_DIR"
 
 AARCH64_DMG="FGBrowser_${VERSION}_aarch64.dmg"
-X86_64_DMG="FGBrowser_${VERSION}_x86_64.dmg"
+X64_DMG="FGBrowser_${VERSION}_x64.dmg"
 
 echo "Downloading $AARCH64_DMG..."
 gh release download "$TAG" --repo "$REPO" --pattern "*_aarch64.dmg" 2>/dev/null || {
@@ -98,8 +98,8 @@ gh release download "$TAG" --repo "$REPO" --pattern "*_aarch64.dmg" 2>/dev/null 
   }
 }
 
-echo "Downloading $X86_64_DMG..."
-gh release download "$TAG" --repo "$REPO" --pattern "*_x86_64.dmg" 2>/dev/null || true
+echo "Downloading $X64_DMG..."
+gh release download "$TAG" --repo "$REPO" --pattern "*_x64.dmg" 2>/dev/null || true
 
 cd -
 
@@ -109,7 +109,7 @@ echo ""
 
 # Find downloaded DMG files
 AARCH64_FILE=$(find "$TEMP_DIR" -name "*_aarch64.dmg" | head -n 1)
-X86_64_FILE=$(find "$TEMP_DIR" -name "*_x86_64.dmg" | head -n 1)
+X64_FILE=$(find "$TEMP_DIR" -name "*_x64.dmg" | head -n 1)
 
 # Calculate and update SHA256 for ARM64
 if [ -n "$AARCH64_FILE" ] && [ -f "$AARCH64_FILE" ]; then
@@ -130,18 +130,18 @@ else
 fi
 
 # Calculate and update SHA256 for Intel
-if [ -n "$X86_64_FILE" ] && [ -f "$X86_64_FILE" ]; then
-  X86_64_SHA=$(shasum -a 256 "$X86_64_FILE" | awk '{print $1}')
-  echo "Intel (x86_64):"
-  echo "  File: $(basename "$X86_64_FILE")"
-  echo "  SHA256: $X86_64_SHA"
+if [ -n "$X64_FILE" ] && [ -f "$X64_FILE" ]; then
+  X64_SHA=$(shasum -a 256 "$X64_FILE" | awk '{print $1}')
+  echo "Intel (x64):"
+  echo "  File: $(basename "$X64_FILE")"
+  echo "  SHA256: $X64_SHA"
   echo ""
   
   # Update in cask file
   if [[ "$OSTYPE" == "darwin"* ]]; then
-    sed -i '' "/on_intel do/,/end/ s/sha256 \".*\"/sha256 \"$X86_64_SHA\"/" "$CASK_FILE"
+    sed -i '' "/on_intel do/,/end/ s/sha256 \".*\"/sha256 \"$X64_SHA\"/" "$CASK_FILE"
   else
-    sed -i "/on_intel do/,/end/ s/sha256 \".*\"/sha256 \"$X86_64_SHA\"/" "$CASK_FILE"
+    sed -i "/on_intel do/,/end/ s/sha256 \".*\"/sha256 \"$X64_SHA\"/" "$CASK_FILE"
   fi
 else
   echo "⚠️  Intel DMG not found, skipping..."
