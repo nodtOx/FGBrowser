@@ -39,7 +39,7 @@ switch ($BumpType) {
 
 $NEW_VERSION = "$MAJOR.$MINOR.$PATCH"
 
-Write-Host "📦 Bumping version: $CURRENT_VERSION → $NEW_VERSION" -ForegroundColor Cyan
+Write-Host "Bumping version: $CURRENT_VERSION → $NEW_VERSION" -ForegroundColor Cyan
 
 # Update VERSION file
 $NEW_VERSION | Out-File -FilePath $VERSION_FILE -Encoding UTF8 -NoNewline
@@ -49,7 +49,7 @@ if (Get-Command node -ErrorAction SilentlyContinue) {
     $pkgJson = Get-Content "package.json" | ConvertFrom-Json
     $pkgJson.version = $NEW_VERSION
     $pkgJson | ConvertTo-Json -Depth 100 | Set-Content "package.json" -Encoding UTF8
-    Write-Host "✅ Updated package.json" -ForegroundColor Green
+    Write-Host "Updated package.json" -ForegroundColor Green
 }
 
 # Update Cargo.toml (only the package version, not dependencies)
@@ -72,7 +72,7 @@ if (Test-Path "src-tauri/Cargo.toml") {
     }
     
     $cargoLines | Set-Content "src-tauri/Cargo.toml" -Encoding UTF8
-    Write-Host "✅ Updated Cargo.toml" -ForegroundColor Green
+    Write-Host "Updated Cargo.toml" -ForegroundColor Green
 }
 
 # Update Cargo.lock
@@ -83,7 +83,7 @@ if (Test-Path "src-tauri/Cargo.lock") {
         cargo check --quiet
     }
     Pop-Location
-    Write-Host "✅ Updated Cargo.lock" -ForegroundColor Green
+    Write-Host "Updated Cargo.lock" -ForegroundColor Green
 }
 
 # Update tauri.conf.json (required for auto-updater)
@@ -92,7 +92,7 @@ if (Test-Path "src-tauri/tauri.conf.json") {
         $tauriConf = Get-Content "src-tauri/tauri.conf.json" | ConvertFrom-Json
         $tauriConf.version = $NEW_VERSION
         $tauriConf | ConvertTo-Json -Depth 100 | Set-Content "src-tauri/tauri.conf.json" -Encoding UTF8
-        Write-Host "✅ Updated tauri.conf.json" -ForegroundColor Green
+        Write-Host "Updated tauri.conf.json" -ForegroundColor Green
     }
 }
 
@@ -102,15 +102,15 @@ Write-Host ""
 
 # Auto-commit the version bump
 Write-Host "📝 Committing version bump..." -ForegroundColor Cyan
-git add VERSION package.json src-tauri/Cargo.toml src-tauri/Cargo.lock src-tauri/tauri.conf.json
+git add .
 git commit -m "chore: bump version to $NEW_VERSION"
 
-Write-Host "✅ Changes committed" -ForegroundColor Green
+Write-Host "Changes committed" -ForegroundColor Green
 Write-Host ""
 Write-Host "Next step:" -ForegroundColor Yellow
 Write-Host "  Run: .\scripts\release.ps1" -ForegroundColor White
 Write-Host ""
 Write-Host "This will:" -ForegroundColor Yellow
-Write-Host "  🏷️  Create and push tag v$NEW_VERSION"
-Write-Host "  📦 Trigger release workflow"
+Write-Host "  Create and push tag v$NEW_VERSION"
+Write-Host "  Trigger release workflow"
 
