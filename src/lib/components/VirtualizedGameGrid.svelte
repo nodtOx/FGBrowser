@@ -174,43 +174,58 @@
     bind:clientWidth={containerWidth}
     on:scroll={handleScroll}
   >
-    <div class="scroll-area" style="height: {totalHeight}px;">
-      <div class="visible-items" style="transform: translateY({offsetY}px);">
-        <div
-          class="grid-wrapper"
-          style="grid-template-columns: repeat({columnsPerRow}, {CARD_WIDTH}px); gap: {GAP}px; padding: 0 {PADDING}px;"
-        >
-          {#each visibleGames as game, index (game.id)}
-            {@const globalIndex = startIndex + index}
-            <div
-              class="game-card"
-              class:selected={globalIndex === $selectedIndex}
-              on:click={() => handleGameClick(index)}
-              on:dblclick={() => handleGameDoubleClick(index)}
-              on:keydown={(e) => e.key === 'Enter' && handleGameDoubleClick(index)}
-              role="button"
-              tabindex={globalIndex === $selectedIndex ? 0 : -1}
-            >
-              <div class="game-image">
-                <CachedImage src={game.image_url} alt={game.title} />
-              </div>
-              <div class="game-info">
-                <h3 class="game-title">
-                  {game.title}
-                  {#if game.is_new}
-                    <span class="new-badge">NEW</span>
-                  {/if}
-                </h3>
-                <div class="game-meta">
-                  <span class="game-date">{formatDate(game.date)}</span>
-                  <span class="game-size">{formatSize(game.size)}</span>
+    {#if $games.length === 0 && $searchQuery.trim() !== ''}
+      <div class="empty-state">
+        <div class="empty-icon">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2" />
+            <path d="M21 21L16.65 16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+            <path d="M8 11H14M11 8V14" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          </svg>
+        </div>
+        <h3 class="empty-title">No results found</h3>
+        <p class="empty-message">No games match your search for "{$searchQuery}"</p>
+        <p class="empty-hint">Try different keywords or clear your search</p>
+      </div>
+    {:else}
+      <div class="scroll-area" style="height: {totalHeight}px;">
+        <div class="visible-items" style="transform: translateY({offsetY}px);">
+          <div
+            class="grid-wrapper"
+            style="grid-template-columns: repeat({columnsPerRow}, {CARD_WIDTH}px); gap: {GAP}px; padding: 0 {PADDING}px;"
+          >
+            {#each visibleGames as game, index (game.id)}
+              {@const globalIndex = startIndex + index}
+              <div
+                class="game-card"
+                class:selected={globalIndex === $selectedIndex}
+                on:click={() => handleGameClick(index)}
+                on:dblclick={() => handleGameDoubleClick(index)}
+                on:keydown={(e) => e.key === 'Enter' && handleGameDoubleClick(index)}
+                role="button"
+                tabindex={globalIndex === $selectedIndex ? 0 : -1}
+              >
+                <div class="game-image">
+                  <CachedImage src={game.image_url} alt={game.title} />
+                </div>
+                <div class="game-info">
+                  <h3 class="game-title">
+                    {game.title}
+                    {#if game.is_new}
+                      <span class="new-badge">NEW</span>
+                    {/if}
+                  </h3>
+                  <div class="game-meta">
+                    <span class="game-date">{formatDate(game.date)}</span>
+                    <span class="game-size">{formatSize(game.size)}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          {/each}
+            {/each}
+          </div>
         </div>
       </div>
-    </div>
+    {/if}
   </div>
 </div>
 
@@ -431,5 +446,40 @@
   .game-size {
     color: var(--color-primary);
     font-weight: 600;
+  }
+
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 32px;
+    text-align: center;
+  }
+
+  .empty-icon {
+    color: var(--color-textMuted);
+    opacity: 0.5;
+    margin-bottom: 16px;
+  }
+
+  .empty-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-text);
+    margin: 0 0 8px 0;
+  }
+
+  .empty-message {
+    font-size: 14px;
+    color: var(--color-textSecondary);
+    margin: 0 0 8px 0;
+  }
+
+  .empty-hint {
+    font-size: 12px;
+    color: var(--color-textMuted);
+    margin: 0;
   }
 </style>
