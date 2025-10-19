@@ -181,14 +181,16 @@
               role="button"
               tabindex={globalIndex === $selectedIndex ? 0 : -1}
             >
-              {#if game.is_new}
-                <div class="new-badge">NEW</div>
-              {/if}
               <div class="game-image">
                 <CachedImage src={game.image_url} alt={game.clean_name || game.title} />
               </div>
               <div class="game-info">
-                <h3 class="game-title">{game.clean_name || game.title}</h3>
+                <h3 class="game-title">
+                  {game.clean_name || game.title}
+                  {#if game.is_new}
+                    <span class="new-badge">NEW</span>
+                  {/if}
+                </h3>
                 <div class="game-meta">
                   <span class="game-date">{formatDate(game.date)}</span>
                   <span class="game-size">{formatSize(game.size)}</span>
@@ -344,18 +346,16 @@
   }
 
   .new-badge {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    padding: 3px 8px;
+    display: inline-block;
+    margin-left: 4px;
+    padding: 2px 4px;
     background-color: #10b981;
     color: white;
-    font-size: calc(var(--base-font-size) * 0.7);
+    font-size: 8px;
     font-weight: 600;
-    border-radius: 3px;
-    letter-spacing: 0.5px;
-    z-index: 10;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    border-radius: 2px;
+    letter-spacing: 0.3px;
+    vertical-align: middle;
   }
 
   .game-card:hover {

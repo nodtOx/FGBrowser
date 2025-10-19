@@ -205,14 +205,14 @@
             tabindex={globalIndex === $selectedIndex ? 0 : -1}
             style="height: {ITEM_HEIGHT}px;"
           >
-            {#if game.is_new}
-              <div class="new-badge">NEW</div>
-            {/if}
             <div class="game-date">
               {formatDate(game.date)}
             </div>
             <div class="game-title">
               {game.clean_name || game.title}
+              {#if game.is_new}
+                <span class="new-badge">NEW</span>
+              {/if}
             </div>
             <div class="game-size">
               {formatSize(game.size)}
@@ -370,18 +370,16 @@
   }
 
   .new-badge {
-    position: absolute;
-    top: 50%;
-    right: 8px;
-    transform: translateY(-50%);
+    display: inline-block;
+    margin-left: 8px;
     padding: 2px 6px;
     background-color: #10b981;
     color: white;
-    font-size: calc(var(--base-font-size) * 0.7);
+    font-size: calc(var(--base-font-size) * 0.65);
     font-weight: 600;
     border-radius: 3px;
     letter-spacing: 0.5px;
-    pointer-events: none;
+    vertical-align: middle;
   }
 
   .game-item:focus {
