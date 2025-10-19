@@ -57,10 +57,57 @@ echo ""
 echo "✅ Tag pushed to GitHub!"
 echo ""
 echo "🚀 Release build will start automatically in a few seconds..."
+echo "📦 Repository: https://github.com/$REPO"
 echo ""
-echo "📦 Check GitHub Actions: https://github.com/$REPO/actions"
-echo "📋 View releases: https://github.com/$REPO/releases"
+
+# Check if gh CLI is installed
+if ! command -v gh &> /dev/null; then
+  echo "⚠️  GitHub CLI not installed. Build will run in background."
+  echo "📦 Check progress: https://github.com/$REPO/actions"
+  exit 0
+fi
+
+# Wait a moment for the workflow to start
+echo "⏳ Waiting for workflow to start..."
+sleep 5
+
+# Watch the workflow run with live logs
 echo ""
-echo "💡 Tip: The release will be created when all platform builds complete successfully."
-echo "📱 Auto-updater: Users will be notified of this update automatically within 5 seconds of app launch."
+echo "📺 Watching build progress (live logs)..."
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+# Get the latest run and watch it
+gh run watch --repo "$REPO" --exit-status || {
+  echo ""
+  echo "❌ Build failed!"
+  echo "📦 Check logs: https://github.com/$REPO/actions"
+  exit 1
+}
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "✅ Build completed successfully!"
+echo ""
+
+# Now update Homebrew SHA256 automatically
+echo "🔐 Updating Homebrew SHA256 hashes..."
+echo ""
+
+SKIP_WORKFLOW_WAIT=1 bash "$(dirname "$0")/update-homebrew-after-release.sh" "$VERSION" || {
+  echo ""
+  echo "❌ Failed to update Homebrew SHA256"
+  echo "You can run manually: make update-homebrew-sha"
+  exit 1
+}
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "🎉 Release v$VERSION complete!"
+echo ""
+echo "Next steps:"
+echo "  1. Review changes: git diff homebrew/fgbrowser.rb"
+echo "  2. Commit: git add homebrew/fgbrowser.rb && git commit -m 'chore: update Homebrew SHA256 for v$VERSION'"
+echo "  3. Push: git push"
+echo "  4. Copy to homebrew-fgbrowser repo"
 

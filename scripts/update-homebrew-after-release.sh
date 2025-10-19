@@ -42,43 +42,45 @@ elif [ -z "$GH_TOKEN" ]; then
   }
 fi
 
-# Wait for workflow to complete
-echo "⏳ Checking workflow status..."
-WORKFLOW_STATUS=""
-ATTEMPTS=0
-MAX_ATTEMPTS=60  # 10 minutes max (10 seconds * 60)
+# If called standalone, wait for workflow. Otherwise assume it's already done.
+if [ -z "$SKIP_WORKFLOW_WAIT" ]; then
+  echo "⏳ Checking workflow status..."
+  WORKFLOW_STATUS=""
+  ATTEMPTS=0
+  MAX_ATTEMPTS=60  # 10 minutes max (10 seconds * 60)
 
-while [ "$WORKFLOW_STATUS" != "completed" ] && [ $ATTEMPTS -lt $MAX_ATTEMPTS ]; do
-  # Get the latest workflow run for this tag
-  WORKFLOW_STATUS=$(gh run list --repo "$REPO" --limit 1 --json status,headBranch --jq ".[] | select(.headBranch == \"$TAG\") | .status" 2>/dev/null || echo "")
-  
-  if [ -z "$WORKFLOW_STATUS" ]; then
-    echo "⏳ Waiting for workflow to start... (attempt $((ATTEMPTS+1))/$MAX_ATTEMPTS)"
-  elif [ "$WORKFLOW_STATUS" = "in_progress" ] || [ "$WORKFLOW_STATUS" = "queued" ]; then
-    echo "⏳ Build in progress... (attempt $((ATTEMPTS+1))/$MAX_ATTEMPTS)"
-  elif [ "$WORKFLOW_STATUS" = "completed" ]; then
-    # Check if it succeeded
-    CONCLUSION=$(gh run list --repo "$REPO" --limit 1 --json conclusion,headBranch --jq ".[] | select(.headBranch == \"$TAG\") | .conclusion")
-    if [ "$CONCLUSION" != "success" ]; then
-      echo "❌ Workflow failed with status: $CONCLUSION"
-      echo "Check: https://github.com/$REPO/actions"
-      exit 1
+  while [ "$WORKFLOW_STATUS" != "completed" ] && [ $ATTEMPTS -lt $MAX_ATTEMPTS ]; do
+    # Get the latest workflow run for this tag
+    WORKFLOW_STATUS=$(gh run list --repo "$REPO" --limit 1 --json status,headBranch --jq ".[] | select(.headBranch == \"$TAG\") | .status" 2>/dev/null || echo "")
+    
+    if [ -z "$WORKFLOW_STATUS" ]; then
+      echo "⏳ Waiting for workflow to start... (attempt $((ATTEMPTS+1))/$MAX_ATTEMPTS)"
+    elif [ "$WORKFLOW_STATUS" = "in_progress" ] || [ "$WORKFLOW_STATUS" = "queued" ]; then
+      echo "⏳ Build in progress... (attempt $((ATTEMPTS+1))/$MAX_ATTEMPTS)"
+    elif [ "$WORKFLOW_STATUS" = "completed" ]; then
+      # Check if it succeeded
+      CONCLUSION=$(gh run list --repo "$REPO" --limit 1 --json conclusion,headBranch --jq ".[] | select(.headBranch == \"$TAG\") | .conclusion")
+      if [ "$CONCLUSION" != "success" ]; then
+        echo "❌ Workflow failed with status: $CONCLUSION"
+        echo "Check: https://github.com/$REPO/actions"
+        exit 1
+      fi
+      echo "✅ Build completed successfully!"
+      break
     fi
-    echo "✅ Build completed successfully!"
-    break
+    
+    sleep 10
+    ATTEMPTS=$((ATTEMPTS+1))
+  done
+
+  if [ $ATTEMPTS -ge $MAX_ATTEMPTS ]; then
+    echo "❌ Timeout waiting for workflow to complete"
+    echo "Check status: https://github.com/$REPO/actions"
+    exit 1
   fi
   
-  sleep 10
-  ATTEMPTS=$((ATTEMPTS+1))
-done
-
-if [ $ATTEMPTS -ge $MAX_ATTEMPTS ]; then
-  echo "❌ Timeout waiting for workflow to complete"
-  echo "Check status: https://github.com/$REPO/actions"
-  exit 1
+  echo ""
 fi
-
-echo ""
 echo "📥 Downloading DMG files from release $TAG..."
 
 # Download DMG files
