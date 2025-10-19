@@ -19,35 +19,31 @@ A desktop application for browsing and organizing FitGirl Repack information.
 
 ## Download
 
-Download the latest version from [GitHub Releases](https://github.com/ekinertac/fit-boy/releases)
+### macOS
 
-**macOS:**
+**Homebrew (Recommended - No Security Warnings!):**
 
-- Apple Silicon (M1/M2/M3/M4): Download `*_aarch64.dmg`
-- Intel Macs: Download `*_x86_64.dmg`
+```bash
+brew tap nodtox/fgbrowser
+brew install --cask fgbrowser
+```
 
-### macOS Installation Instructions
+**Direct Download from [GitHub Releases](https://github.com/nodtOx/FGBrowser/releases):**
 
-If you see **"FGBrowser is damaged and can't be opened"** - don't worry, the app is not actually damaged. This is macOS blocking unsigned apps downloaded from the internet.
+- Apple Silicon (M1/M2/M3/M4): `*_aarch64.dmg`
+- Intel Macs: `*_x86_64.dmg`
 
-**Option 1 - Terminal (Recommended):**
+If you see "FGBrowser is damaged" error after direct download:
 
 ```bash
 xattr -cr /Applications/FGBrowser.app
 ```
 
-Then open the app normally. This removes the quarantine flag.
+Or: Right-click app → Open → Open
 
-**Option 2 - Right-click Method:**
+### Windows
 
-1. Right-click (or Control-click) on FGBrowser.app in Applications
-2. Select "Open" from the menu
-3. Click "Open" in the security dialog
-4. App will open normally from then on
-
-**Windows:**
-
-- Download `*_x64-setup.exe`
+Download `*_x64-setup.exe` from [GitHub Releases](https://github.com/nodtOx/FGBrowser/releases)
 
 ## Development
 
