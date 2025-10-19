@@ -1,4 +1,4 @@
-.PHONY: run build clear-db run-clear-db test lint clean install upload-db deploy-nginx version bump-patch bump-minor bump-major release build-release
+.PHONY: run build clear-db run-clear-db test lint clean install upload-db deploy-nginx version bump-patch bump-minor bump-major release build-release update-homebrew-sha
 
 run:
 	npm run tauri dev
@@ -61,6 +61,9 @@ bump-minor:
 
 bump-major:
 	@bash scripts/bump-version.sh major
+
+update-homebrew-sha:
+	@bash scripts/update-homebrew-sha.sh
 
 release:
 	@bash scripts/release.sh

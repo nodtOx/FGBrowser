@@ -90,47 +90,19 @@ jobs:
           releaseBody: |
             ## FGBrowser ${{ inputs.version || github.ref_name }}
 
-            ### Installation
+            ### Downloads
 
-            **macOS (Recommended - No Security Warnings!):**
-            ```bash
-            brew tap nodtox/fgbrowser
-            brew install --cask fgbrowser
-            ```
+            **macOS:**
+            - Apple Silicon (M1/M2/M3/M4): `*_aarch64.dmg`
+            - Intel Macs: `*_x86_64.dmg`
 
-            **Direct Downloads:**
-            - macOS Apple Silicon (M1/M2/M3/M4): `*_aarch64.dmg`
-            - macOS Intel: `*_x86_64.dmg`
-            - Windows: `*_x64-setup.exe`
+            **Windows:**
+            - Installer (recommended): `*_x64-setup.exe`
 
-            ### macOS Direct Download Instructions
-
-            If you download the DMG directly and see **"FGBrowser is damaged and can't be opened"**, run:
-            ```bash
-            xattr -cr /Applications/FGBrowser.app
-            ```
-            This removes the quarantine flag. One-time step.
-
-            **Alternatively:** Right-click app → Open → Open (in dialog)
+            Download, run the installer, and start browsing repacks!
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
-
-      - name: Calculate SHA256 for Homebrew (macOS)
-        if: matrix.platform == 'macos-latest'
-        run: |
-          echo "📦 SHA256 hashes for Homebrew Cask:"
-          echo "======================================"
-          if [ -f src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg ]; then
-            echo "ARM64 (aarch64):"
-            shasum -a 256 src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg | tee -a $GITHUB_STEP_SUMMARY
-          fi
-          if [ -f src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg ]; then
-            echo "Intel (x86_64):"
-            shasum -a 256 src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg | tee -a $GITHUB_STEP_SUMMARY
-          fi
-          echo "======================================"
-          echo "Copy these hashes to your Homebrew Cask file"
 
       - name: Cleanup keychain (macOS)
         if: always() && matrix.platform == 'macos-latest'

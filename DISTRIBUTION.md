@@ -107,15 +107,58 @@ From their GitHub Actions workflow analysis:
 
 **You're following industry best practices for anonymous, free distribution.**
 
+## Release Workflow
+
+### Complete Process
+
+1. **Bump version:**
+
+   ```bash
+   make bump-patch  # or bump-minor, bump-major
+   ```
+
+2. **Build locally:**
+
+   ```bash
+   make build
+   ```
+
+3. **Update Homebrew SHA256 hashes:**
+
+   ```bash
+   make update-homebrew-sha
+   ```
+
+4. **Review and commit:**
+
+   ```bash
+   git diff
+   git add -A
+   git commit -m "chore: bump version to X.X.X"
+   ```
+
+5. **Create release:**
+
+   ```bash
+   make release
+   ```
+
+6. **Copy to homebrew-fgbrowser repo:**
+   ```bash
+   cp homebrew/fgbrowser.rb ../homebrew-fgbrowser/Casks/
+   cd ../homebrew-fgbrowser
+   git add Casks/fgbrowser.rb
+   git commit -m "Update FGBrowser to vX.X.X"
+   git push
+   ```
+
 ## Next Steps
 
-1. ✅ Commit all changes
-2. ✅ Create v0.1.4 release (already done)
-3. ⏳ Wait for GitHub Actions to complete
-4. 📋 Get SHA256 hashes from Actions logs
-5. 🍺 Create `homebrew-fgbrowser` repo
-6. 📦 Publish cask with correct hashes
-7. 🎉 Users can install via Homebrew!
+1. ✅ Local SHA256 calculation (done)
+2. ✅ GitHub Actions reverted to v0.1.3 (done)
+3. 🍺 Create `homebrew-fgbrowser` repo (to do)
+4. 📦 Test full workflow with next release
+5. 🎉 Users can install via Homebrew!
 
 ## Automation Ideas
 
