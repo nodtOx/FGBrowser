@@ -73,6 +73,13 @@ if [ -f "src-tauri/tauri.conf.json" ]; then
   fi
 fi
 
+# Update Homebrew cask
+if [ -f "homebrew/fgbrowser.rb" ]; then
+  sed -i.bak "s/version \".*\"/version \"$NEW_VERSION\"/" homebrew/fgbrowser.rb
+  rm -f homebrew/fgbrowser.rb.bak
+  echo "✅ Updated homebrew/fgbrowser.rb"
+fi
+
 echo ""
 echo "✨ Version bumped to $NEW_VERSION"
 echo ""
@@ -80,4 +87,5 @@ echo "Next steps:"
 echo "  1. Review changes: git diff"
 echo "  2. Commit changes: git add -A && git commit -m \"chore: bump version to $NEW_VERSION\""
 echo "  3. Create release: make release"
+echo "  4. After release builds, update SHA256 hashes in homebrew/fgbrowser.rb"
 
