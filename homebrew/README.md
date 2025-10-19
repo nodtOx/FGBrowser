@@ -17,12 +17,14 @@ This guide explains how to create and maintain a Homebrew tap for FGBrowser dist
 The automated SHA256 update script uses GitHub CLI. Set up a token for your nodtOx account:
 
 1. **Create Personal Access Token:**
+
    - Go to: https://github.com/settings/tokens
    - Click "Generate new token (classic)"
    - Select scopes: `repo`, `workflow`
    - Generate and copy the token
 
 2. **Add to your shell profile** (`~/.zshrc` or `~/.bashrc`):
+
    ```bash
    export GH_TOKEN_NODTOX="ghp_your_token_here"
    ```
