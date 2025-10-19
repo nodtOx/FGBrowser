@@ -3,8 +3,13 @@ use super::models::{Game, GameDetails, MagnetLink, Category, DatabaseStats};
 use super::cache;
 
 // SQL query helpers to reduce repetition
-pub const GAME_SELECT_FIELDS: &str = "id, title, clean_name, genres_tags, company, languages, original_size, repack_size, size, url, date, image_url";
-pub const GAME_SELECT_FIELDS_PREFIXED: &str = "r.id, r.title, r.clean_name, r.genres_tags, r.company, r.languages, r.original_size, r.repack_size, r.size, r.url, r.date, r.image_url";
+// Note: is_new field is calculated via CASE statement in queries
+pub const GAME_SELECT_FIELDS: &str = "id, title, clean_name, genres_tags, company, languages, original_size, repack_size, size, url, date, image_url, \
+    CASE WHEN created_at > COALESCE((SELECT json_extract(value, '$.games_last_seen_date') FROM settings WHERE key = 'app_settings'), '1970-01-01') \
+    THEN 1 ELSE 0 END as is_new";
+pub const GAME_SELECT_FIELDS_PREFIXED: &str = "r.id, r.title, r.clean_name, r.genres_tags, r.company, r.languages, r.original_size, r.repack_size, r.size, r.url, r.date, r.image_url, \
+    CASE WHEN r.created_at > COALESCE((SELECT json_extract(value, '$.games_last_seen_date') FROM settings WHERE key = 'app_settings'), '1970-01-01') \
+    THEN 1 ELSE 0 END as is_new";
 
 // Helper function to map a row to a Game struct
 // This eliminates repetitive mapping code across all queries
@@ -22,6 +27,7 @@ pub fn map_row_to_game(row: &rusqlite::Row) -> Result<Game> {
         url: row.get(9)?,
         date: row.get(10)?,
         image_url: row.get(11)?,
+        is_new: row.get::<_, i32>(12)? == 1,
     })
 }
 

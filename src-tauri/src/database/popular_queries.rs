@@ -102,6 +102,7 @@ impl PopularQueries {
                         url: row.get(15)?,
                         date: row.get(16)?,
                         image_url: row.get(17)?,
+                        is_new: false,
                     })
                 } else {
                     None

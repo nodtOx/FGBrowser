@@ -14,6 +14,7 @@ pub struct Game {
     pub url: String,
     pub date: Option<String>,
     pub image_url: Option<String>,
+    pub is_new: bool, // true if added after games_last_seen_date
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -159,6 +160,9 @@ pub struct AppSettings {
     pub popular_month_last_viewed: Option<String>,
     pub popular_year_last_viewed: Option<String>,
     pub popular_award_last_viewed: Option<String>,
+
+    // Games last seen timestamp (ISO 8601 string)
+    pub games_last_seen_date: Option<String>,
 }
 
 // Default value helpers for serde
@@ -199,6 +203,7 @@ impl Default for AppSettings {
             popular_month_last_viewed: None,
             popular_year_last_viewed: None,
             popular_award_last_viewed: None,
+            games_last_seen_date: None,
         }
     }
 }

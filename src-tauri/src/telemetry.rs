@@ -98,6 +98,7 @@ pub fn capture_event(message: &str, level: sentry::Level) {
 }
 
 /// Capture an error
+#[allow(dead_code)]
 pub fn capture_error<E: std::error::Error + Send + Sync + 'static>(error: &E) {
     if !is_telemetry_enabled() {
         return;
@@ -107,6 +108,7 @@ pub fn capture_error<E: std::error::Error + Send + Sync + 'static>(error: &E) {
 }
 
 /// Capture an anyhow error
+#[allow(dead_code)]
 pub fn capture_anyhow_error(error: &anyhow::Error) {
     if !is_telemetry_enabled() {
         return;
@@ -131,6 +133,7 @@ pub fn track_feature(feature_name: &str) {
 }
 
 /// Set user context (completely anonymous with random ID)
+#[allow(dead_code)]
 pub fn set_anonymous_user_id(id: String) {
     if !is_telemetry_enabled() {
         return;

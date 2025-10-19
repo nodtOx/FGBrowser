@@ -15,6 +15,7 @@ export interface Game {
   url: string;
   date: string | null;
   image_url: string | null;
+  is_new: boolean; // true if added after games_last_seen_date
 }
 
 export interface MagnetLink {
@@ -48,6 +49,7 @@ export const isLoading = writable<boolean>(false);
 export const categories = writable<CategoryWithCount[]>([]);
 export const selectedCategories = writable<CategoryWithCount[]>([]);
 export const totalGamesCount = writable<number>(0);
+export const newGamesCount = writable<number>(0);
 
 // Popular games crawling state
 export const isCrawlingPopular = writable<boolean>(false);
@@ -664,6 +666,11 @@ export async function selectGame(index: number) {
   selectedIndex.set(index);
   const game = currentGames[index];
 
+  // Clear new badge if this is a new game
+  if (game.is_new) {
+    clearNewBadgeForGame(game.id);
+  }
+
   // Fetch details for magnet links
   try {
     const details = await invoke<GameDetails>('get_game_details', { gameId: game.id });
@@ -721,4 +728,43 @@ export function formatSize(sizeInMB: number | null): string {
     const sizeInTB = sizeInMB / (1024 * 1024);
     return `${sizeInTB.toFixed(1)} TB`;
   }
+}
+
+// Load count of new games
+export async function loadNewGamesCount() {
+  try {
+    const count = await invoke<number>('get_new_games_count');
+    newGamesCount.set(count);
+  } catch (error) {
+    console.error('Failed to load new games count:', error);
+  }
+}
+
+// Mark all games as seen
+export async function markAllGamesAsSeen() {
+  try {
+    await invoke('mark_all_games_as_seen');
+    // Refresh game list to update is_new flags
+    await applyAllFilters();
+    // Reset new games count
+    newGamesCount.set(0);
+    console.log('✅ All games marked as seen');
+  } catch (error) {
+    console.error('Failed to mark games as seen:', error);
+  }
+}
+
+// Clear new badge for a specific game (when viewing details)
+export function clearNewBadgeForGame(gameId: number) {
+  games.update(($games) => {
+    return $games.map((game) => {
+      if (game.id === gameId) {
+        return { ...game, is_new: false };
+      }
+      return game;
+    });
+  });
+
+  // Update count
+  newGamesCount.update((count) => Math.max(0, count - 1));
 }

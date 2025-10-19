@@ -14,8 +14,9 @@ use commands::{
     get_games_by_categories_and_time, get_games_by_categories_size_and_time,
     get_games_by_category, get_games_by_date_range, get_games_by_multiple_categories,
     get_games_by_size_and_time, get_games_by_size_range, clear_category_cache, is_database_empty,
+    mark_all_games_as_seen, get_new_games_count,
     // Crawler commands
-    start_crawler, update_database,
+    start_crawler, update_database, save_repacks_to_db,
     // Popular repacks commands
     fetch_popular_repacks, parse_popular_repacks_from_file, get_popular_repacks,
     get_popular_repacks_with_games, get_unseen_popular_count, get_total_unseen_popular_count,
@@ -34,14 +35,15 @@ use commands::{
     // AppState
     AppState,
 };
-use commands::database_service::SqliteDatabaseService;
+use commands::database_service::{SqliteDatabaseService, DatabaseService};
 use database::Database;
 use constants::DATABASE_URL;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::fs;
 use std::io::Write;
-use rusqlite;
+use tauri::{Manager, Emitter, menu::{Menu, MenuItem}, tray::{TrayIconBuilder, MouseButton, MouseButtonState}};
+use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 
 fn find_database() -> PathBuf {
     // Try multiple locations to find the database
@@ -138,7 +140,7 @@ fn download_database_sync(db_path: &PathBuf) -> Result<(), String> {
         .map_err(|e| format!("Failed to read response: {}", e))?;
     
     // Write to file
-    let mut file = fs::File::create(&db_path)
+    let mut file = fs::File::create(db_path)
         .map_err(|e| format!("Failed to create database file: {}", e))?;
     
     file.write_all(&bytes)
@@ -166,10 +168,104 @@ fn download_database_sync(db_path: &PathBuf) -> Result<(), String> {
         }
         Err(e) => {
             // Delete corrupted file
-            let _ = fs::remove_file(&db_path);
+            let _ = fs::remove_file(db_path);
             Err(format!("Downloaded database is invalid: {}", e))
         }
     }
+}
+
+fn setup_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    let show_hide = MenuItem::with_id(app, "show_hide", "Show/Hide Window", true, None::<&str>)?;
+    let check_updates = MenuItem::with_id(app, "check_updates", "Check for Updates", true, None::<&str>)?;
+    let about = MenuItem::with_id(app, "about", "About", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+    
+    let menu = Menu::with_items(app, &[
+        &show_hide,
+        &check_updates,
+        &about,
+        &tauri::menu::PredefinedMenuItem::separator(app)?,
+        &quit,
+    ])?;
+    
+    let _tray = TrayIconBuilder::new()
+        .menu(&menu)
+        .icon(app.default_window_icon().unwrap().clone())
+        .on_menu_event(|app, event| {
+            match event.id.as_ref() {
+                "show_hide" => {
+                    if let Some(window) = app.get_webview_window("main") {
+                        if window.is_visible().unwrap_or(false) {
+                            let _ = window.hide();
+                        } else {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
+                }
+                "check_updates" => {
+                    if let Some(window) = app.get_webview_window("main") {
+                        // Emit event to frontend to trigger update check
+                        let _ = window.emit("check-for-updates", ());
+                    }
+                }
+                "about" => {
+                    let version = app.package_info().version.to_string();
+                    let message = format!(
+                        "FGBrowser v{}\n\nGitHub Repository:\nhttps://github.com/nodtOx/FGBrowser\n\nBuilt with Tauri 2.0 + Svelte",
+                        version
+                    );
+                    
+                    let app_handle = app.clone();
+                    app.dialog()
+                        .message(message)
+                        .title("About FGBrowser")
+                        .kind(MessageDialogKind::Info)
+                        .buttons(MessageDialogButtons::OkCancelCustom(
+                            "Open GitHub".to_string(),
+                            "Report Issue".to_string()
+                        ))
+                        .show(move |result| {
+                            use tauri_plugin_opener::OpenerExt;
+                            match result {
+                                true => {
+                                    // OK button (Open GitHub)
+                                    let _ = app_handle.opener().open_url("https://github.com/nodtOx/FGBrowser", None::<&str>);
+                                }
+                                false => {
+                                    // Cancel button (Report Issue)
+                                    let _ = app_handle.opener().open_url("https://github.com/nodtOx/FGBrowser/issues/new", None::<&str>);
+                                }
+                            }
+                        });
+                }
+                "quit" => {
+                    app.exit(0);
+                }
+                _ => {}
+            }
+        })
+        .on_tray_icon_event(|tray, event| {
+            if let tauri::tray::TrayIconEvent::Click {
+                button: MouseButton::Left,
+                button_state: MouseButtonState::Up,
+                ..
+            } = event
+            {
+                let app = tray.app_handle();
+                if let Some(window) = app.get_webview_window("main") {
+                    if window.is_visible().unwrap_or(false) {
+                        let _ = window.hide();
+                    } else {
+                        let _ = window.show();
+                        let _ = window.set_focus();
+                    }
+                }
+            }
+        })
+        .build(app)?;
+    
+    Ok(())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -210,10 +306,117 @@ pub fn run() {
     // Clone db_path for commands that need it directly (reset/download/check)
     let db_path_for_commands = db_path.clone();
 
+    // Clone db_service for background crawler
+    let db_service_for_crawler = Arc::clone(&db_service);
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_dialog::init())
+        .setup(move |app| {
+            // Setup system tray
+            setup_tray(app)?;
+            
+            // Handle window close event - hide to tray instead of closing
+            let window = app.get_webview_window("main").unwrap();
+            let window_clone = window.clone();
+            window.on_window_event(move |event| {
+                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                    // Prevent the window from closing
+                    api.prevent_close();
+                    // Hide the window instead
+                    let _ = window_clone.hide();
+                }
+            });
+            
+            // Start background crawler task (runs every 10 minutes)
+            let db_service_clone = Arc::clone(&db_service_for_crawler);
+            tokio::spawn(async move {
+                // Wait 10 minutes before first run (let app settle)
+                tokio::time::sleep(tokio::time::Duration::from_secs(600)).await;
+                
+                loop {
+                    println!("🔄 Background crawler: Checking for new games...");
+                    
+                    // Run update_database
+                    match db_service_clone.get_latest_game_date() {
+                        Ok(Some(_latest_date)) => {
+                            // We have existing data, run incremental update
+                            match crate::crawler::FitGirlCrawler::new() {
+                                Ok(crawler) => {
+                                    let mut current_page = 1u32;
+                                    let mut total_new_games = 0;
+                                    
+                                    // Crawl until we find games we already have
+                                    loop {
+                                        match crawler.crawl_page(current_page).await {
+                                            Ok(repacks) => {
+                                                if repacks.is_empty() {
+                                                    break;
+                                                }
+                                                
+                                                // Filter out existing games
+                                                let new_repacks: Vec<_> = repacks
+                                                    .into_iter()
+                                                    .filter(|r| {
+                                                        match db_service_clone.check_url_exists(&r.url) {
+                                                            Ok(exists) => !exists,
+                                                            Err(_) => true,
+                                                        }
+                                                    })
+                                                    .collect();
+                                                
+                                                if new_repacks.is_empty() {
+                                                    break;
+                                                }
+                                                
+                                                // Save new games
+                                                match save_repacks_to_db(&new_repacks, &db_service_clone) {
+                                                    Ok(_) => {
+                                                        total_new_games += new_repacks.len();
+                                                    }
+                                                    Err(e) => {
+                                                        eprintln!("Failed to save repacks: {}", e);
+                                                    }
+                                                }
+                                                
+                                                current_page += 1;
+                                                
+                                                // Limit to 5 pages per background check
+                                                if current_page > 5 {
+                                                    break;
+                                                }
+                                            }
+                                            Err(e) => {
+                                                eprintln!("Background crawler error: {}", e);
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    
+                                    if total_new_games > 0 {
+                                        println!("✅ Background crawler: Found {} new games", total_new_games);
+                                    } else {
+                                        println!("✅ Background crawler: No new games found");
+                                    }
+                                }
+                                Err(e) => eprintln!("Background crawler failed to initialize: {}", e),
+                            }
+                        }
+                        Ok(None) => {
+                            println!("⏭️  Background crawler: Skipping (no existing data)");
+                        }
+                        Err(e) => eprintln!("Background crawler error checking latest game: {}", e),
+                    }
+                    
+                    // Wait 10 minutes before next run
+                    tokio::time::sleep(tokio::time::Duration::from_secs(600)).await;
+                }
+            });
+            
+            Ok(())
+        })
         .manage(AppState {
             db_service,
         })
@@ -240,6 +443,8 @@ pub fn run() {
             get_games_by_multiple_categories,
             clear_category_cache,
             is_database_empty,
+            mark_all_games_as_seen,
+            get_new_games_count,
             check_database_exists,
             download_database,
             open_magnet_link,

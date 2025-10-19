@@ -1,12 +1,13 @@
 <script lang="ts">
-  import { checkForUpdatesOnStartup } from '$lib/stores/appUpdater';
-  import { isCrawlingPopular, loadCategories, loadGames, totalGamesCount } from '$lib/stores/games';
+  import { checkForUpdatesOnStartup, checkForUpdates as checkForAppUpdates } from '$lib/stores/appUpdater';
+  import { isCrawlingPopular, loadCategories, loadGames, totalGamesCount, loadNewGamesCount } from '$lib/stores/games';
   import { initKeyboardShortcuts } from '$lib/stores/keyboard';
   import { browseView, currentPage, gameListViewMode, loadSavedGameListViewMode } from '$lib/stores/navigation';
   import { refreshPopularCounts } from '$lib/stores/popular';
   import { loadSavedTheme, watchOSThemeChanges } from '$lib/stores/theme';
   import { popularStatus, updateStatus } from '$lib/stores/updates';
   import { invoke } from '@tauri-apps/api/core';
+  import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
   import { onDestroy, onMount } from 'svelte';
 
   import Downloads from '$lib/components/Downloads.svelte';
@@ -31,28 +32,29 @@
     try {
       // Track app launch (if telemetry enabled)
       invoke('track_app_launch').catch(() => {}); // Non-blocking, ignore errors
-      
+
       // Check for app updates in the background
       checkForUpdatesOnStartup();
-      
+
       // Database should be ready from Rust startup, check if it has data
       const isEmpty = await invoke<boolean>('is_database_empty');
-      
+
       if (isEmpty) {
         // Database exists but is empty - Rust download likely failed
         databaseError = 'Database is empty. Please check your internet connection and retry.';
         return;
       }
-      
+
       // Load the games and categories
       await loadGames(LOAD_ALL_GAMES);
       await loadCategories();
-      
+
+      // Load new games count
+      await loadNewGamesCount();
+
       // Load popular repacks in the background (non-blocking)
-      loadPopularRepacks().catch(err => 
-        console.warn('Failed to load popular repacks:', err)
-      );
-      
+      loadPopularRepacks().catch((err) => console.warn('Failed to load popular repacks:', err));
+
       // Start background updates (non-blocking)
       startBackgroundUpdates();
     } catch (error) {
@@ -64,7 +66,7 @@
   async function retryDatabaseDownload() {
     isRetrying = true;
     databaseError = '';
-    
+
     try {
       await invoke<boolean>('download_database');
       await initializeApp();
@@ -75,14 +77,16 @@
       isRetrying = false;
     }
   }
-  
+
   async function loadPopularRepacks() {
     try {
       // Load all three periods from database (fetch all available games)
       const monthlyRepacks = await invoke<any[]>('get_popular_repacks', { period: 'month', limit: 9999 });
       const yearlyRepacks = await invoke<any[]>('get_popular_repacks', { period: 'year', limit: 9999 });
       const awardRepacks = await invoke<any[]>('get_popular_repacks', { period: 'award', limit: 9999 });
-      console.log(`Loaded ${monthlyRepacks.length} monthly + ${yearlyRepacks.length} yearly + ${awardRepacks.length} award popular repacks from database`);
+      console.log(
+        `Loaded ${monthlyRepacks.length} monthly + ${yearlyRepacks.length} yearly + ${awardRepacks.length} award popular repacks from database`,
+      );
     } catch (error) {
       console.warn('No popular repacks in database yet');
     }
@@ -91,7 +95,7 @@
   async function startBackgroundUpdates() {
     // Check for database updates
     checkForUpdates();
-    
+
     // Fetch popular repacks (non-blocking)
     fetchPopularRepacks();
   }
@@ -99,14 +103,14 @@
   async function checkForUpdates() {
     try {
       updateStatus.set({ isUpdating: true, message: '', newGamesFound: 0 });
-      
+
       const result = await invoke<{ total_games: number; status: string }>('update_database');
-      
+
       if (result.total_games > 0) {
         await loadGames(LOAD_ALL_GAMES);
         await loadCategories();
       }
-      
+
       updateStatus.set({ isUpdating: false, message: '', newGamesFound: 0 });
     } catch (error) {
       console.error('Update error:', error);
@@ -117,31 +121,31 @@
   async function fetchPopularRepacks() {
     try {
       popularStatus.set({ isFetching: true, message: '', currentPeriod: '' });
-      
+
       // Fetch all five periods
       await invoke<number>('fetch_popular_repacks', { period: 'week' });
       await invoke<number>('fetch_popular_repacks', { period: 'today' });
       await invoke<number>('fetch_popular_repacks', { period: 'month' });
       await invoke<number>('fetch_popular_repacks', { period: 'year' });
       await invoke<number>('fetch_popular_repacks', { period: 'award' });
-      
+
       isCrawlingPopular.set(true);
-      
+
       // Crawl all five periods
       await invoke<number>('crawl_popular_games', { period: 'week' });
       await invoke<number>('crawl_popular_games', { period: 'today' });
       await invoke<number>('crawl_popular_games', { period: 'month' });
       await invoke<number>('crawl_popular_games', { period: 'year' });
       await invoke<number>('crawl_popular_games', { period: 'award' });
-      
+
       isCrawlingPopular.set(false);
-      
+
       // Reload data
       await loadPopularRepacks();
-      
+
       // Refresh badges
       refreshPopularCounts();
-      
+
       popularStatus.set({ isFetching: false, message: '', currentPeriod: '' });
     } catch (error) {
       console.error('Failed to fetch popular repacks:', error);
@@ -151,6 +155,7 @@
   }
 
   let unwatchOSTheme: (() => void) | null = null;
+  let unwatchTrayEvents: (() => void) | null = null;
 
   onMount(async () => {
     // Load saved theme (or detect from OS)
@@ -164,6 +169,13 @@
       console.log(`OS theme changed, auto-switching to ${newTheme.name}`);
     });
 
+    // Listen for system tray events
+    const window = getCurrentWebviewWindow();
+    unwatchTrayEvents = await window.listen('check-for-updates', () => {
+      console.log('Check for updates triggered from system tray');
+      checkForAppUpdates(false);
+    });
+
     // Initialize keyboard shortcuts
     initKeyboardShortcuts();
 
@@ -175,6 +187,11 @@
     // Cleanup OS theme watcher
     if (unwatchOSTheme) {
       unwatchOSTheme();
+    }
+
+    // Cleanup tray event listener
+    if (unwatchTrayEvents) {
+      unwatchTrayEvents();
     }
   });
 </script>

@@ -241,3 +241,33 @@ pub async fn is_database_empty(
     
     Ok(stats.total_games == 0)
 }
+
+#[tauri::command]
+pub async fn mark_all_games_as_seen(
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    // Get current settings
+    let mut settings = state.db_service
+        .get_settings()
+        .map_err(|e| e.to_string())?;
+    
+    // Update games_last_seen_date to current timestamp
+    settings.games_last_seen_date = Some(chrono::Utc::now().to_rfc3339());
+    
+    // Save settings
+    state.db_service
+        .save_settings(&settings)
+        .map_err(|e| e.to_string())?;
+    
+    println!("✅ Marked all games as seen at {}", settings.games_last_seen_date.as_ref().unwrap());
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn get_new_games_count(
+    state: State<'_, AppState>,
+) -> Result<i64, String> {
+    state.db_service
+        .get_new_games_count()
+        .map_err(|e| e.to_string())
+}

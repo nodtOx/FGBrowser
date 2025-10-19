@@ -42,6 +42,7 @@ pub trait DatabaseService: Send + Sync {
     fn delete_download(&self, info_hash: &str) -> SqliteResult<()>;
     fn check_table_exists(&self, table_name: &str) -> SqliteResult<bool>;
     fn check_url_exists(&self, url: &str) -> SqliteResult<bool>;
+    fn get_new_games_count(&self) -> SqliteResult<i64>;
     
     /// Get direct access to the database for bulk operations
     /// This is a pragmatic compromise for operations that need transaction control
@@ -218,6 +219,22 @@ impl DatabaseService for SqliteDatabaseService {
                 |row| row.get(0),
             )?;
             Ok(count > 0)
+        })
+    }
+    
+    fn get_new_games_count(&self) -> SqliteResult<i64> {
+        self.with_db(|db| {
+            let count: i64 = db.conn.query_row(
+                "SELECT COUNT(*) FROM repacks 
+                 WHERE created_at > COALESCE(
+                     (SELECT json_extract(value, '$.games_last_seen_date') FROM settings WHERE key = 'app_settings'), 
+                     '1970-01-01'
+                 )
+                 AND EXISTS (SELECT 1 FROM magnet_links WHERE magnet_links.repack_id = repacks.id)",
+                [],
+                |row| row.get(0),
+            )?;
+            Ok(count)
         })
     }
     

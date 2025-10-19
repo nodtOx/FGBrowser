@@ -5,7 +5,7 @@
   export let src: string | null | undefined;
   export let alt: string = '';
   export let className: string = '';
-  
+
   let cachedSrc: string = '';
   let error: boolean = false;
   let imageLoaded: boolean = false;
@@ -18,21 +18,18 @@
     try {
       error = false;
       imageLoaded = false;
-      
+
       // Check if image is already cached (fast, synchronous check)
       const cachedPath = await invoke<string | null>('check_image_cached', { url: src });
-      
+
       if (cachedPath) {
         // Image is cached, use the cached version
         cachedSrc = convertFileSrc(cachedPath);
-        console.log('Using cached image:', cachedSrc);
       } else {
         // Image not cached, show original URL immediately
         cachedSrc = src;
-        console.log('Using original URL, caching in background:', src);
-        
         // Start caching in the background (fire and forget)
-        invoke('cache_image_background', { url: src }).catch(err => {
+        invoke('cache_image_background', { url: src }).catch((err) => {
           console.warn('Background cache failed:', err);
         });
       }
@@ -71,7 +68,7 @@
       <div class="loading-spinner"></div>
     </div>
   {/if}
-  
+
   {#if error || !src || !cachedSrc}
     <slot name="fallback">
       <div class="image-error">
@@ -79,12 +76,12 @@
       </div>
     </slot>
   {:else}
-    <img 
-      src={cachedSrc} 
-      {alt} 
+    <img
+      src={cachedSrc}
+      {alt}
       class="cached-image"
       class:loaded={imageLoaded}
-      loading="lazy" 
+      loading="lazy"
       on:load={handleImageLoad}
       on:error={handleImageError}
     />
@@ -150,4 +147,3 @@
     opacity: 1;
   }
 </style>
-
