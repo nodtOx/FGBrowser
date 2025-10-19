@@ -20,6 +20,12 @@ fn get_sentry_dsn() -> String {
 }
 
 pub fn init_telemetry() {
+    // Disable Sentry in development mode
+    if cfg!(debug_assertions) {
+        println!("⚠️  Sentry disabled in development mode");
+        return;
+    }
+
     if SENTRY_GUARD.get().is_some() {
         println!("Telemetry already initialized");
         return;
