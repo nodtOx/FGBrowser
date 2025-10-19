@@ -1,5 +1,6 @@
 .PHONY: run build clear-db run-clear-db test lint clean install upload-db deploy-nginx version bump-patch bump-minor bump-major release build-release
 
+
 run:
 	npm run tauri dev
 
