@@ -2,12 +2,12 @@ cask "fgbrowser" do
   version "0.1.10"
   
   on_arm do
-    sha256 "a0e5b536035a2bd3d22bca0e6eedaaa1c2c3c78b977ad8dbda2d79d1e1c09797"
+    sha256 "a2dd075c13e4cf563fbc72e9593623bac8b56b79f7e94e2b800c304220594ba6"
     url "https://github.com/nodtOx/FGBrowser/releases/download/v#{version}/FGBrowser_#{version}_aarch64.dmg"
   end
   
   on_intel do
-    sha256 "65c7e3406e855bae0d1b023f61d182ad1e890d35f9773744b9120e31829acf95"
+    sha256 "9fd2888d31ddef335747703f2d6062d336baa7ea6f37d5f6d5e0eea60eb8e4ae"
     url "https://github.com/nodtOx/FGBrowser/releases/download/v#{version}/FGBrowser_#{version}_x64.dmg"
   end
 
