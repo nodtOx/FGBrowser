@@ -2,7 +2,7 @@ cask "fgbrowser" do
   version "0.1.6"
   
   on_arm do
-    sha256 "REPLACE_WITH_SHA256_OF_AARCH64_DMG"
+    sha256 "7d104866b54e617642b197ca499b683ba661e202f43fa45657ff473024438b0a"
     url "https://github.com/nodtOx/FGBrowser/releases/download/v#{version}/FGBrowser_#{version}_aarch64.dmg"
   end
   
