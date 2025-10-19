@@ -8,8 +8,6 @@
     "opener:default",
     "updater:default",
     "updater:allow-check",
-    "updater:allow-download",
-    "updater:allow-install",
-    "process:allow-restart"
+    "updater:allow-download-and-install"
   ]
 }
