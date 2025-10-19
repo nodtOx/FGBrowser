@@ -83,11 +83,19 @@ fi
 echo ""
 echo "✨ Version bumped to $NEW_VERSION"
 echo ""
+
+# Auto-commit the version bump
+echo "📝 Committing version bump..."
+git add VERSION package.json src-tauri/Cargo.toml src-tauri/Cargo.lock src-tauri/tauri.conf.json homebrew/fgbrowser.rb
+git commit -m "chore: bump version to $NEW_VERSION"
+
+echo "✅ Changes committed"
+echo ""
 echo "Next step:"
 echo "  Run: make release"
 echo ""
 echo "This will:"
-echo "  ✅ Commit and tag v$NEW_VERSION"
+echo "  🏷️  Create and push tag v$NEW_VERSION"
 echo "  📺 Show live build logs from GitHub Actions"
 echo "  🔐 Auto-update Homebrew SHA256 after build"
 echo "  ⚡ Everything happens automatically!"
