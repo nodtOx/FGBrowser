@@ -1,4 +1,4 @@
-.PHONY: run build clear-db run-clear-db test lint clean install upload-db deploy-nginx version bump-patch bump-minor bump-major release build-release update-homebrew-sha
+.PHONY: run build clear-db run-clear-db test lint clean install upload-db deploy-nginx version bump-patch bump-minor bump-major release build-release update-homebrew-sha validate-entitlements
 
 run:
 	npm run tauri dev
@@ -64,6 +64,10 @@ bump-major:
 
 update-homebrew-sha:
 	@bash scripts/update-homebrew-after-release.sh
+
+validate-entitlements:
+	@echo "🔍 Validating entitlements.plist..."
+	@plutil -lint src-tauri/entitlements.plist && echo "✅ Entitlements file is valid"
 
 release:
 	@bash scripts/release.sh
