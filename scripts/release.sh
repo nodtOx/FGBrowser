@@ -69,19 +69,28 @@ fi
 
 # Wait a moment for the workflow to start
 echo "⏳ Waiting for workflow to start..."
-sleep 5
+sleep 10
+
+# Get the latest workflow run ID
+echo "🔍 Finding workflow run..."
+RUN_ID=$(gh run list --repo "$REPO" --limit 1 --json databaseId --jq '.[0].databaseId')
+
+if [ -z "$RUN_ID" ]; then
+  echo "❌ Could not find workflow run"
+  echo "📦 Check manually: https://github.com/$REPO/actions"
+  exit 1
+fi
 
 # Watch the workflow run with live logs
 echo ""
-echo "📺 Watching build progress (live logs)..."
+echo "📺 Watching build progress (Run ID: $RUN_ID)..."
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
-# Get the latest run and watch it
-gh run watch --repo "$REPO" --exit-status || {
+gh run watch "$RUN_ID" --repo "$REPO" --exit-status || {
   echo ""
   echo "❌ Build failed!"
-  echo "📦 Check logs: https://github.com/$REPO/actions"
+  echo "📦 Check logs: https://github.com/$REPO/actions/runs/$RUN_ID"
   exit 1
 }
 
