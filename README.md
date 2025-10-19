@@ -4,6 +4,8 @@ A desktop application for browsing and organizing FitGirl Repack information.
 
 ![FGBrowser](.github/assets/FGBrowser-03.png)
 
+**This application is currently in active development.** While functional, you may encounter bugs, errors, or unexpected behavior. Please report any issues you find on the [GitHub Issues](https://github.com/nodtOx/FGBrowser/issues) page.
+
 ## Features
 
 - **Fast Browsing**: Search and filter thousands of games instantly
