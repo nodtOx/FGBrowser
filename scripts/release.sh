@@ -68,28 +68,28 @@ if ! command -v gh &> /dev/null; then
 fi
 
 # Wait a moment for the workflow to start
-echo "⏳ Waiting for workflow to start..."
+echo "⏳ Waiting for Release workflow to start..."
 sleep 10
 
-# Get the latest workflow run ID
-echo "🔍 Finding workflow run..."
-RUN_ID=$(gh run list --repo "$REPO" --limit 1 --json databaseId --jq '.[0].databaseId')
+# Get the latest Release workflow run ID (not CLI build)
+echo "🔍 Finding Release workflow run..."
+RUN_ID=$(gh run list --repo "$REPO" --workflow "Release" --limit 1 --json databaseId --jq '.[0].databaseId')
 
 if [ -z "$RUN_ID" ]; then
-  echo "❌ Could not find workflow run"
+  echo "❌ Could not find Release workflow run"
   echo "📦 Check manually: https://github.com/$REPO/actions"
   exit 1
 fi
 
-# Watch the workflow run with live logs
+# Watch the Release workflow with live logs
 echo ""
-echo "📺 Watching build progress (Run ID: $RUN_ID)..."
+echo "📺 Watching Release workflow (Run ID: $RUN_ID)..."
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
 gh run watch "$RUN_ID" --repo "$REPO" --exit-status || {
   echo ""
-  echo "❌ Build failed!"
+  echo "❌ Release build failed!"
   echo "📦 Check logs: https://github.com/$REPO/actions/runs/$RUN_ID"
   exit 1
 }
