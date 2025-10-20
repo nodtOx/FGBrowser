@@ -1,5 +1,7 @@
 use sentry::{ClientOptions, integrations::anyhow::capture_anyhow};
 use std::sync::OnceLock;
+use std::fs;
+use std::path::PathBuf;
 
 // Store the Sentry guard for the lifetime of the application
 static SENTRY_GUARD: OnceLock<sentry::ClientInitGuard> = OnceLock::new();
@@ -17,6 +19,41 @@ fn get_sentry_dsn() -> String {
     }
     
     SENTRY_DSN.to_string()
+}
+
+/// Get or create a persistent anonymous user ID
+fn get_or_create_user_id() -> String {
+    let user_id_path = get_user_id_file_path();
+    
+    // Try to read existing user ID
+    if let Ok(existing_id) = fs::read_to_string(&user_id_path) {
+        let trimmed = existing_id.trim();
+        if !trimmed.is_empty() {
+            return trimmed.to_string();
+        }
+    }
+    
+    // Generate new anonymous user ID (UUID v4)
+    let new_id = uuid::Uuid::new_v4().to_string();
+    
+    // Try to save it (ignore errors - we'll just generate a new one next time)
+    if let Some(parent) = user_id_path.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+    let _ = fs::write(&user_id_path, &new_id);
+    
+    new_id
+}
+
+/// Get the path to store the anonymous user ID
+fn get_user_id_file_path() -> PathBuf {
+    // Store in app data directory
+    if let Some(data_dir) = dirs::data_dir() {
+        data_dir.join("fgbrowser").join(".telemetry_uid")
+    } else {
+        // Fallback to temp directory
+        std::env::temp_dir().join("fgbrowser_uid")
+    }
 }
 
 pub fn init_telemetry() {
@@ -75,11 +112,27 @@ pub fn init_telemetry() {
     
     println!("   Client enabled: {}", guard.is_enabled());
 
-    // Configure user context (anonymous)
+    // Get or create persistent anonymous user ID
+    let user_id = get_or_create_user_id();
+    println!("   Anonymous User ID: {}", &user_id[..8]); // Show first 8 chars only
+
+    // Configure user context and tags
     sentry::configure_scope(|scope| {
+        // Set anonymous user ID
+        scope.set_user(Some(sentry::User {
+            id: Some(user_id),
+            ..Default::default()
+        }));
+        
+        // Set tags for filtering/grouping
         scope.set_tag("app", "fgbrowser");
         scope.set_tag("platform", std::env::consts::OS);
         scope.set_tag("arch", std::env::consts::ARCH);
+        
+        // Add app version as tag for easier filtering
+        if let Some(version) = option_env!("CARGO_PKG_VERSION") {
+            scope.set_tag("app_version", version);
+        }
     });
 
     // Store the guard to keep Sentry active for the lifetime of the application
@@ -136,6 +189,16 @@ pub fn track_feature(feature_name: &str) {
         level: sentry::Level::Info,
         ..Default::default()
     });
+}
+
+/// Get the current anonymous user ID
+pub fn get_user_id() -> Option<String> {
+    if !is_telemetry_enabled() {
+        return None;
+    }
+    
+    let user_id_path = get_user_id_file_path();
+    fs::read_to_string(user_id_path).ok().map(|s| s.trim().to_string())
 }
 
 /// Set user context (completely anonymous with random ID)

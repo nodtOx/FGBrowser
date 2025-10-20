@@ -94,3 +94,5 @@ sentry = { version = "0.45", features = [
   "reqwest",
   "panic",
 ] }
+uuid = { version = "1.11", features = ["v4"] }
+dirs = "5.0"

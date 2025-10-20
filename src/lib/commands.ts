@@ -91,6 +91,8 @@ export const commands = {
     track_error: 'track_error',
     is_telemetry_enabled: 'is_telemetry_enabled',
     test_sentry_integration: 'test_sentry_integration',
+    get_telemetry_user_id: 'get_telemetry_user_id',
+    track_search: 'track_search',
   },
 } as const;
 

@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - Empty state message displayed when search returns no results
+- Enhanced telemetry with anonymous user tracking and search analytics
 
 ### Changed
 

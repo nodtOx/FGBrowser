@@ -635,6 +635,9 @@ export async function searchGames(query: string, limit: number = LOAD_ALL_GAMES)
 
   lastSearchQuery = trimmedQuery;
 
+  // Track search start time
+  const searchStartTime = performance.now();
+
   // Search overrides all filters
   isLoading.set(true);
   try {
@@ -650,6 +653,29 @@ export async function searchGames(query: string, limit: number = LOAD_ALL_GAMES)
     if (result.length > 0) {
       await selectGame(0);
     }
+
+    // Track search analytics (after search completes)
+    const searchDuration = performance.now() - searchStartTime;
+
+    // Get current filters state to see if user has filters applied
+    let currentCategories: CategoryWithCount[] = [];
+    selectedCategories.subscribe((s) => (currentCategories = s))();
+
+    let currentTimeFilter: string = '';
+    activeTimeFilter.subscribe((s) => (currentTimeFilter = s))();
+
+    let currentSizeFilter: string = '';
+    activeSizeFilter.subscribe((s) => (currentSizeFilter = s))();
+
+    const hasFilters = currentCategories.length > 0 || !!currentTimeFilter || !!currentSizeFilter;
+
+    // Send analytics (non-blocking, ignore errors)
+    invoke('track_search', {
+      queryLength: trimmedQuery.length,
+      resultsCount: result.length,
+      hasFilters,
+      searchDurationMs: Math.round(searchDuration),
+    }).catch(() => {}); // Silently fail if telemetry is disabled
   } catch (error) {
     console.error('Failed to search games:', error);
   } finally {

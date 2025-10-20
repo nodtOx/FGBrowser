@@ -118,5 +118,7 @@ pub use telemetry_commands::{
     track_error,
     is_telemetry_enabled,
     test_sentry_integration,
+    get_telemetry_user_id,
+    track_search,
 };
 

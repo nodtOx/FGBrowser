@@ -2,8 +2,57 @@ use crate::telemetry;
 
 #[tauri::command]
 pub fn track_app_launch() {
+    // Track app launch event with context
+    sentry::configure_scope(|scope| {
+        scope.set_context("launch", sentry::protocol::Context::Other({
+            let mut map = std::collections::BTreeMap::new();
+            map.insert("timestamp".to_string(), sentry::protocol::Value::String(chrono::Utc::now().to_rfc3339()));
+            map.insert("session_start".to_string(), sentry::protocol::Value::Bool(true));
+            map
+        }));
+    });
+    
     telemetry::capture_event("App launched", sentry::Level::Info);
     println!("📊 Tracked: App launch");
+}
+
+#[tauri::command]
+pub fn get_telemetry_user_id() -> Option<String> {
+    telemetry::get_user_id()
+}
+
+#[tauri::command]
+pub fn track_search(query_length: usize, results_count: usize, has_filters: bool, search_duration_ms: u64) {
+    // Track search metadata (NOT the actual query for privacy)
+    sentry::configure_scope(|scope| {
+        scope.set_context("search", sentry::protocol::Context::Other({
+            let mut map = std::collections::BTreeMap::new();
+            map.insert("query_length".to_string(), sentry::protocol::Value::Number((query_length as i64).into()));
+            map.insert("results_count".to_string(), sentry::protocol::Value::Number((results_count as i64).into()));
+            map.insert("has_filters".to_string(), sentry::protocol::Value::Bool(has_filters));
+            map.insert("duration_ms".to_string(), sentry::protocol::Value::Number((search_duration_ms as i64).into()));
+            map.insert("timestamp".to_string(), sentry::protocol::Value::String(chrono::Utc::now().to_rfc3339()));
+            map
+        }));
+    });
+    
+    // Determine search quality
+    let search_quality = if results_count == 0 {
+        "no_results"
+    } else if results_count < 5 {
+        "few_results"
+    } else if results_count < 20 {
+        "good_results"
+    } else {
+        "many_results"
+    };
+    
+    sentry::configure_scope(|scope| {
+        scope.set_tag("search_quality", search_quality);
+    });
+    
+    telemetry::capture_event("Search performed", sentry::Level::Info);
+    println!("📊 Tracked search: {} chars, {} results, {}ms", query_length, results_count, search_duration_ms);
 }
 
 #[tauri::command]

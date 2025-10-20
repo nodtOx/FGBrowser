@@ -31,7 +31,8 @@ use commands::{
     get_app_constants, open_magnet_link, copy_to_clipboard, get_disk_info,
     select_download_folder, open_download_folder,
     // Telemetry commands
-    track_app_launch, track_feature_usage, track_crawler_run, track_error, is_telemetry_enabled, test_sentry_integration,
+    track_app_launch, track_feature_usage, track_crawler_run, track_error, is_telemetry_enabled, 
+    test_sentry_integration, get_telemetry_user_id, track_search,
     // AppState
     AppState,
 };
@@ -489,7 +490,9 @@ pub fn run() {
             track_crawler_run,
             track_error,
             is_telemetry_enabled,
-            test_sentry_integration
+            test_sentry_integration,
+            get_telemetry_user_id,
+            track_search
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
