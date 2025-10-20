@@ -10,6 +10,9 @@
     "updater:allow-check",
     "updater:allow-download-and-install",
     "dialog:default",
-    "dialog:allow-message"
+    "dialog:allow-message",
+    "window-state:default",
+    "window-state:allow-save-window-state",
+    "window-state:allow-restore-state"
   ]
 }

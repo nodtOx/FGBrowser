@@ -18,30 +18,22 @@
         "height": 800,
         "minWidth": 1000,
         "minHeight": 600,
-        "zoomHotkeysEnabled": true
+        "zoomHotkeysEnabled": true,
+        "backgroundColor": "#2e3440"
       }
     ],
     "security": {
       "csp": null,
       "assetProtocol": {
         "enable": true,
-        "scope": [
-          "$APPCACHE/**"
-        ]
+        "scope": ["$APPCACHE/**"]
       }
     }
   },
   "bundle": {
     "active": true,
-    "targets": [
-      "nsis"
-    ],
-    "icon": [
-      "icons/32x32.png",
-      "icons/128x128.png",
-      "icons/128x128@2x.png",
-      "icons/icon.ico"
-    ],
+    "targets": ["nsis"],
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.ico"],
     "externalBin": [],
     "windows": {
       "wix": {
@@ -52,9 +44,7 @@
   "plugins": {
     "updater": {
       "active": true,
-      "endpoints": [
-        "https://github.com/nodtOx/FGBrowser/releases/latest/download/latest.json"
-      ],
+      "endpoints": ["https://github.com/nodtOx/FGBrowser/releases/latest/download/latest.json"],
       "dialog": false,
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDU2QzdBNjI5NDI5M0FCMTgKUldRWXE1TkNLYWJIVnNTVk1MTmFnZytObXMxd3hwbzRGVUVqMVE5L0U3WU9JVE51VFFOdkJkL28K"
     }
