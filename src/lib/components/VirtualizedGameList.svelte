@@ -425,7 +425,7 @@
   .game-item.selected {
     background-color: var(--color-primary);
     color: var(--color-selectedText);
-    opacity: 0.4;
+    opacity: 0.8;
   }
 
   .game-item.selected.focused-panel {
