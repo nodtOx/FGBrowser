@@ -3,6 +3,7 @@
     formatSize,
     games,
     markAllGamesAsSeen,
+    moveSelection,
     newGamesCount,
     searchGames,
     searchQuery,
@@ -80,6 +81,16 @@
       previousQuery = '';
       searchGames('');
       searchInput.blur();
+    } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      // Prevent default cursor movement in search input
+      e.preventDefault();
+      // Focus game list and navigate
+      focusedPanel.set('gamelist');
+      if (e.key === 'ArrowUp') {
+        moveSelection('up');
+      } else {
+        moveSelection('down');
+      }
     }
   }
 
