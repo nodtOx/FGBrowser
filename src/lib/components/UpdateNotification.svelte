@@ -5,7 +5,7 @@
   let showNotification = false;
   let dismissedVersion = '';
 
-  const unsubscribe = appUpdateStatus.subscribe(status => {
+  const unsubscribe = appUpdateStatus.subscribe((status) => {
     if (status.available && status.latestVersion !== dismissedVersion) {
       showNotification = true;
     }
@@ -50,12 +50,8 @@
         {:else if $appUpdateStatus.downloaded}
           <span class="ready-text">Ready to install!</span>
         {:else}
-          <button class="btn-update" on:click={handleUpdate}>
-            Update Now
-          </button>
-          <button class="btn-dismiss" on:click={dismiss}>
-            Later
-          </button>
+          <button class="btn-update" on:click={handleUpdate}> Update Now </button>
+          <button class="btn-dismiss" on:click={dismiss}> Later </button>
         {/if}
       </div>
     </div>
@@ -68,19 +64,20 @@
 {/if}
 
 {#if $appUpdateStatus.checking}
-  <div class="checking-notification">
-    Checking for updates...
-  </div>
+  <div class="checking-notification">Checking for updates...</div>
 {/if}
 
 <style>
   .update-notification {
     position: fixed;
-    top: 20px;
+    bottom: 48px;
     right: 20px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border-radius: 12px;
+    background: var(--color-primary);
+    color: var(--color-background);
+    border-radius: var(--border-radius);
+    border-color: var(--color-text);
+    border-width: 2px;
+    border-style: solid;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
     padding: 16px 20px;
     z-index: 10000;
@@ -132,35 +129,36 @@
   }
 
   .btn-update {
-    background: white;
-    color: #667eea;
+    background: var(--color-background);
+    color: var(--color-primary);
     border: none;
     padding: 8px 16px;
-    border-radius: 6px;
+    border-radius: var(--border-radius);
     font-weight: 600;
     cursor: pointer;
     font-size: 13px;
-    transition: all 0.2s;
+    transition: var(--transition);
   }
 
   .btn-update:hover {
-    transform: scale(1.05);
-    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.3);
+    background: var(--color-hover);
+    color: var(--color-text);
   }
 
   .btn-dismiss {
     background: transparent;
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: var(--color-background);
+    border: 1px solid var(--color-background);
     padding: 8px 16px;
-    border-radius: 6px;
+    border-radius: var(--border-radius);
     cursor: pointer;
     font-size: 13px;
-    transition: all 0.2s;
+    transition: var(--transition);
   }
 
   .btn-dismiss:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--color-backgroundSecondary);
+    color: var(--color-text);
   }
 
   .download-progress {
@@ -172,14 +170,14 @@
 
   .progress-bar {
     height: 6px;
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 3px;
+    background: var(--color-backgroundSecondary);
+    border-radius: var(--border-radius);
     overflow: hidden;
   }
 
   .progress-fill {
     height: 100%;
-    background: white;
+    background: var(--color-background);
     transition: width 0.3s ease;
   }
 
@@ -197,8 +195,9 @@
   .update-error {
     margin-top: 12px;
     padding: 8px 12px;
-    background: rgba(255, 0, 0, 0.2);
-    border-radius: 6px;
+    background: var(--color-error);
+    color: var(--color-background);
+    border-radius: var(--border-radius);
     font-size: 12px;
   }
 
@@ -206,10 +205,10 @@
     position: fixed;
     bottom: 20px;
     right: 20px;
-    background: rgba(0, 0, 0, 0.8);
-    color: white;
+    background: var(--color-backgroundTertiary);
+    color: var(--color-text);
     padding: 12px 20px;
-    border-radius: 8px;
+    border-radius: var(--border-radius);
     font-size: 14px;
     z-index: 9999;
     animation: fadeIn 0.3s ease-out;
@@ -224,4 +223,3 @@
     }
   }
 </style>
-
