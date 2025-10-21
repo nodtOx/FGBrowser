@@ -242,9 +242,11 @@
                 <VirtualizedGameGrid />
               {/if}
             </div>
-            <div class="view-container" class:hidden={$browseView !== 'details'}>
-              <GameDetails />
-            </div>
+            {#if $browseView === 'details'}
+              <div class="view-container">
+                <GameDetails />
+              </div>
+            {/if}
           </div>
         </div>
       </div>

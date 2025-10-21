@@ -66,10 +66,6 @@
           <Kbd keys="Left" />
           <Kbd keys="Right" />
         </div>
-        <div class="shortcut-item">
-          <span class="shortcut-label">Download</span>
-          <Kbd keys="Enter" />
-        </div>
       {:else if $currentPage === 'browse'}
         <div class="shortcut-item">
           <span class="shortcut-label">Navigate</span>
