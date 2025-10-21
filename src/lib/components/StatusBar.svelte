@@ -83,6 +83,10 @@
           <span class="shortcut-label">Switch Panel</span>
           <Kbd keys="Tab" />
         </div>
+        <div class="shortcut-item">
+          <span class="shortcut-label">Toggle View</span>
+          <Kbd keys="V" />
+        </div>
         {#if $focusedPanel === 'categories'}
           <div class="shortcut-item">
             <span class="shortcut-label">Toggle All</span>

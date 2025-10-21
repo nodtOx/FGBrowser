@@ -68,8 +68,11 @@ export function setGameListViewMode(mode: GameListViewMode) {
 }
 
 export function toggleGameListViewMode() {
+  console.log('[Navigation] toggleGameListViewMode called');
   gameListViewMode.update((current) => {
+    console.log('[Navigation] Current mode:', current);
     const newMode = current === 'list' ? 'grid' : 'list';
+    console.log('[Navigation] New mode:', newMode);
     saveGameListViewMode(newMode);
     return newMode;
   });

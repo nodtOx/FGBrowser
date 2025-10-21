@@ -708,18 +708,30 @@ export async function selectGame(index: number) {
 }
 
 // Navigate selection
-export async function moveSelection(direction: 'up' | 'down', pageSize: number = 1) {
+export async function moveSelection(direction: 'up' | 'down' | 'left' | 'right', pageSize: number = 1) {
   let currentIndex = 0;
   let currentGames: Game[] = [];
 
   selectedIndex.subscribe((i) => (currentIndex = i))();
   games.subscribe((g) => (currentGames = g))();
 
+  console.log('[moveSelection] direction:', direction, 'pageSize:', pageSize, 'currentIndex:', currentIndex);
+
   if (direction === 'up') {
     const newIndex = Math.max(0, currentIndex - pageSize);
+    console.log('[moveSelection] UP: moving from', currentIndex, 'to', newIndex);
     await selectGame(newIndex);
   } else if (direction === 'down') {
     const newIndex = Math.min(currentGames.length - 1, currentIndex + pageSize);
+    console.log('[moveSelection] DOWN: moving from', currentIndex, 'to', newIndex);
+    await selectGame(newIndex);
+  } else if (direction === 'left') {
+    const newIndex = Math.max(0, currentIndex - 1);
+    console.log('[moveSelection] LEFT: moving from', currentIndex, 'to', newIndex);
+    await selectGame(newIndex);
+  } else if (direction === 'right') {
+    const newIndex = Math.min(currentGames.length - 1, currentIndex + 1);
+    console.log('[moveSelection] RIGHT: moving from', currentIndex, 'to', newIndex);
     await selectGame(newIndex);
   }
 }

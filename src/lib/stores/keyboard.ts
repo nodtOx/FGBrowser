@@ -6,8 +6,10 @@ import {
   currentPage,
   cycleFocusPanel,
   focusedPanel,
+  gameListViewMode,
   navigateTo,
   openGameDetails,
+  toggleGameListViewMode,
   type Page,
 } from './navigation';
 
@@ -89,7 +91,9 @@ const browseListBindings: KeyBinding[] = [
     condition: (ctx) => !ctx.ctrl && !ctx.isTyping,
     handler: () => {
       const panel = get(focusedPanel);
-      if (panel === 'gamelist') {
+      const viewMode = get(gameListViewMode);
+      // Only handle arrow keys in list mode - grid mode handles its own navigation
+      if (panel === 'gamelist' && viewMode === 'list') {
         moveSelection('up');
       }
       // Other panels handle their own arrow navigation
@@ -100,7 +104,9 @@ const browseListBindings: KeyBinding[] = [
     condition: (ctx) => !ctx.ctrl && !ctx.isTyping,
     handler: () => {
       const panel = get(focusedPanel);
-      if (panel === 'gamelist') {
+      const viewMode = get(gameListViewMode);
+      // Only handle arrow keys in list mode - grid mode handles its own navigation
+      if (panel === 'gamelist' && viewMode === 'list') {
         moveSelection('down');
       }
       // Other panels handle their own arrow navigation
@@ -111,7 +117,9 @@ const browseListBindings: KeyBinding[] = [
     condition: (ctx) => !ctx.ctrl && !ctx.isTyping,
     handler: () => {
       const panel = get(focusedPanel);
-      if (panel === 'gamelist') {
+      const viewMode = get(gameListViewMode);
+      // Only handle PageUp/Down in list mode - grid mode handles its own navigation
+      if (panel === 'gamelist' && viewMode === 'list') {
         moveSelection('up', 10);
       }
     },
@@ -121,7 +129,9 @@ const browseListBindings: KeyBinding[] = [
     condition: (ctx) => !ctx.ctrl && !ctx.isTyping,
     handler: () => {
       const panel = get(focusedPanel);
-      if (panel === 'gamelist') {
+      const viewMode = get(gameListViewMode);
+      // Only handle PageUp/Down in list mode - grid mode handles its own navigation
+      if (panel === 'gamelist' && viewMode === 'list') {
         moveSelection('down', 10);
       }
     },
@@ -142,6 +152,14 @@ const browseListBindings: KeyBinding[] = [
     handler: (e, ctx) => {
       e.preventDefault();
       cycleFocusPanel(ctx.shift ? 'previous' : 'next');
+    },
+  },
+  {
+    key: 'v',
+    condition: (ctx) => !ctx.ctrl && !ctx.isTyping,
+    handler: () => {
+      console.log('[Keyboard] Toggling view mode');
+      toggleGameListViewMode();
     },
   },
 ];
@@ -192,6 +210,11 @@ function handleKeyPress(e: KeyboardEvent): boolean {
   } else if (ctx.page === 'browse' && ctx.view === 'details') {
     // Let details view handle its own shortcuts
     contextBindings = browseDetailsBindings;
+  }
+
+  // Debug logging for 'v' key
+  if (e.key === 'v') {
+    console.log('[Keyboard] v pressed - Context:', ctx, 'Bindings:', contextBindings.length);
   }
 
   // Try context bindings

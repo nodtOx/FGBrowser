@@ -29,6 +29,19 @@
   let previousQuery = '';
 
   $: columnsPerRow = Math.max(1, Math.floor((containerWidth - PADDING * 2 + GAP) / (CARD_WIDTH + GAP)));
+
+  // Debug: log when columns change
+  $: if (columnsPerRow && containerWidth) {
+    const totalGridWidth = columnsPerRow * CARD_WIDTH + (columnsPerRow - 1) * GAP + PADDING * 2;
+    console.log(
+      '[Grid Debug] Calculated columns:',
+      columnsPerRow,
+      'Container width:',
+      containerWidth,
+      'Grid needs:',
+      totalGridWidth,
+    );
+  }
   $: totalRows = Math.ceil($games.length / columnsPerRow);
   $: totalHeight = totalRows * (CARD_HEIGHT + GAP) + PADDING * 2;
 
@@ -81,15 +94,19 @@
       previousQuery = '';
       searchGames('');
       searchInput.blur();
-    } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+    } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       // Prevent default cursor movement in search input
       e.preventDefault();
       // Focus game list and navigate
       focusedPanel.set('gamelist');
       if (e.key === 'ArrowUp') {
-        moveSelection('up');
-      } else {
-        moveSelection('down');
+        moveSelection('up', columnsPerRow);
+      } else if (e.key === 'ArrowDown') {
+        moveSelection('down', columnsPerRow);
+      } else if (e.key === 'ArrowLeft') {
+        moveSelection('left');
+      } else if (e.key === 'ArrowRight') {
+        moveSelection('right');
       }
     }
   }
@@ -110,6 +127,16 @@
     } else {
       searchInput.blur();
     }
+  }
+
+  // Focus the selected game card when gamelist panel becomes focused
+  $: if ($focusedPanel === 'gamelist' && containerElement) {
+    tick().then(() => {
+      const selectedCard = containerElement.querySelector('.game-card[tabindex="0"]') as HTMLElement;
+      if (selectedCard) {
+        selectedCard.focus();
+      }
+    });
   }
 
   onMount(() => {
@@ -180,6 +207,7 @@
 
   <div
     class="virtualized-grid"
+    class:focused={$focusedPanel === 'gamelist'}
     bind:this={containerElement}
     bind:clientHeight={containerHeight}
     bind:clientWidth={containerWidth}
@@ -210,9 +238,32 @@
               <div
                 class="game-card"
                 class:selected={globalIndex === $selectedIndex}
-                on:click={() => handleGameClick(index)}
+                class:focused-panel={$focusedPanel === 'gamelist'}
+                on:click={() => {
+                  focusedPanel.set('gamelist');
+                  handleGameClick(index);
+                }}
                 on:dblclick={() => handleGameDoubleClick(index)}
-                on:keydown={(e) => e.key === 'Enter' && handleGameDoubleClick(index)}
+                on:keydown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleGameDoubleClick(index);
+                  } else if (e.key === 'Tab') {
+                    // Let the global handler manage Tab for panel switching
+                    return;
+                  } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    moveSelection('up', columnsPerRow);
+                  } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    moveSelection('down', columnsPerRow);
+                  } else if (e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    moveSelection('left');
+                  } else if (e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    moveSelection('right');
+                  }
+                }}
                 role="button"
                 tabindex={globalIndex === $selectedIndex ? 0 : -1}
               >
@@ -352,6 +403,11 @@
     background-color: var(--color-background);
   }
 
+  .virtualized-grid.focused {
+    border-left: 3px solid var(--color-primary);
+    background-color: rgba(var(--color-primary-rgb, 136, 192, 208), 0.02);
+  }
+
   .scroll-area {
     position: relative;
     width: 100%;
@@ -403,6 +459,11 @@
   .game-card.selected {
     border-color: var(--color-primary);
     box-shadow: 0 0 0 2px var(--color-primary);
+  }
+
+  .game-card.selected.focused-panel {
+    opacity: 1;
+    box-shadow: 0 0 0 3px var(--color-primary);
   }
 
   .game-card:focus {
