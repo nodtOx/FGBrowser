@@ -11,13 +11,6 @@
   // Optional callback for custom back behavior (e.g., from Popular page)
   export let onBack: (() => void) | undefined = undefined;
 
-  let selectedMagnetIndex = 0;
-
-  // Reset selection when game changes
-  $: if ($selectedGame) {
-    selectedMagnetIndex = 0;
-  }
-
   async function handleDownload(magnet: string) {
     if (!$selectedGame) return;
 
@@ -57,32 +50,14 @@
     const isTyping = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
 
     // Handle back navigation (only Backspace, not Escape to avoid conflict with lightbox)
-    if (event.key === 'Backspace') {
-      if (!isTyping) {
-        event.preventDefault();
-        handleBackAction();
-        return;
-      }
-    }
-
-    if (isTyping || !$selectedGame || $selectedGame.magnet_links.length === 0) {
-      return;
-    }
-
-    const magnetCount = $selectedGame.magnet_links.length;
-
-    // Navigate between magnet links with arrow keys
-    if (event.key === 'ArrowUp') {
+    if (event.key === 'Backspace' && !isTyping) {
       event.preventDefault();
-      selectedMagnetIndex = selectedMagnetIndex > 0 ? selectedMagnetIndex - 1 : magnetCount - 1;
-    } else if (event.key === 'ArrowDown') {
-      event.preventDefault();
-      selectedMagnetIndex = selectedMagnetIndex < magnetCount - 1 ? selectedMagnetIndex + 1 : 0;
+      handleBackAction();
     }
   }
 
   // Add keyboard listener when a game is selected
-  // Only handles Backspace for back navigation and arrow keys for magnet selection
+  // Only handles Backspace for back navigation
   $: {
     if ($selectedGame) {
       window.addEventListener('keydown', handleKeydown);
@@ -170,9 +145,7 @@
               {#each $selectedGame.magnet_links as link, index}
                 <div
                   class="magnet-row"
-                  class:selected={index === selectedMagnetIndex}
                   on:click={() => {
-                    selectedMagnetIndex = index;
                     if (featureFlags.torrentClient) {
                       handleDownload(link.magnet);
                     } else {
@@ -182,7 +155,6 @@
                   on:keydown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
-                      selectedMagnetIndex = index;
                       if (featureFlags.torrentClient) {
                         handleDownload(link.magnet);
                       } else {
@@ -191,13 +163,10 @@
                     }
                   }}
                   role="button"
-                  tabindex={index === selectedMagnetIndex ? 0 : -1}
+                  tabindex="0"
                 >
                   <span class="magnet-index">{index + 1}</span>
                   <span class="magnet-source">{link.source}</span>
-                  <span class="magnet-hint">
-                    {index === selectedMagnetIndex ? 'Selected' : ''}
-                  </span>
                 </div>
               {/each}
             </div>
@@ -357,7 +326,7 @@
 
   .magnet-row {
     display: grid;
-    grid-template-columns: 40px 1fr auto;
+    grid-template-columns: 40px 1fr;
     align-items: center;
     gap: 16px;
     padding: 12px 16px;
@@ -376,11 +345,6 @@
     background-color: var(--color-hover);
   }
 
-  .magnet-row.selected {
-    background-color: var(--color-primary);
-    color: var(--color-selectedText);
-  }
-
   .magnet-row:focus {
     outline: none;
   }
@@ -392,29 +356,11 @@
     text-align: center;
   }
 
-  .magnet-row.selected .magnet-index {
-    color: var(--color-selectedText);
-  }
-
   .magnet-source {
     color: var(--color-text);
     font-size: 14px;
     font-weight: 500;
     user-select: text;
-  }
-
-  .magnet-row.selected .magnet-source {
-    color: var(--color-selectedText);
-  }
-
-  .magnet-hint {
-    color: var(--color-textSecondary);
-    font-size: 12px;
-    font-style: italic;
-  }
-
-  .magnet-row.selected .magnet-hint {
-    color: rgba(255, 255, 255, 0.8);
   }
 
   .no-selection {

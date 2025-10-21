@@ -68,18 +68,46 @@
   }
 
   function handleKeydown(e: KeyboardEvent) {
-    if (!lightboxOpen) return;
+    // Don't handle if typing in an input
+    const target = e.target as HTMLElement;
+    const isTyping = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+    if (isTyping) return;
 
-    switch (e.key) {
-      case 'Escape':
-        closeLightbox();
-        break;
-      case 'ArrowRight':
-        nextImage();
-        break;
-      case 'ArrowLeft':
-        prevImage();
-        break;
+    // Don't handle if no screenshots
+    if (!media || media.screenshots.length === 0) return;
+
+    // When lightbox is open
+    if (lightboxOpen) {
+      switch (e.key) {
+        case 'Escape':
+          closeLightbox();
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          nextImage();
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          prevImage();
+          break;
+      }
+    } 
+    // When lightbox is closed, arrow keys open it
+    else {
+      switch (e.key) {
+        case 'ArrowRight':
+          e.preventDefault();
+          // Move to next image and open lightbox
+          currentImageIndex = (currentImageIndex + 1) % media.screenshots.length;
+          openLightbox(currentImageIndex);
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          // Move to previous image and open lightbox
+          currentImageIndex = (currentImageIndex - 1 + media.screenshots.length) % media.screenshots.length;
+          openLightbox(currentImageIndex);
+          break;
+      }
     }
   }
 
