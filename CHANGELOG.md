@@ -12,10 +12,7 @@ All notable changes to this project will be documented in this file.
 - Enhanced telemetry with anonymous usage tracking and search analytics
 - View high-resolution screenshots and videos for each game
 - Full-screen screenshot viewer with smooth animations and easy navigation
-
-### Changed
-
-### Fixed
+- Keyboard navigation added to the grid view in browse page
 
 ## [0.1.18] - 2024-10-19
 
