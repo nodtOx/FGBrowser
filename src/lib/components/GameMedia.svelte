@@ -91,7 +91,7 @@
           prevImage();
           break;
       }
-    } 
+    }
     // When lightbox is closed, arrow keys open it
     else {
       switch (e.key) {
