@@ -69,8 +69,7 @@
       {:else if $currentPage === 'browse'}
         <div class="shortcut-item">
           <span class="shortcut-label">Navigate</span>
-          <Kbd keys="Up" />
-          <Kbd keys="Down" />
+          <Kbd keys="Arrow Keys" />
         </div>
         {#if $focusedPanel === 'gamelist' || $focusedPanel === 'categories'}
           <div class="shortcut-item">
