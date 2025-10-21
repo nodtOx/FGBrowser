@@ -10,12 +10,14 @@ use tokio::time::sleep;
 use super::extractors::Extractors;
 use super::models::{GameRepack, PopularRepackEntry};
 use super::site_crawler::SiteCrawler;
+use super::riotpixels::RiotPixelsClient;
 
 pub struct FitGirlCrawler {
     client: Client,
     base_url: String,
     crawl_delay: Duration,
     blacklist: Vec<String>,
+    riotpixels_client: RiotPixelsClient,
 }
 
 impl FitGirlCrawler {
@@ -26,12 +28,14 @@ impl FitGirlCrawler {
             .build()?;
 
         let blacklist = Self::load_blacklist();
+        let riotpixels_client = RiotPixelsClient::new()?;
 
         Ok(Self {
             client,
             base_url: "https://fitgirl-repacks.site".to_string(),
             crawl_delay: Duration::from_secs(1),
             blacklist,
+            riotpixels_client,
         })
     }
 
@@ -95,6 +99,13 @@ impl FitGirlCrawler {
         // Extract magnet links
         let magnet_links = Extractors::extract_magnet_links(&content);
 
+        // Extract screenshots from RiotPixels (async, so we can't do it here in sync context)
+        // This will be handled by the async crawler methods
+        let screenshots = Vec::new();
+
+        // Extract video/GIF URLs
+        let videos = Extractors::extract_video_urls(&content);
+
         Some(GameRepack {
             title,
             genres_tags: details.genres_tags,
@@ -106,6 +117,8 @@ impl FitGirlCrawler {
             date,
             image_url,
             magnet_links,
+            screenshots,
+            videos,
         })
     }
 
@@ -145,6 +158,16 @@ impl FitGirlCrawler {
         // Extract magnet links
         let magnet_links = Extractors::extract_magnet_links(&content);
 
+        // Store RiotPixels URL temporarily (will be fetched async later)
+        let screenshots = if let Some(riotpixels_url) = Extractors::extract_riotpixels_screenshot_url(&content) {
+            vec![riotpixels_url]
+        } else {
+            Vec::new()
+        };
+
+        // Extract video/GIF URLs (YouTube, Streamable, etc.)
+        let videos = Extractors::extract_video_urls(&content);
+
         Some(GameRepack {
             title,
             genres_tags: details.genres_tags,
@@ -156,6 +179,8 @@ impl FitGirlCrawler {
             date,
             image_url,
             magnet_links,
+            screenshots,
+            videos,
         })
     }
 }
@@ -201,15 +226,36 @@ impl SiteCrawler for FitGirlCrawler {
 
     async fn crawl_single_game(&self, url: &str) -> Result<Option<GameRepack>> {
         let html = self.fetch_page(url).await?;
-        let document = Html::parse_document(&html);
         
-        // Find the article element
-        let article_selector = Selector::parse("article").unwrap();
-        if let Some(article) = document.select(&article_selector).next() {
-            Ok(self.extract_repack_from_single_page(&article, url))
-        } else {
-            Ok(None)
+        // Extract all data from document (sync operation)
+        let mut repack = {
+            let document = Html::parse_document(&html);
+            let article_selector = Selector::parse("article").unwrap();
+            
+            if let Some(article) = document.select(&article_selector).next() {
+                self.extract_repack_from_single_page(&article, url)
+            } else {
+                None
+            }
+        }; // Html document is dropped here
+        
+        // Now handle screenshots (async operation, after document is dropped)
+        if let Some(ref mut repack) = repack {
+            if !repack.screenshots.is_empty() {
+                if let Some(riotpixels_url) = repack.screenshots.first().cloned() {
+                    let cleaned_url = RiotPixelsClient::clean_screenshot_url(&riotpixels_url);
+                    match self.riotpixels_client.fetch_screenshots(&cleaned_url).await {
+                        Ok(urls) => repack.screenshots = urls,
+                        Err(e) => {
+                            eprintln!("Failed to fetch RiotPixels screenshots for {}: {}", url, e);
+                            repack.screenshots = Vec::new();
+                        }
+                    }
+                }
+            }
         }
+        
+        Ok(repack)
     }
 
     async fn fetch_popular_repacks(&self, period: &str) -> Result<Vec<PopularRepackEntry>> {

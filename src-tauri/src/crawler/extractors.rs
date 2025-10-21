@@ -180,5 +180,108 @@ impl Extractors {
 
         magnet_links
     }
+
+    /// Extract RiotPixels screenshot page URL from FitGirl content
+    /// Returns the raw URL (will be cleaned by RiotPixels module)
+    pub fn extract_riotpixels_screenshot_url(content: &ElementRef) -> Option<String> {
+        // Look for <h3>Screenshots (Click to enlarge)</h3>
+        let h3_selector = Selector::parse("h3").unwrap();
+        
+        for h3 in content.select(&h3_selector) {
+            let h3_text: String = h3.text().collect();
+            
+            // Check if this is the Screenshots heading
+            if h3_text.contains("Screenshots") && h3_text.contains("Click to enlarge") {
+                // Find the first <p> element after this <h3>
+                for sibling in h3.next_siblings() {
+                    if let Some(element) = ElementRef::wrap(sibling) {
+                        if element.value().name() == "p" {
+                            // Extract the first <a> tag with riotpixels.com URL
+                            let link_selector = Selector::parse("a").unwrap();
+                            
+                            for link in element.select(&link_selector) {
+                                if let Some(href) = link.value().attr("href") {
+                                    if href.contains("riotpixels.com") && href.contains("/screenshots/") {
+                                        return Some(href.to_string());
+                                    }
+                                }
+                            }
+                            
+                            // Stop after processing the first <p> element
+                            break;
+                        }
+                    }
+                }
+                
+                // Stop after finding the Screenshots heading
+                break;
+            }
+        }
+        
+        None
+    }
+
+    /// Extract video/GIF URLs from FitGirl content (YouTube, Streamable, GIFs, etc.)
+    /// These are in the same <p> section as screenshots but from different sources
+    pub fn extract_video_urls(content: &ElementRef) -> Vec<String> {
+        let mut video_urls = Vec::new();
+        
+        // Look for <h3>Screenshots (Click to enlarge)</h3>
+        let h3_selector = Selector::parse("h3").unwrap();
+        
+        for h3 in content.select(&h3_selector) {
+            let h3_text: String = h3.text().collect();
+            
+            // Check if this is the Screenshots heading
+            if h3_text.contains("Screenshots") && h3_text.contains("Click to enlarge") {
+                // Find the first <p> element after this <h3>
+                for sibling in h3.next_siblings() {
+                    if let Some(element) = ElementRef::wrap(sibling) {
+                        if element.value().name() == "p" {
+                            // Extract all <a> tags that are NOT riotpixels
+                            let link_selector = Selector::parse("a").unwrap();
+                            
+                            for link in element.select(&link_selector) {
+                                if let Some(href) = link.value().attr("href") {
+                                    let href_lower = href.to_lowercase();
+                                    
+                                    // Skip RiotPixels links (they're screenshots)
+                                    if href.contains("riotpixels.com") {
+                                        continue;
+                                    }
+                                    
+                                    // Check if it's a video/gif link
+                                    // Common video platforms and direct media links
+                                    if href_lower.contains("youtube.com") ||
+                                       href_lower.contains("youtu.be") ||
+                                       href_lower.contains("streamable.com") ||
+                                       href_lower.contains("vimeo.com") ||
+                                       href_lower.contains("gfycat.com") ||
+                                       href_lower.contains("imgur.com/") ||
+                                       href_lower.ends_with(".gif") ||
+                                       href_lower.ends_with(".gifv") ||
+                                       href_lower.ends_with(".mp4") ||
+                                       href_lower.ends_with(".webm") ||
+                                       href_lower.contains(".gif?") ||
+                                       href_lower.contains(".mp4?") ||
+                                       href_lower.contains(".webm?") {
+                                        video_urls.push(href.to_string());
+                                    }
+                                }
+                            }
+                            
+                            // Stop after processing the first <p> element
+                            break;
+                        }
+                    }
+                }
+                
+                // Stop after finding the Screenshots heading
+                break;
+            }
+        }
+        
+        video_urls
+    }
 }
 

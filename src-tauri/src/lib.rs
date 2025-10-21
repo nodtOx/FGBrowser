@@ -33,6 +33,8 @@ use commands::{
     // Telemetry commands
     track_app_launch, track_feature_usage, track_crawler_run, track_error, is_telemetry_enabled, 
     test_sentry_integration, get_telemetry_user_id, track_search,
+    // Screenshot commands
+    fetch_game_media, get_game_media,
     // AppState
     AppState,
 };
@@ -501,7 +503,9 @@ pub fn run() {
             is_telemetry_enabled,
             test_sentry_integration,
             get_telemetry_user_id,
-            track_search
+            track_search,
+            fetch_game_media,
+            get_game_media
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

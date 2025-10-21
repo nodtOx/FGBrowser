@@ -77,6 +77,12 @@ enum Commands {
         period: String,
     },
 
+    /// Test RiotPixels screenshot scraping
+    TestScreenshots {
+        /// RiotPixels screenshot page URL
+        url: String,
+    },
+
     /// Show database statistics
     Stats,
 
@@ -110,6 +116,9 @@ async fn main() -> Result<()> {
         }
         Commands::Popular { period } => {
             update_popular(&db, &db_path, &period, cli.verbose).await?;
+        }
+        Commands::TestScreenshots { url } => {
+            test_screenshots(&url).await?;
         }
         Commands::Stats => {
             show_stats(&db)?;
@@ -272,6 +281,36 @@ fn show_stats(db: &Database) -> Result<()> {
         println!("  {}. {} ({})", i + 1, category.name, category.game_count);
     }
 
+    Ok(())
+}
+
+async fn test_screenshots(url: &str) -> Result<()> {
+    use fgbrowser_lib::crawler::riotpixels::RiotPixelsClient;
+    
+    println!("🔍 Testing RiotPixels screenshot scraping");
+    println!("URL: {}\n", url);
+    
+    // Clean the URL
+    let cleaned_url = RiotPixelsClient::clean_screenshot_url(url);
+    println!("Cleaned URL: {}\n", cleaned_url);
+    
+    // Create client and fetch
+    let client = RiotPixelsClient::new()?;
+    
+    println!("📡 Fetching page...");
+    match client.fetch_screenshots(&cleaned_url).await {
+        Ok(screenshots) => {
+            println!("✅ Found {} screenshots\n", screenshots.len());
+            
+            for (i, url) in screenshots.iter().enumerate() {
+                println!("{}. {}", i + 1, url);
+            }
+        }
+        Err(e) => {
+            println!("❌ Error: {}", e);
+        }
+    }
+    
     Ok(())
 }
 

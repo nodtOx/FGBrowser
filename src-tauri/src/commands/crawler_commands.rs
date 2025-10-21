@@ -208,6 +208,16 @@ pub fn save_repacks_to_db(repacks: &[GameRepack], db_service: &SqliteDatabaseSer
                  VALUES (?1, ?2, ?3)
                  ON CONFLICT(repack_id, source) DO UPDATE SET magnet = excluded.magnet"
             )?;
+            let mut insert_screenshot_stmt = tx.prepare(
+                "INSERT INTO screenshots (repack_id, screenshot_url)
+                 VALUES (?1, ?2)
+                 ON CONFLICT(repack_id, screenshot_url) DO NOTHING"
+            )?;
+            let mut insert_video_stmt = tx.prepare(
+                "INSERT INTO videos (repack_id, video_url)
+                 VALUES (?1, ?2)
+                 ON CONFLICT(repack_id, video_url) DO NOTHING"
+            )?;
             let mut insert_category_stmt = tx.prepare("INSERT OR IGNORE INTO categories (name) VALUES (?1)")?;
             let mut get_category_id_stmt = tx.prepare("SELECT id FROM categories WHERE name = ?1")?;
             let mut insert_game_category_stmt = tx.prepare("INSERT OR IGNORE INTO game_categories (repack_id, category_id) VALUES (?1, ?2)")?;
@@ -226,6 +236,14 @@ pub fn save_repacks_to_db(repacks: &[GameRepack], db_service: &SqliteDatabaseSer
                     
                     for magnet in &repack.magnet_links {
                         insert_magnet_stmt.execute((repack_id, &magnet.source, &magnet.magnet))?;
+                    }
+                    
+                    for screenshot_url in &repack.screenshots {
+                        insert_screenshot_stmt.execute((repack_id, screenshot_url))?;
+                    }
+                    
+                    for video_url in &repack.videos {
+                        insert_video_stmt.execute((repack_id, video_url))?;
                     }
                     
                     if let Some(genres_tags) = &repack.genres_tags {
@@ -301,6 +319,16 @@ pub fn save_repacks_to_db_legacy(repacks: &[GameRepack], db_path: &Path) -> anyh
              VALUES (?1, ?2, ?3)
              ON CONFLICT(repack_id, source) DO UPDATE SET magnet = excluded.magnet"
         )?;
+        let mut insert_screenshot_stmt = tx.prepare(
+            "INSERT INTO screenshots (repack_id, screenshot_url)
+             VALUES (?1, ?2)
+             ON CONFLICT(repack_id, screenshot_url) DO NOTHING"
+        )?;
+        let mut insert_video_stmt = tx.prepare(
+            "INSERT INTO videos (repack_id, video_url)
+             VALUES (?1, ?2)
+             ON CONFLICT(repack_id, video_url) DO NOTHING"
+        )?;
         let mut insert_category_stmt = tx.prepare("INSERT OR IGNORE INTO categories (name) VALUES (?1)")?;
         let mut get_category_id_stmt = tx.prepare("SELECT id FROM categories WHERE name = ?1")?;
         let mut insert_game_category_stmt = tx.prepare("INSERT OR IGNORE INTO game_categories (repack_id, category_id) VALUES (?1, ?2)")?;
@@ -326,6 +354,16 @@ pub fn save_repacks_to_db_legacy(repacks: &[GameRepack], db_path: &Path) -> anyh
                 // Insert magnet links
                 for magnet in &repack.magnet_links {
                     insert_magnet_stmt.execute((repack_id, &magnet.source, &magnet.magnet))?;
+                }
+                
+                // Insert screenshots
+                for screenshot_url in &repack.screenshots {
+                    insert_screenshot_stmt.execute((repack_id, screenshot_url))?;
+                }
+                
+                // Insert videos
+                for video_url in &repack.videos {
+                    insert_video_stmt.execute((repack_id, video_url))?;
                 }
                 
                 // Insert categories if genres_tags is present

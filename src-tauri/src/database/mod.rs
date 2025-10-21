@@ -80,6 +80,8 @@ impl Database {
         migrations::migrate_cleanup_malformed_categories(&self.conn)?;
         migrations::migrate_normalize_genre_variations(&self.conn)?;
         migrations::migrate_add_is_seen_column(&self.conn)?;
+        migrations::migrate_add_screenshots_table(&self.conn)?;
+        migrations::migrate_add_videos_table(&self.conn)?;
         
         Ok(())
     }

@@ -11,6 +11,7 @@ pub mod extractors;
 pub mod popular;
 pub mod site_crawler;
 pub mod fitgirl;
+pub mod riotpixels;
 
 // Re-export commonly used types for convenience
 pub use models::*;
@@ -25,6 +26,7 @@ pub struct FitGirlCrawler {
     base_url: String,
     crawl_delay: Duration,
     blacklist: Vec<String>,
+    riotpixels_client: riotpixels::RiotPixelsClient,
 }
 
 impl FitGirlCrawler {
@@ -35,12 +37,14 @@ impl FitGirlCrawler {
             .build()?;
 
         let blacklist = Self::load_blacklist();
+        let riotpixels_client = riotpixels::RiotPixelsClient::new()?;
 
         Ok(Self {
             client,
             base_url: "https://fitgirl-repacks.site".to_string(),
             crawl_delay: Duration::from_secs(1),
             blacklist,
+            riotpixels_client,
         })
     }
 
@@ -118,27 +122,51 @@ impl FitGirlCrawler {
         println!("Crawling single game: {}", url);
         
         let html = self.fetch_page(url).await?;
-        let document = Html::parse_document(&html);
         
-        let article_selector = Selector::parse("article").unwrap();
-        
-        if let Some(article) = document.select(&article_selector).next() {
-            // Use specialized extraction for single game pages
-            if let Some(repack) = self.extract_repack_from_single_page(&article, url) {
-                if self.is_blacklisted(&repack.url, &repack.title) {
-                    println!("  [SKIP] Blacklisted: {}", repack.title);
-                    return Ok(None);
-                }
-                println!("  [✓] Extracted: {}", repack.title);
-                return Ok(Some(repack));
+        // Extract all data from document (sync operation, must complete before any await)
+        let mut repack = {
+            let document = Html::parse_document(&html);
+            let article_selector = Selector::parse("article").unwrap();
+            
+            if let Some(article) = document.select(&article_selector).next() {
+                self.extract_repack_from_single_page(&article, url)
             } else {
-                println!("  [DEBUG] Failed to extract data from article");
+                println!("  [DEBUG] No article element found");
+                None
             }
+        }; // Html document is dropped here
+        
+        // Now handle screenshots asynchronously (after document is dropped)
+        if let Some(ref mut repack) = repack {
+            if self.is_blacklisted(&repack.url, &repack.title) {
+                println!("  [SKIP] Blacklisted: {}", repack.title);
+                return Ok(None);
+            }
+            
+            // Fetch screenshots from RiotPixels if URL exists
+            if !repack.screenshots.is_empty() {
+                if let Some(riotpixels_url) = repack.screenshots.first().cloned() {
+                    let cleaned_url = riotpixels::RiotPixelsClient::clean_screenshot_url(&riotpixels_url);
+                    println!("    [DEBUG] Fetching screenshots from: {}", cleaned_url);
+                    match self.riotpixels_client.fetch_screenshots(&cleaned_url).await {
+                        Ok(urls) => {
+                            println!("    [DEBUG] Found {} screenshots", urls.len());
+                            repack.screenshots = urls;
+                        },
+                        Err(e) => {
+                            println!("    [WARNING] Failed to fetch RiotPixels screenshots: {}", e);
+                            repack.screenshots = Vec::new();
+                        }
+                    }
+                }
+            }
+            
+            println!("  [✓] Extracted: {}", repack.title);
         } else {
-            println!("  [DEBUG] No article element found");
+            println!("  [DEBUG] Failed to extract data from article");
         }
         
-        Ok(None)
+        Ok(repack)
     }
     
     fn extract_repack_from_single_page(&self, article: &scraper::ElementRef, url: &str) -> Option<GameRepack> {
@@ -208,6 +236,18 @@ impl FitGirlCrawler {
             println!("    [WARNING] No magnet links found!");
         }
 
+        // Store RiotPixels URL temporarily in screenshots vector (will be fetched async later)
+        // This is a workaround to avoid holding ElementRef across await
+        let screenshots = if let Some(riotpixels_url) = Extractors::extract_riotpixels_screenshot_url(&content) {
+            vec![riotpixels_url]  // Will be replaced with actual screenshots later
+        } else {
+            Vec::new()
+        };
+
+        // Extract video/GIF URLs
+        let videos = Extractors::extract_video_urls(&content);
+        println!("    [DEBUG] Found {} video/GIF links", videos.len());
+
         Some(GameRepack {
             title,
             genres_tags: details.genres_tags,
@@ -219,6 +259,8 @@ impl FitGirlCrawler {
             date,
             image_url,
             magnet_links,
+            screenshots,
+            videos,
         })
     }
 
@@ -258,6 +300,13 @@ impl FitGirlCrawler {
         // Extract magnet links
         let magnet_links = Extractors::extract_magnet_links(&content);
 
+        // Screenshots can't be fetched here (sync context)
+        // If needed, crawl_page will handle it
+        let screenshots = Vec::new();
+
+        // Extract video/GIF URLs
+        let videos = Extractors::extract_video_urls(&content);
+
         Some(GameRepack {
             title,
             genres_tags: details.genres_tags,
@@ -269,6 +318,8 @@ impl FitGirlCrawler {
             date,
             image_url,
             magnet_links,
+            screenshots,
+            videos,
         })
     }
 

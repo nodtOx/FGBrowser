@@ -522,3 +522,91 @@ pub fn migrate_add_is_seen_column(conn: &Connection) -> Result<()> {
     Ok(())
 }
 
+pub fn migrate_add_screenshots_table(conn: &Connection) -> Result<()> {
+    // Check if screenshots table exists
+    let table_exists: Result<i64, _> = conn.query_row(
+        "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='screenshots'",
+        [],
+        |row| row.get(0),
+    );
+    
+    match table_exists {
+        Ok(0) => {
+            println!("🔄 Creating screenshots table...");
+            
+            // Create screenshots table
+            conn.execute(
+                "CREATE TABLE screenshots (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    repack_id INTEGER NOT NULL,
+                    screenshot_url TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (repack_id) REFERENCES repacks (id) ON DELETE CASCADE,
+                    UNIQUE(repack_id, screenshot_url)
+                )",
+                [],
+            )?;
+            
+            // Create index for faster lookups
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_screenshots_repack_id ON screenshots(repack_id)",
+                [],
+            )?;
+            
+            println!("✅ Migration completed! Created screenshots table");
+        }
+        Ok(_) => {
+            // Table already exists, do nothing
+        }
+        Err(e) => {
+            eprintln!("Warning: Could not check for screenshots table: {}", e);
+        }
+    }
+    
+    Ok(())
+}
+
+pub fn migrate_add_videos_table(conn: &Connection) -> Result<()> {
+    // Check if videos table exists
+    let table_exists: Result<i64, _> = conn.query_row(
+        "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='videos'",
+        [],
+        |row| row.get(0),
+    );
+    
+    match table_exists {
+        Ok(0) => {
+            println!("🔄 Creating videos table...");
+            
+            // Create videos table for YouTube, Streamable, GIFs, etc.
+            conn.execute(
+                "CREATE TABLE videos (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    repack_id INTEGER NOT NULL,
+                    video_url TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (repack_id) REFERENCES repacks (id) ON DELETE CASCADE,
+                    UNIQUE(repack_id, video_url)
+                )",
+                [],
+            )?;
+            
+            // Create index for faster lookups
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_videos_repack_id ON videos(repack_id)",
+                [],
+            )?;
+            
+            println!("✅ Migration completed! Created videos table");
+        }
+        Ok(_) => {
+            // Table already exists, do nothing
+        }
+        Err(e) => {
+            eprintln!("Warning: Could not check for videos table: {}", e);
+        }
+    }
+    
+    Ok(())
+}
+

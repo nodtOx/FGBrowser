@@ -6,6 +6,7 @@
   import { invoke } from '@tauri-apps/api/core';
   import { onDestroy } from 'svelte';
   import CachedImage from './CachedImage.svelte';
+  import GameMedia from './GameMedia.svelte';
 
   // Optional callback for custom back behavior (e.g., from Popular page)
   export let onBack: (() => void) | undefined = undefined;
@@ -55,8 +56,8 @@
     const target = event.target as HTMLElement;
     const isTyping = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
 
-    // Handle back navigation
-    if (event.key === 'Escape' || event.key === 'Backspace') {
+    // Handle back navigation (only Backspace, not Escape to avoid conflict with lightbox)
+    if (event.key === 'Backspace') {
       if (!isTyping) {
         event.preventDefault();
         handleBackAction();
@@ -81,7 +82,7 @@
   }
 
   // Add keyboard listener when a game is selected
-  // Only handles Escape/Backspace for back navigation and arrow keys for magnet selection
+  // Only handles Backspace for back navigation and arrow keys for magnet selection
   $: {
     if ($selectedGame) {
       window.addEventListener('keydown', handleKeydown);
@@ -98,7 +99,7 @@
 <div class="details-panel">
   {#if $selectedGame}
     <div class="details-header">
-      <button class="back-button" on:click={handleBackAction} title="Go back (Esc or Backspace)"> ← Back </button>
+      <button class="back-button" on:click={handleBackAction} title="Go back (Backspace)"> ← Back </button>
       <h2 class="game-title">
         <a
           href={$selectedGame.url}
@@ -204,6 +205,11 @@
         {/if}
       </div>
     </div>
+
+    <!-- Screenshots and Videos Section -->
+    <div class="media-section">
+      <GameMedia gameId={$selectedGame.id} />
+    </div>
   {:else}
     <div class="no-selection">
       <p>Select a game to view details</p>
@@ -221,12 +227,16 @@
   }
 
   .details-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
     padding: 16px;
     border-bottom: 1px solid var(--color-border);
     background-color: var(--color-backgroundSecondary);
     display: flex;
     align-items: center;
     gap: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
 
   .back-button {
@@ -432,5 +442,11 @@
     white-space: nowrap;
     user-select: text;
     cursor: text;
+  }
+
+  .media-section {
+    padding: 16px;
+    border-top: 1px solid var(--color-border);
+    background-color: var(--color-background);
   }
 </style>

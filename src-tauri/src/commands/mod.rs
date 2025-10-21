@@ -13,6 +13,7 @@ pub mod settings_commands;
 pub mod image_commands;
 pub mod system_commands;
 pub mod telemetry_commands;
+pub mod screenshot_commands;
 
 // Re-export AppState for convenience
 pub use utils::AppState;
@@ -120,5 +121,14 @@ pub use telemetry_commands::{
     test_sentry_integration,
     get_telemetry_user_id,
     track_search,
+};
+
+// Screenshot and media commands
+pub use screenshot_commands::{
+    fetch_game_media,
+    get_game_media,
+    Screenshot,
+    Video,
+    MediaResult,
 };
 

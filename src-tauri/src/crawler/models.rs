@@ -12,6 +12,8 @@ pub struct GameRepack {
     pub date: Option<String>,
     pub image_url: Option<String>,
     pub magnet_links: Vec<MagnetLink>,
+    pub screenshots: Vec<String>,
+    pub videos: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
