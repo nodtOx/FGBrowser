@@ -12,9 +12,34 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-# Tauri signing keys
-$TAURI_PRIVATE_KEY = "[REDACTED]"
-$TAURI_PASSWORD = "[REDACTED]"
+# Read Tauri signing keys from .notes/tauri_update_keys.md
+$KEYS_FILE = ".notes/tauri_update_keys.md"
+
+if (-not (Test-Path $KEYS_FILE)) {
+    Write-Host "❌ Error: Tauri keys file not found at $KEYS_FILE" -ForegroundColor Red
+    Write-Host "Please ensure the keys file exists before running this script." -ForegroundColor Yellow
+    exit 1
+}
+
+$keysContent = Get-Content $KEYS_FILE -Raw
+
+# Extract TAURI_PRIVATE_KEY
+if ($keysContent -match 'TAURI_PRIVATE_KEY:\s*(.+)') {
+    $TAURI_PRIVATE_KEY = $matches[1].Trim()
+}
+else {
+    Write-Host "❌ Error: Could not find TAURI_PRIVATE_KEY in $KEYS_FILE" -ForegroundColor Red
+    exit 1
+}
+
+# Extract TAURI_PRIVATE_KEY_PASSWORD
+if ($keysContent -match 'TAURI_PRIVATE_KEY_PASSWORD:\s*(.+)') {
+    $TAURI_PASSWORD = $matches[1].Trim()
+}
+else {
+    Write-Host "❌ Error: Could not find TAURI_PRIVATE_KEY_PASSWORD in $KEYS_FILE" -ForegroundColor Red
+    exit 1
+}
 
 Write-Host "===============================================" -ForegroundColor Cyan
 Write-Host "   FGBrowser Release Automation Script" -ForegroundColor Cyan
