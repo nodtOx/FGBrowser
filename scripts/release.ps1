@@ -12,8 +12,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-# Read Tauri signing keys from .notes/tauri_update_keys.md
-$KEYS_FILE = ".notes/tauri_update_keys.md"
+# Load Tauri signing keys from .notes/tauri_update_keys.ps1
+$KEYS_FILE = ".notes/tauri_update_keys.ps1"
 
 if (-not (Test-Path $KEYS_FILE)) {
     Write-Host "❌ Error: Tauri keys file not found at $KEYS_FILE" -ForegroundColor Red
@@ -21,25 +21,21 @@ if (-not (Test-Path $KEYS_FILE)) {
     exit 1
 }
 
-$keysContent = Get-Content $KEYS_FILE -Raw
+# Dot-source the keys file to load the variables
+. $KEYS_FILE
 
-# Extract TAURI_PRIVATE_KEY
-if ($keysContent -match 'TAURI_PRIVATE_KEY:\s*(.+)') {
-    $TAURI_PRIVATE_KEY = $matches[1].Trim()
-}
-else {
-    Write-Host "❌ Error: Could not find TAURI_PRIVATE_KEY in $KEYS_FILE" -ForegroundColor Red
+# Validate that keys were loaded
+if ([string]::IsNullOrWhiteSpace($TAURI_PRIVATE_KEY)) {
+    Write-Host "❌ Error: TAURI_PRIVATE_KEY not found in $KEYS_FILE" -ForegroundColor Red
     exit 1
 }
 
-# Extract TAURI_PRIVATE_KEY_PASSWORD
-if ($keysContent -match 'TAURI_PRIVATE_KEY_PASSWORD:\s*(.+)') {
-    $TAURI_PASSWORD = $matches[1].Trim()
-}
-else {
-    Write-Host "❌ Error: Could not find TAURI_PRIVATE_KEY_PASSWORD in $KEYS_FILE" -ForegroundColor Red
+if ([string]::IsNullOrWhiteSpace($TAURI_PRIVATE_KEY_PASSWORD)) {
+    Write-Host "❌ Error: TAURI_PRIVATE_KEY_PASSWORD not found in $KEYS_FILE" -ForegroundColor Red
     exit 1
 }
+
+$TAURI_PASSWORD = $TAURI_PRIVATE_KEY_PASSWORD
 
 Write-Host "===============================================" -ForegroundColor Cyan
 Write-Host "   FGBrowser Release Automation Script" -ForegroundColor Cyan
