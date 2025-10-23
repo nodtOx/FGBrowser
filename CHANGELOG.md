@@ -8,11 +8,35 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- Empty state message displayed when search returns no results
-- Enhanced telemetry with anonymous usage tracking and search analytics
+### Changed
+
+### Fixed
+
+## [0.2.0] - 2025-10-23
+
+### Added
+
 - View high-resolution screenshots and videos for each game
-- Full-screen screenshot viewer with smooth animations and easy navigation
-- Keyboard navigation added to the grid view in browse page
+- Full-screen screenshot viewer with smooth animations and zone-based navigation
+- Click left/right sides of screenshots to browse, center to close
+- Thumbnail support for faster screenshot loading
+- Preloading of full-resolution images for instant lightbox viewing
+- 4-directional keyboard navigation in grid view (all arrow keys)
+- Keyboard shortcut 'V' to toggle between list and grid views
+- Visual focus indicators for grid and list panels
+
+### Changed
+
+- Improved keyboard navigation: arrow keys now control screenshots in game details
+- Backspace (not Escape) now returns to game list to avoid lightbox conflicts
+- Game details page only renders when opened (performance improvement)
+- Status bar shortcuts updated to reflect new keyboard controls
+
+### Fixed
+
+- Grid view keyboard navigation now properly handles 2D movement
+- Tab key panel switching now works correctly in grid mode
+- Screenshot grid no longer jumps during window resize
 
 ## [0.1.18] - 2024-10-19
 

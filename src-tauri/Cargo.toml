@@ -1,6 +1,6 @@
 [package]
 name = "fgbrowser"
-version = "0.1.18"
+version = "0.2.0"
 description = "FitGirl Repack Browser"
 authors = ["you"]
 edition = "2021"
