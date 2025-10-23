@@ -31,12 +31,31 @@
       media = await fetchGameMedia(id);
 
       console.log(`Loaded ${media.screenshots.length} screenshots and ${media.videos.length} videos for game ${id}`);
+
+      // Preload full-resolution images in the background
+      if (media && media.screenshots.length > 0) {
+        const screenshotsToPreload = media.screenshots;
+        setTimeout(() => {
+          preloadFullResImages(screenshotsToPreload);
+        }, 500); // Small delay to prioritize thumbnail loading
+      }
     } catch (err) {
       console.error('Failed to fetch game media:', err);
       error = err instanceof Error ? err.message : String(err);
     } finally {
       loading = false;
     }
+  }
+
+  function preloadFullResImages(screenshots: Array<{ url: string; thumbnail_url?: string }>) {
+    screenshots.forEach((screenshot) => {
+      if (screenshot.url) {
+        const img = new Image();
+        img.src = screenshot.url;
+        // Browser will cache the image
+      }
+    });
+    console.log(`🖼️ Preloading ${screenshots.length} full-resolution images`);
   }
 
   function openLightbox(index: number) {
@@ -137,17 +156,11 @@
         <h3>Screenshots ({media.screenshots.length})</h3>
         <div class="screenshot-grid">
           {#each media.screenshots as screenshot, i}
-            <div class="screenshot-item">
-              <img
-                src={screenshot.url}
-                alt="Game screenshot"
-                loading="lazy"
-                role="button"
-                tabindex="0"
-                on:click={() => openLightbox(i)}
-                on:keydown={(e) => e.key === 'Enter' && openLightbox(i)}
-              />
-            </div>
+            {#if screenshot.thumbnail_url}
+              <button class="screenshot-item" on:click={() => openLightbox(i)} type="button">
+                <img src={screenshot.thumbnail_url} alt="Game screenshot" loading="lazy" />
+              </button>
+            {/if}
           {/each}
         </div>
       </section>
@@ -308,6 +321,10 @@
     overflow: hidden;
     border-radius: var(--border-radius);
     background-color: var(--color-backgroundTertiary);
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    display: block;
   }
 
   .screenshot-item img {
@@ -316,13 +333,13 @@
     object-fit: cover;
     border-radius: var(--border-radius);
     border: 1px solid var(--color-border);
-    cursor: pointer;
     transition:
       transform 0.2s,
       box-shadow 0.2s;
+    pointer-events: none;
   }
 
-  .screenshot-item img:hover {
+  .screenshot-item:hover img {
     transform: scale(1.05);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   }

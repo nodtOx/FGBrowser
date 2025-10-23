@@ -209,8 +209,8 @@ pub fn save_repacks_to_db(repacks: &[GameRepack], db_service: &SqliteDatabaseSer
                  ON CONFLICT(repack_id, source) DO UPDATE SET magnet = excluded.magnet"
             )?;
             let mut insert_screenshot_stmt = tx.prepare(
-                "INSERT INTO screenshots (repack_id, screenshot_url)
-                 VALUES (?1, ?2)
+                "INSERT INTO screenshots (repack_id, screenshot_url, thumbnail_url)
+                 VALUES (?1, ?2, ?3)
                  ON CONFLICT(repack_id, screenshot_url) DO NOTHING"
             )?;
             let mut insert_video_stmt = tx.prepare(
@@ -238,8 +238,12 @@ pub fn save_repacks_to_db(repacks: &[GameRepack], db_service: &SqliteDatabaseSer
                         insert_magnet_stmt.execute((repack_id, &magnet.source, &magnet.magnet))?;
                     }
                     
-                    for screenshot_url in &repack.screenshots {
-                        insert_screenshot_stmt.execute((repack_id, screenshot_url))?;
+                    for screenshot in &repack.screenshot_data {
+                        insert_screenshot_stmt.execute((
+                            repack_id, 
+                            &screenshot.full_url,
+                            screenshot.thumbnail_url.as_ref()
+                        ))?;
                     }
                     
                     for video_url in &repack.videos {
@@ -320,8 +324,8 @@ pub fn save_repacks_to_db_legacy(repacks: &[GameRepack], db_path: &Path) -> anyh
              ON CONFLICT(repack_id, source) DO UPDATE SET magnet = excluded.magnet"
         )?;
         let mut insert_screenshot_stmt = tx.prepare(
-            "INSERT INTO screenshots (repack_id, screenshot_url)
-             VALUES (?1, ?2)
+            "INSERT INTO screenshots (repack_id, screenshot_url, thumbnail_url)
+             VALUES (?1, ?2, ?3)
              ON CONFLICT(repack_id, screenshot_url) DO NOTHING"
         )?;
         let mut insert_video_stmt = tx.prepare(
@@ -357,8 +361,12 @@ pub fn save_repacks_to_db_legacy(repacks: &[GameRepack], db_path: &Path) -> anyh
                 }
                 
                 // Insert screenshots
-                for screenshot_url in &repack.screenshots {
-                    insert_screenshot_stmt.execute((repack_id, screenshot_url))?;
+                for screenshot in &repack.screenshot_data {
+                    insert_screenshot_stmt.execute((
+                        repack_id,
+                        &screenshot.full_url,
+                        screenshot.thumbnail_url.as_ref()
+                    ))?;
                 }
                 
                 // Insert videos

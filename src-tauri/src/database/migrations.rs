@@ -610,3 +610,34 @@ pub fn migrate_add_videos_table(conn: &Connection) -> Result<()> {
     Ok(())
 }
 
+pub fn migrate_add_screenshot_thumbnail(conn: &Connection) -> Result<()> {
+    // Check if thumbnail_url column exists
+    let column_exists: Result<i64, _> = conn.query_row(
+        "SELECT COUNT(*) FROM pragma_table_info('screenshots') WHERE name = 'thumbnail_url'",
+        [],
+        |row| row.get(0),
+    );
+    
+    match column_exists {
+        Ok(0) => {
+            println!("🔄 Adding thumbnail_url column to screenshots table...");
+            
+            // Add thumbnail_url column
+            conn.execute(
+                "ALTER TABLE screenshots ADD COLUMN thumbnail_url TEXT",
+                [],
+            )?;
+            
+            println!("✅ Migration completed! Added thumbnail_url column to screenshots");
+        }
+        Ok(_) => {
+            // Column already exists, do nothing
+        }
+        Err(e) => {
+            eprintln!("Warning: Could not check for thumbnail_url column: {}", e);
+        }
+    }
+    
+    Ok(())
+}
+

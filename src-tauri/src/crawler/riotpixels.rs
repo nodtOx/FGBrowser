@@ -7,6 +7,12 @@ use scraper::{Html, Selector};
 use serde_json::Value;
 use tokio::process::Command;
 
+#[derive(Debug, Clone)]
+pub struct ScreenshotData {
+    pub full_url: String,
+    pub thumbnail_url: Option<String>,
+}
+
 pub struct RiotPixelsClient;
 
 impl RiotPixelsClient {
@@ -62,7 +68,8 @@ impl RiotPixelsClient {
 
     /// Fetch and parse high-res screenshot URLs from RiotPixels page
     /// Parses the JSON data from onclick attributes as described in riotpixels_scraping.md
-    pub async fn fetch_screenshots(&self, screenshot_page_url: &str) -> Result<Vec<String>> {
+    /// Returns full URLs and thumbnails (240p)
+    pub async fn fetch_screenshots(&self, screenshot_page_url: &str) -> Result<Vec<ScreenshotData>> {
         // Use Russian domain - it's more reliable and less likely to be blocked
         let url = screenshot_page_url
             .replace("en.riotpixels.com", "ru.riotpixels.com")
@@ -83,7 +90,7 @@ impl RiotPixelsClient {
         };
         
         let document = Html::parse_document(&html);
-        let mut screenshot_urls = Vec::new();
+        let mut screenshots = Vec::new();
         
         // Try multiple selectors - RiotPixels uses different structures
         let selectors = vec![
@@ -107,13 +114,33 @@ impl RiotPixelsClient {
                                 let json_str = &onclick_attr[json_start..=json_end];
                                 
                                 // Parse the JSON array
+                                // Fields: "o" = original flag (1 = full res), "s" = file size in bytes, "u" = URL
                                 if let Ok(json_array) = serde_json::from_str::<Vec<Value>>(json_str) {
-                                    // Get the first item (highest resolution, o: 1)
-                                    if let Some(first_item) = json_array.first() {
-                                        if let Some(url) = first_item.get("u").and_then(|u| u.as_str()) {
-                                            // Convert http to https (as per the guide)
-                                            let https_url = url.replace("http:", "https:");
-                                            screenshot_urls.push(https_url);
+                                    // Find full resolution: look for o=1 OR largest file size
+                                    let full_res_item = json_array.iter()
+                                        .find(|item| item.get("o").and_then(|o| o.as_i64()) == Some(1))
+                                        .or_else(|| {
+                                            // Fallback: find largest file size
+                                            json_array.iter()
+                                                .max_by_key(|item| item.get("s").and_then(|s| s.as_i64()).unwrap_or(0))
+                                        });
+                                    
+                                    // Find thumbnail: smallest file size
+                                    let thumbnail_item = json_array.iter()
+                                        .min_by_key(|item| item.get("s").and_then(|s| s.as_i64()).unwrap_or(i64::MAX));
+                                    
+                                    if let Some(full_item) = full_res_item {
+                                        if let Some(full_url) = full_item.get("u").and_then(|u| u.as_str()) {
+                                            let full_url = full_url.replace("http:", "https:");
+                                            
+                                            let thumbnail_url = thumbnail_item
+                                                .and_then(|item| item.get("u").and_then(|u| u.as_str()))
+                                                .map(|url| url.replace("http:", "https:"));
+                                            
+                                            screenshots.push(ScreenshotData {
+                                                full_url,
+                                                thumbnail_url,
+                                            });
                                         }
                                     }
                                 }
@@ -128,7 +155,7 @@ impl RiotPixelsClient {
             }
         }
         
-        Ok(screenshot_urls)
+        Ok(screenshots)
     }
 }
 

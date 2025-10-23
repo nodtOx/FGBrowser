@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use super::riotpixels::ScreenshotData;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameRepack {
     pub title: String,
@@ -14,6 +16,8 @@ pub struct GameRepack {
     pub magnet_links: Vec<MagnetLink>,
     pub screenshots: Vec<String>,
     pub videos: Vec<String>,
+    #[serde(skip)]
+    pub screenshot_data: Vec<ScreenshotData>, // Not serialized to DB, used internally
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

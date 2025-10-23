@@ -2,6 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 
 export interface Screenshot {
   url: string;
+  thumbnail_url?: string;
 }
 
 export interface Video {

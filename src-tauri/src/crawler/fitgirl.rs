@@ -119,6 +119,7 @@ impl FitGirlCrawler {
             magnet_links,
             screenshots,
             videos,
+            screenshot_data: Vec::new(),
         })
     }
 
@@ -181,6 +182,7 @@ impl FitGirlCrawler {
             magnet_links,
             screenshots,
             videos,
+            screenshot_data: Vec::new(),
         })
     }
 }
@@ -245,10 +247,16 @@ impl SiteCrawler for FitGirlCrawler {
                 if let Some(riotpixels_url) = repack.screenshots.first().cloned() {
                     let cleaned_url = RiotPixelsClient::clean_screenshot_url(&riotpixels_url);
                     match self.riotpixels_client.fetch_screenshots(&cleaned_url).await {
-                        Ok(urls) => repack.screenshots = urls,
+                        Ok(screenshot_data) => {
+                            // Store both full URLs and thumbnails
+                            repack.screenshot_data = screenshot_data;
+                            // Keep screenshots vec with just full URLs for compatibility
+                            repack.screenshots = repack.screenshot_data.iter().map(|s| s.full_url.clone()).collect();
+                        },
                         Err(e) => {
                             eprintln!("Failed to fetch RiotPixels screenshots for {}: {}", url, e);
                             repack.screenshots = Vec::new();
+                            repack.screenshot_data = Vec::new();
                         }
                     }
                 }

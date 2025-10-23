@@ -82,6 +82,7 @@ impl Database {
         migrations::migrate_add_is_seen_column(&self.conn)?;
         migrations::migrate_add_screenshots_table(&self.conn)?;
         migrations::migrate_add_videos_table(&self.conn)?;
+        migrations::migrate_add_screenshot_thumbnail(&self.conn)?;
         
         Ok(())
     }
