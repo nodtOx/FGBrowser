@@ -214,9 +214,10 @@ fn setup_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
                 }
                 "about" => {
                     let version = app.package_info().version.to_string();
+                    let build_number = include_str!("../../BUILD_NUMBER").trim();
                     let message = format!(
-                        "FGBrowser v{}\n\nGitHub Repository:\nhttps://github.com/nodtOx/FGBrowser\n\nBuilt with Tauri 2.0 + Svelte",
-                        version
+                        "FGBrowser v{} (build {})\n\nGitHub Repository:\nhttps://github.com/nodtOx/FGBrowser\n\nBuilt with Tauri 2.0 + Svelte",
+                        version, build_number
                     );
                     
                     let app_handle = app.clone();
@@ -332,6 +333,12 @@ pub fn run() {
             
             // Handle window close event - hide to tray instead of closing
             let window = app.get_webview_window("main").unwrap();
+            
+            // Set window title with version and build number
+            let version = app.package_info().version.to_string();
+            let build_number = include_str!("../../BUILD_NUMBER").trim();
+            let _ = window.set_title(&format!("FGBrowser v{} - Build {}", version, build_number));
+            
             let window_clone = window.clone();
             window.on_window_event(move |event| {
                 if let tauri::WindowEvent::CloseRequested { api, .. } = event {

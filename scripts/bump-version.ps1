@@ -11,9 +11,14 @@ param(
 $ErrorActionPreference = "Stop"
 
 $VERSION_FILE = "VERSION"
+$BUILD_FILE = "BUILD_NUMBER"
 
 # Read current version
 $CURRENT_VERSION = (Get-Content $VERSION_FILE).Trim()
+
+# Read and increment build number
+$CURRENT_BUILD = [int](Get-Content $BUILD_FILE).Trim()
+$NEW_BUILD = $CURRENT_BUILD + 1
 
 # Parse version components
 $VERSION_PARTS = $CURRENT_VERSION.Split('.')
@@ -40,9 +45,13 @@ switch ($BumpType) {
 $NEW_VERSION = "$MAJOR.$MINOR.$PATCH"
 
 Write-Host "Bumping version: $CURRENT_VERSION → $NEW_VERSION" -ForegroundColor Cyan
+Write-Host "Bumping build: $CURRENT_BUILD → $NEW_BUILD" -ForegroundColor Cyan
 
 # Update VERSION file
 $NEW_VERSION | Out-File -FilePath $VERSION_FILE -Encoding UTF8 -NoNewline
+
+# Update BUILD_NUMBER file
+$NEW_BUILD | Out-File -FilePath $BUILD_FILE -Encoding UTF8 -NoNewline
 
 # Update package.json
 if (Get-Command node -ErrorAction SilentlyContinue) {
@@ -61,7 +70,8 @@ if (Test-Path "src-tauri/Cargo.toml") {
     for ($i = 0; $i -lt $cargoLines.Count; $i++) {
         if ($cargoLines[$i] -match '^\[package\]') {
             $inPackageSection = $true
-        } elseif ($cargoLines[$i] -match '^\[') {
+        }
+        elseif ($cargoLines[$i] -match '^\[') {
             $inPackageSection = $false
         }
         
@@ -97,13 +107,13 @@ if (Test-Path "src-tauri/tauri.conf.json") {
 }
 
 Write-Host ""
-Write-Host "✨ Version bumped to $NEW_VERSION" -ForegroundColor Green
+Write-Host "✨ Version bumped to $NEW_VERSION (build $NEW_BUILD)" -ForegroundColor Green
 Write-Host ""
 
 # Auto-commit the version bump
 Write-Host "📝 Committing version bump..." -ForegroundColor Cyan
 git add .
-git commit -m "chore: bump version to $NEW_VERSION"
+git commit -m "chore: bump version to $NEW_VERSION (build $NEW_BUILD)"
 
 Write-Host "Changes committed" -ForegroundColor Green
 Write-Host ""

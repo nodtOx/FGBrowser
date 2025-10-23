@@ -27,9 +27,14 @@ Write-Host ""
 Write-Host "[1/5] Bumping version..." -ForegroundColor Yellow
 
 $VERSION_FILE = "VERSION"
+$BUILD_FILE = "BUILD_NUMBER"
 
 # Read current version
 $CURRENT_VERSION = (Get-Content $VERSION_FILE).Trim()
+
+# Read and increment build number
+$CURRENT_BUILD = [int](Get-Content $BUILD_FILE).Trim()
+$NEW_BUILD = $CURRENT_BUILD + 1
 
 # Parse version components
 $VERSION_PARTS = $CURRENT_VERSION.Split('.')
@@ -55,10 +60,14 @@ switch ($BumpType) {
 
 $NEW_VERSION = "$MAJOR.$MINOR.$PATCH"
 
-Write-Host "      $CURRENT_VERSION → $NEW_VERSION" -ForegroundColor Cyan
+Write-Host "      Version: $CURRENT_VERSION → $NEW_VERSION" -ForegroundColor Cyan
+Write-Host "      Build: $CURRENT_BUILD → $NEW_BUILD" -ForegroundColor Cyan
 
 # Update VERSION file
 $NEW_VERSION | Out-File -FilePath $VERSION_FILE -Encoding UTF8 -NoNewline
+
+# Update BUILD_NUMBER file
+$NEW_BUILD | Out-File -FilePath $BUILD_FILE -Encoding UTF8 -NoNewline
 
 # Update package.json
 if (Get-Command node -ErrorAction SilentlyContinue) {
@@ -77,7 +86,8 @@ if (Test-Path "src-tauri/Cargo.toml") {
     for ($i = 0; $i -lt $cargoLines.Count; $i++) {
         if ($cargoLines[$i] -match '^\[package\]') {
             $inPackageSection = $true
-        } elseif ($cargoLines[$i] -match '^\[') {
+        }
+        elseif ($cargoLines[$i] -match '^\[') {
             $inPackageSection = $false
         }
         
@@ -114,8 +124,8 @@ if (Test-Path "src-tauri/tauri.conf.json") {
 
 # Commit version bump
 git add .
-git commit -m "chore: bump version to $NEW_VERSION"
-Write-Host "      ✓ Version committed" -ForegroundColor Green
+git commit -m "chore: bump version to $NEW_VERSION (build $NEW_BUILD)"
+Write-Host "      ✓ Version and build number committed" -ForegroundColor Green
 Write-Host ""
 
 # ========================================
@@ -178,13 +188,13 @@ if ([string]::IsNullOrWhiteSpace($Notes)) {
 }
 
 $latestJson = @{
-    version = $NEW_VERSION
-    notes = $Notes
-    pub_date = $PUB_DATE
+    version   = $NEW_VERSION
+    notes     = $Notes
+    pub_date  = $PUB_DATE
     platforms = @{
         "windows-x86_64" = @{
-            signature = $SIGNATURE
-            url = "https://github.com/[REDACTED]/FGBrowser/releases/download/v${NEW_VERSION}/FGBrowser_${NEW_VERSION}_x64-setup.exe"
+            signature          = $SIGNATURE
+            url                = "https://github.com/[REDACTED]/FGBrowser/releases/download/v${NEW_VERSION}/FGBrowser_${NEW_VERSION}_x64-setup.exe"
             with_elevated_task = $false
         }
     }

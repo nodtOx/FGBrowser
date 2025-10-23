@@ -22,14 +22,23 @@ impl RiotPixelsClient {
 
     /// Fetch page using curl subprocess (bypasses Cloudflare bot detection)
     async fn fetch_with_curl(url: &str) -> Result<String> {
-        let output = Command::new("curl")
-            .arg("-A")
+        let mut cmd = Command::new("curl");
+        cmd.arg("-A")
             .arg("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
             .arg(url)
             .arg("-s")  // Silent mode
-            .arg("-L")  // Follow redirects
-            .output()
-            .await?;
+            .arg("-L");  // Follow redirects
+        
+        // Hide console window on Windows (prevents flashing window in release builds)
+        #[cfg(target_os = "windows")]
+        {
+            #[allow(unused_imports)]
+            use std::os::windows::process::CommandExt;
+            const CREATE_NO_WINDOW: u32 = 0x08000000;
+            cmd.creation_flags(CREATE_NO_WINDOW);
+        }
+        
+        let output = cmd.output().await?;
         
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);

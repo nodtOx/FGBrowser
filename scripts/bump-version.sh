@@ -7,9 +7,14 @@ set -e
 
 BUMP_TYPE=${1:-patch}
 VERSION_FILE="VERSION"
+BUILD_FILE="BUILD_NUMBER"
 
 # Read current version
 CURRENT_VERSION=$(cat $VERSION_FILE)
+
+# Read and increment build number
+CURRENT_BUILD=$(cat $BUILD_FILE)
+NEW_BUILD=$((CURRENT_BUILD + 1))
 
 # Parse version components
 IFS='.' read -ra VERSION_PARTS <<< "$CURRENT_VERSION"
@@ -41,9 +46,13 @@ esac
 NEW_VERSION="$MAJOR.$MINOR.$PATCH"
 
 echo "📦 Bumping version: $CURRENT_VERSION → $NEW_VERSION"
+echo "🔢 Bumping build: $CURRENT_BUILD → $NEW_BUILD"
 
 # Update VERSION file
 echo $NEW_VERSION > $VERSION_FILE
+
+# Update BUILD_NUMBER file
+echo $NEW_BUILD > $BUILD_FILE
 
 # Update package.json
 if command -v node &> /dev/null; then
@@ -74,13 +83,13 @@ if [ -f "src-tauri/tauri.conf.json" ]; then
 fi
 
 echo ""
-echo "✨ Version bumped to $NEW_VERSION"
+echo "✨ Version bumped to $NEW_VERSION (build $NEW_BUILD)"
 echo ""
 
 # Auto-commit the version bump
 echo "📝 Committing version bump..."
-git add VERSION package.json src-tauri/Cargo.toml src-tauri/Cargo.lock src-tauri/tauri.conf.json
-git commit -m "chore: bump version to $NEW_VERSION"
+git add VERSION BUILD_NUMBER package.json src-tauri/Cargo.toml src-tauri/Cargo.lock src-tauri/tauri.conf.json
+git commit -m "chore: bump version to $NEW_VERSION (build $NEW_BUILD)"
 
 echo "✅ Changes committed"
 echo ""
