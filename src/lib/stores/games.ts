@@ -42,7 +42,9 @@ export interface GameDetails extends Game {
   categories: Category[];
 }
 
-export const games = writable<Game[]>([]);
+export type SortOption = 'date-desc' | 'date-asc' | 'title-asc' | 'title-desc' | 'size-desc' | 'size-asc';
+
+const rawGames = writable<Game[]>([]);
 export const selectedGame = writable<GameDetails | null>(null);
 export const selectedIndex = writable<number>(0);
 export const searchQuery = writable<string>('');
@@ -51,6 +53,45 @@ export const categories = writable<CategoryWithCount[]>([]);
 export const selectedCategories = writable<CategoryWithCount[]>([]);
 export const totalGamesCount = writable<number>(0);
 export const newGamesCount = writable<number>(0);
+export const sortBy = writable<SortOption>('date-desc');
+
+// Derived store that applies sorting to games
+export const games = derived([rawGames, sortBy], ([$rawGames, $sortBy]) => {
+  const sorted = [...$rawGames];
+
+  switch ($sortBy) {
+    case 'date-desc':
+      return sorted.sort((a, b) => {
+        if (!a.date) return 1;
+        if (!b.date) return -1;
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
+      });
+    case 'date-asc':
+      return sorted.sort((a, b) => {
+        if (!a.date) return 1;
+        if (!b.date) return -1;
+        return new Date(a.date).getTime() - new Date(b.date).getTime();
+      });
+    case 'title-asc':
+      return sorted.sort((a, b) => a.title.localeCompare(b.title));
+    case 'title-desc':
+      return sorted.sort((a, b) => b.title.localeCompare(a.title));
+    case 'size-desc':
+      return sorted.sort((a, b) => {
+        if (!a.size) return 1;
+        if (!b.size) return -1;
+        return b.size - a.size;
+      });
+    case 'size-asc':
+      return sorted.sort((a, b) => {
+        if (!a.size) return 1;
+        if (!b.size) return -1;
+        return a.size - b.size;
+      });
+    default:
+      return sorted;
+  }
+});
 
 // Popular games crawling state
 export const isCrawlingPopular = writable<boolean>(false);
@@ -286,7 +327,7 @@ export async function loadGames(limit: number = LOAD_ALL_GAMES, offset: number =
       invoke<{ total_games: number; total_magnets: number }>('get_database_stats'),
     ]);
 
-    games.set(result);
+    rawGames.set(result);
     totalGamesCount.set(stats.total_games);
 
     if (result.length > 0) {
@@ -375,7 +416,7 @@ export async function loadGamesByCategory(
       limit,
       offset,
     });
-    games.set(result);
+    rawGames.set(result);
     if (result.length > 0) {
       await selectGame(0);
     }
@@ -399,7 +440,7 @@ export async function loadGamesByMultipleCategories(
       limit,
       offset,
     });
-    games.set(result);
+    rawGames.set(result);
     if (result.length > 0) {
       await selectGame(0);
     }
@@ -423,7 +464,7 @@ export async function loadGamesByDateRange(
       limit,
       offset,
     });
-    games.set(result);
+    rawGames.set(result);
     if (result.length > 0) {
       await selectGame(0);
     }
@@ -449,7 +490,7 @@ export async function loadGamesBySize(
       limit,
       offset,
     });
-    games.set(result);
+    rawGames.set(result);
     if (result.length > 0) {
       await selectGame(0);
     }
@@ -477,7 +518,7 @@ export async function loadGamesByCategoriesAndSize(
       limit,
       offset,
     });
-    games.set(result);
+    rawGames.set(result);
     if (result.length > 0) {
       await selectGame(0);
     }
@@ -503,7 +544,7 @@ export async function loadGamesByCategoriesAndTime(
       limit,
       offset,
     });
-    games.set(result);
+    rawGames.set(result);
     if (result.length > 0) {
       await selectGame(0);
     }
@@ -533,7 +574,7 @@ export async function loadGamesBySizeAndTime(
       limit,
       offset,
     });
-    games.set(result);
+    rawGames.set(result);
     if (result.length > 0) {
       await selectGame(0);
     }
@@ -565,7 +606,7 @@ export async function loadGamesByCategoriesSizeAndTime(
       limit,
       offset,
     });
-    games.set(result);
+    rawGames.set(result);
     if (result.length > 0) {
       await selectGame(0);
     }
@@ -647,7 +688,7 @@ export async function searchGames(query: string, limit: number = LOAD_ALL_GAMES)
       invoke<CategoryWithCount[]>('get_categories_for_search', { searchQuery: trimmedQuery }),
     ]);
 
-    games.set(result);
+    rawGames.set(result);
     categories.set(searchCategories);
 
     if (result.length > 0) {
@@ -793,6 +834,11 @@ export async function markAllGamesAsSeen() {
   }
 }
 
+// Set sort option
+export function setSortOption(option: SortOption) {
+  sortBy.set(option);
+}
+
 // Clear new badge for a specific game (when viewing details)
 export async function clearNewBadgeForGame(gameId: number) {
   console.log('🔍 clearNewBadgeForGame called for gameId:', gameId);
@@ -804,7 +850,7 @@ export async function clearNewBadgeForGame(gameId: number) {
 
     // Update local state
     console.log('🔍 Updating local state...');
-    games.update(($games) => {
+    rawGames.update(($games) => {
       return $games.map((game) => {
         if (game.id === gameId) {
           console.log('🔍 Updating game:', {
