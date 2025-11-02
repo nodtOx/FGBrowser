@@ -2,5 +2,5 @@
   "[xml]": {
     "editor.formatOnSave": false
   },
-  "workbench.sideBar.location": "left"
+  "workbench.sideBar.location": "right"
 }

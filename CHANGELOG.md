@@ -8,6 +8,10 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- Game list sorting with 6 options: Date (newest/oldest), Title (A-Z/Z-A), Size (largest/smallest)
+- Sort dropdown button in both list and grid views
+- Visual indicators for active sort option with checkmarks
+
 ### Changed
 
 ### Fixed

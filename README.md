@@ -52,12 +52,13 @@ make build
 
 Anonymous telemetry(Sentry) is enabled to help improve the app. No personal data or game information is collected - only crash reports and usage statistics.
 
-## Roadmap:
+## Planned Features (Roadmap):
 
-- Include game updates
-- Global application Settings
-- Built-in torrent client (not decided yet)
-- Crawl game screenshots
+- [ ] Include game updates
+- [ ] Global application Settings
+- [ ] Built-in torrent client (not decided yet)
+- [x] Crawl game screenshots
+- [x] Sorting options for game list and grid views
 
 ## Disclaimer
 

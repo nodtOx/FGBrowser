@@ -10,6 +10,9 @@
     searchQuery,
     selectedIndex,
     selectGame,
+    setSortOption,
+    sortBy,
+    type SortOption,
   } from '$lib/stores/games';
   import { focusedPanel, gameListViewMode, openGameDetails, setGameListViewMode } from '$lib/stores/navigation';
   import { onMount, tick } from 'svelte';
@@ -20,6 +23,21 @@
   let searchInput: HTMLInputElement;
   let searchTimeout: any;
   let previousQuery: string = '';
+  let showSortDropdown = false;
+
+  const sortOptions: Array<{ value: SortOption; label: string }> = [
+    { value: 'date-desc', label: 'Date (Newest)' },
+    { value: 'date-asc', label: 'Date (Oldest)' },
+    { value: 'title-asc', label: 'Title (A-Z)' },
+    { value: 'title-desc', label: 'Title (Z-A)' },
+    { value: 'size-desc', label: 'Size (Largest)' },
+    { value: 'size-asc', label: 'Size (Smallest)' },
+  ];
+
+  function handleSortChange(option: SortOption) {
+    setSortOption(option);
+    showSortDropdown = false;
+  }
 
   // Calculated values
   $: visibleCount = Math.ceil(containerHeight / ITEM_HEIGHT);
@@ -159,6 +177,34 @@
       placeholder="Search games... (press / to focus, Esc to clear)"
       class="search-input"
     />
+    <div class="sort-container">
+      <button
+        class="sort-btn"
+        on:click={() => (showSortDropdown = !showSortDropdown)}
+        title="Sort games"
+      >
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 4H13M5 8H11M7 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+        </svg>
+        Sort
+      </button>
+      {#if showSortDropdown}
+        <div class="sort-dropdown">
+          {#each sortOptions as option}
+            <button
+              class="sort-option"
+              class:active={$sortBy === option.value}
+              on:click={() => handleSortChange(option.value)}
+            >
+              {option.label}
+              {#if $sortBy === option.value}
+                <span class="checkmark">✓</span>
+              {/if}
+            </button>
+          {/each}
+        </div>
+      {/if}
+    </div>
     <div class="view-toggles">
       <button
         class="view-toggle-btn"
@@ -300,6 +346,78 @@
   .search-input::placeholder {
     color: var(--color-textSecondary);
     opacity: 0.6;
+  }
+
+  .sort-container {
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .sort-btn {
+    padding: 6px 12px;
+    background-color: var(--color-backgroundSecondary);
+    border: 1px solid var(--color-border);
+    color: var(--color-text);
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: calc(var(--base-font-size) * 0.9);
+    white-space: nowrap;
+  }
+
+  .sort-btn:hover {
+    background-color: var(--color-hover);
+    border-color: var(--color-primary);
+  }
+
+  .sort-btn svg {
+    display: block;
+    flex-shrink: 0;
+  }
+
+  .sort-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 4px;
+    background-color: var(--color-backgroundSecondary);
+    border: 1px solid var(--color-border);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    min-width: 180px;
+  }
+
+  .sort-option {
+    width: 100%;
+    padding: 8px 12px;
+    background-color: transparent;
+    border: none;
+    color: var(--color-text);
+    text-align: left;
+    cursor: pointer;
+    transition: var(--transition);
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: calc(var(--base-font-size) * 0.9);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .sort-option:hover {
+    background-color: var(--color-hover);
+  }
+
+  .sort-option.active {
+    background-color: rgba(var(--color-primary-rgb, 136, 192, 208), 0.1);
+    color: var(--color-primary);
+  }
+
+  .checkmark {
+    color: var(--color-primary);
+    font-weight: bold;
   }
 
   .view-toggles {
